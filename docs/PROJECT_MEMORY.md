@@ -4,7 +4,7 @@
 
 Version `0.1.0` is implemented as a standalone Next.js 16 application. The first screen is the live map, with a desktop information rail and a mobile bottom sheet. It supports Traditional Chinese, Simplified Chinese, and English.
 
-The production target is Render: a Docker Web Service with two to three instances and one private Render Key Value instance. Redis-compatible storage is used only for cache, locks, circuit state, and rate limiting.
+It is deployed on Render as project `Macau Traffic Intelligence`, environment `production`, at https://macau-traffic-intelligence.onrender.com. The service runs two instances in Singapore with a private Render Key Value instance for cache, locks, circuit state, and rate limiting; autoscaling remains declarative until the workspace is on a Pro plan.
 
 ## Architecture
 

@@ -597,6 +597,7 @@ export function MacauMap({
             minzoom: 12.5,
             layout: {
               visibility: "visible",
+              "text-font": ["Noto Sans Regular"],
               "text-field": ["get", "name"],
               "text-size": 10,
               "text-offset": [0, 1.1],
@@ -617,6 +618,7 @@ export function MacauMap({
             minzoom: 11,
             layout: {
               visibility: "visible",
+              "text-font": ["Noto Sans Regular"],
               "text-field": ["get", "name"],
               "text-size": 11,
               "text-offset": [0, 1.15],
@@ -637,6 +639,7 @@ export function MacauMap({
             minzoom: 13,
             layout: {
               visibility: "visible",
+              "text-font": ["Noto Sans Regular"],
               "text-field": ["get", "plate"],
               "text-size": 10,
               "text-offset": [0, 1.5],

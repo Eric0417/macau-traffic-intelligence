@@ -2,6 +2,13 @@
 
 All notable user-visible and architectural changes are recorded here.
 
+## Deployment - 2026-10-03
+
+- Live at https://macau-traffic-intelligence.onrender.com on Render project `Macau Traffic Intelligence`, environment `production`.
+- Web service `macau-traffic-intelligence` (Docker, singapore, two instances) plus private Key Value `macau-traffic-cache` (256 MB, no persistence).
+- Source repository: https://github.com/Eric0417/macau-traffic-intelligence with auto-deploy from `main`.
+- Map labels now request the `Noto Sans Regular` glyph set that OpenFreeMap serves, removing a 404 for the default font stack.
+
 ## 0.1.0 - 2026-10-03
 
 ### Added

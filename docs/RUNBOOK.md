@@ -1,5 +1,29 @@
 # Runbook
 
+## Deployed Environment
+
+| Item | Value |
+| --- | --- |
+| Render project | `Macau Traffic Intelligence` (`prj-davvc33tqb8s73dujto0`) |
+| Environment | `production` (`evm-davvc33tqb8s73dujtp0`) |
+| Web service | `macau-traffic-intelligence` (`srv-davv87qjnfac73d9gkc0`) |
+| Public URL | https://macau-traffic-intelligence.onrender.com |
+| Key Value | `macau-traffic-cache` (`red-davv7vqjnfac73d9fs90`), singapore, 256 MB, no persistence |
+| Source | https://github.com/Eric0417/macau-traffic-intelligence (branch `main`, auto-deploy on push) |
+
+The service runs two manually scaled instances in Singapore. Render only offers autoscaling
+on Pro workspaces, so the `render.yaml` autoscaling block stays declarative until the
+workspace is upgraded; scale with `POST /v1/services/{id}/scale` or the dashboard.
+
+Useful commands:
+
+```bash
+render deploys list srv-davv87qjnfac73d9gkc0
+render logs --resources srv-davv87qjnfac73d9gkc0 --limit 100
+render restart srv-davv87qjnfac73d9gkc0
+curl -s https://macau-traffic-intelligence.onrender.com/api/v1/health
+```
+
 ## Health
 
 `GET /api/v1/health` returns service status and the active cache backend.
@@ -20,7 +44,8 @@ The FSM platform uses a WAF. A blocked request is expected to produce a failed o
 
 ## Rollback
 
-Use the Render dashboard to redeploy the last known good commit. The Key Value cache contains no user data and can be flushed without migration.
+Use the Render dashboard, `render deploys` plus the rollback action, or push a revert commit to
+`main`. The Key Value cache contains no user data and can be flushed without migration.
 
 ## Incident Checks
 
