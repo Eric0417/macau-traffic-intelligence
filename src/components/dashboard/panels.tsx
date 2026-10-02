@@ -1,0 +1,670 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import {
+  AlertTriangle,
+  ArrowDown,
+  ArrowUp,
+  BusFront,
+  ChevronRight,
+  CircleParking,
+  Clock3,
+  MapPin,
+  Video,
+  Waves,
+  Wind,
+} from "lucide-react";
+import type { LiveJsonResult } from "@/components/use-live-json";
+import { useLanguage } from "@/components/language-provider";
+import { localized } from "@/lib/i18n";
+import type {
+  ApiEnvelope,
+  BorderStatus,
+  BridgeTime,
+  BusEta,
+  BusRoute,
+  Camera,
+  LrtNetwork,
+  LrtNotice,
+  ParkingFacility,
+  RoadCollection,
+  TrafficNotice,
+  WeatherSnapshot,
+} from "@/lib/types";
+
+export interface PanelMetaProps {
+  meta: ApiEnvelope<unknown>["meta"] | null;
+}
+
+function SourceNote({ meta }: PanelMetaProps) {
+  const { t, locale } = useLanguage();
+  if (!meta) return null;
+  const time = new Date(meta.updatedAt).toLocaleTimeString(
+    locale === "en" ? "en-GB" : "zh-MO",
+    { hour: "2-digit", minute: "2-digit" },
+  );
+
+  return (
+    <p className={`source-note ${meta.stale ? "is-stale" : ""}`}>
+      {meta.stale ? <AlertTriangle size={13} aria-hidden="true" /> : null}
+      <span>
+        {t("updated")} {time}
+      </span>
+      <a href={meta.source.url} target="_blank" rel="noreferrer">
+        {meta.source.name}
+      </a>
+    </p>
+  );
+}
+
+function statusLabel(
+  status: "normal" | "slow" | "congested" | "unknown",
+  t: ReturnType<typeof useLanguage>["t"],
+) {
+  return t(status);
+}
+
+export function OverviewPanel({
+  roads,
+  bridges,
+  weather,
+  borders,
+  notices,
+  roadsMeta,
+  bridgesMeta,
+  weatherMeta,
+  bordersMeta,
+}: {
+  roads: RoadCollection | null;
+  bridges: BridgeTime[] | null;
+  weather: WeatherSnapshot | null;
+  borders: BorderStatus[] | null;
+  notices: TrafficNotice[] | null;
+  roadsMeta: PanelMetaProps["meta"];
+  bridgesMeta: PanelMetaProps["meta"];
+  weatherMeta: PanelMetaProps["meta"];
+  bordersMeta: PanelMetaProps["meta"];
+}) {
+  const { t, locale } = useLanguage();
+  const counts = useMemo(() => {
+    const result = { normal: 0, slow: 0, congested: 0, unknown: 0 };
+    roads?.features.forEach((feature) => {
+      result[feature.properties.status] += 1;
+    });
+    return result;
+  }, [roads]);
+
+  const groupedBridges = useMemo(() => {
+    const groups = new Map<string, BridgeTime[]>();
+    bridges?.forEach((bridge) => {
+      const key = bridge.name["zh-Hant"];
+      groups.set(key, [...(groups.get(key) ?? []), bridge]);
+    });
+    return [...groups.values()];
+  }, [bridges]);
+
+  return (
+    <div className="panel-stack">
+      <section className="panel-section">
+        <div className="section-heading">
+          <h2>{t("weather")}</h2>
+          <SourceNote meta={weatherMeta} />
+        </div>
+        <div className="weather-line">
+          <strong>{weather?.temperatureCelsius ?? "--"}°</strong>
+          <span>{t("humidity")} {weather?.humidityPercent ?? "--"}%</span>
+          <span className="weather-wind">
+            <Wind size={14} aria-hidden="true" />
+            {weather?.wind?.replace(/^風向:\s*/, "").split(";")[0] ?? "--"}
+          </span>
+        </div>
+        {weather?.warnings.some((warning) => warning.active) ? (
+          weather.warnings
+            .filter((warning) => warning.active)
+            .map((warning) => (
+              <div className="warning-row" key={warning.type}>
+                <AlertTriangle size={16} aria-hidden="true" />
+                <span>{warning.type}</span>
+                <strong>{warning.text}</strong>
+              </div>
+            ))
+        ) : (
+          <p className="quiet-copy">{t("noWarnings")}</p>
+        )}
+      </section>
+
+      <section className="panel-section">
+        <div className="section-heading">
+          <h2>{t("bridges")}</h2>
+          <SourceNote meta={bridgesMeta} />
+        </div>
+        <div className="bridge-list">
+          {groupedBridges.map((group) => (
+            <div className="bridge-row" key={group[0].id.split("-")[0]}>
+              <strong>{localized(group[0].name, locale)}</strong>
+              <div className="bridge-directions">
+                {group.map((bridge) => (
+                  <span key={bridge.id}>
+                    {bridge.direction === "northbound" ? (
+                      <ArrowUp size={13} aria-hidden="true" />
+                    ) : (
+                      <ArrowDown size={13} aria-hidden="true" />
+                    )}
+                    {Math.max(1, Math.round(bridge.runtimeSeconds / 60))} {t("minutes")}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="panel-section">
+        <div className="section-heading">
+          <h2>{t("trafficSummary")}</h2>
+          <SourceNote meta={roadsMeta} />
+        </div>
+        <div className="status-grid">
+          {(["normal", "slow", "congested", "unknown"] as const).map((status) => (
+            <div className={`traffic-stat status-${status}`} key={status}>
+              <span>{statusLabel(status, t)}</span>
+              <strong>{counts[status]}</strong>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="panel-section">
+        <div className="section-heading">
+          <h2>{t("border")}</h2>
+          <SourceNote meta={bordersMeta} />
+        </div>
+        <div className="compact-list">
+          {borders?.map((border) => (
+            <a
+              href={border.sourceUrl}
+              target="_blank"
+              rel="noreferrer"
+              key={border.id}
+              className="compact-row"
+            >
+              <span>{localized(border.name, locale)}</span>
+              <strong>
+                {border.estimatedWaitMinutes !== null
+                  ? `${border.estimatedWaitMinutes} ${t("minutes")}`
+                  : t(border.status === "unknown" ? "unknown" : border.status === "clear" ? "normal" : "slow")}
+              </strong>
+            </a>
+          ))}
+          {!borders?.length ? <p className="quiet-copy">{t("unavailable")}</p> : null}
+        </div>
+      </section>
+
+      <section className="panel-section">
+        <div className="section-heading">
+          <h2>{t("latestNotices")}</h2>
+          <Clock3 size={15} aria-hidden="true" />
+        </div>
+        <div className="compact-list">
+          {notices?.slice(0, 4).map((notice) => (
+            <a href={notice.url} target="_blank" rel="noreferrer" className="notice-row" key={notice.id}>
+              <span className={`notice-type type-${notice.category}`}>
+                {notice.category === "roadworks"
+                  ? t("roads")
+                  : notice.category === "bus-change"
+                    ? t("bus")
+                    : t("notices")}
+              </span>
+              <span className="notice-title">{notice.title}</span>
+              <ChevronRight size={15} aria-hidden="true" />
+            </a>
+          ))}
+          {!notices?.length ? <p className="quiet-copy">{t("noNotices")}</p> : null}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+export function BusPanel({
+  routes,
+  selected,
+  direction,
+  eta,
+  onSelect,
+  onDirectionChange,
+}: {
+  routes: BusRoute[] | null;
+  selected: BusRoute | null;
+  direction: 0 | 1;
+  eta: LiveJsonResult<BusEta>;
+  onSelect: (route: BusRoute) => void;
+  onDirectionChange: (direction: 0 | 1) => void;
+}) {
+  const { t } = useLanguage();
+  const [query, setQuery] = useState("");
+  const filtered = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return (routes ?? []).filter(
+      (route) => !needle || route.routeName.toLowerCase().includes(needle),
+    );
+  }, [query, routes]);
+
+  const vehicles = eta.data?.vehicles ?? [];
+  const vehicleByStation = new Map(vehicles.map((vehicle) => [vehicle.stationCode, vehicle]));
+
+  return (
+    <div className="panel-stack">
+      <section className="panel-section">
+        <div className="section-heading">
+          <h2>{t("bus")}</h2>
+          <BusFront size={16} aria-hidden="true" />
+        </div>
+        <label className="search-field">
+          <span className="sr-only">{t("searchRoute")}</span>
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={t("searchRoute")}
+          />
+        </label>
+        <div className="route-grid">
+          {filtered.map((route) => (
+            <button
+              type="button"
+              key={route.routeCode}
+              onClick={() => {
+                onSelect(route);
+              }}
+              className={selected?.routeCode === route.routeCode ? "is-active" : ""}
+              aria-pressed={selected?.routeCode === route.routeCode}
+            >
+              {route.routeName}
+              {route.live ? null : <span className="route-flag">{t("seasonal")}</span>}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {selected ? (
+        <section className="panel-section">
+          <div className="route-detail-head">
+            <div>
+              <span>{t("route")}</span>
+              <strong>{selected.routeName}</strong>
+            </div>
+            <div className="segmented" aria-label={t("direction")}>
+              <button
+                type="button"
+                className={direction === 0 ? "is-active" : ""}
+                onClick={() => onDirectionChange(0)}
+              >
+                {t("outbound")}
+              </button>
+              <button
+                type="button"
+                className={direction === 1 ? "is-active" : ""}
+                onClick={() => onDirectionChange(1)}
+              >
+                {t("return")}
+              </button>
+            </div>
+          </div>
+          <SourceNote meta={eta.meta} />
+          {eta.data && eta.data.diversion.suspendedStops.length > 0 ? (
+            <p className="diversion-note">
+              <AlertTriangle size={13} aria-hidden="true" />
+              <span>
+                {t("diversion")} · {t("suspendedStops")}：
+                {eta.data.diversion.suspendedStops
+                  .map((stop) => stop.stationName)
+                  .join("、")}
+              </span>
+            </p>
+          ) : null}
+          {selected.live ? null : <p className="quiet-copy">{t("noLiveData")}</p>}
+          {eta.loading ? <p className="quiet-copy">{t("loading")}</p> : null}
+          {eta.error ? <p className="error-copy">{t("unavailable")}</p> : null}
+          {vehicles.length > 0 ? (
+            <div className="vehicle-list">
+              <div className="section-heading">
+                <h3>
+                  {t("liveBuses")} <small>{vehicles.length}</small>
+                </h3>
+                <BusFront size={15} aria-hidden="true" />
+              </div>
+              {vehicles.map((vehicle) => (
+                <article className="vehicle-row" key={vehicle.id}>
+                  <strong>{vehicle.plate}</strong>
+                  <span>
+                    {t("approaching")} {vehicle.stationName}
+                  </span>
+                  <div>
+                    {vehicle.lowFloor ? (
+                      <em className="vehicle-tag">{t("lowFloor")}</em>
+                    ) : null}
+                    {vehicle.speedKph === null ? null : (
+                      <em>
+                        {t("speed")} {vehicle.speedKph} km/h
+                      </em>
+                    )}
+                  </div>
+                </article>
+              ))}
+              <p className="quiet-copy">{t("positionNote")}</p>
+              <p className="quiet-copy">{t("modelNote")}</p>
+            </div>
+          ) : null}
+          {eta.data ? <p className="quiet-copy">{t("routeTrafficNote")}</p> : null}
+          <ol className="eta-list">
+            {eta.data?.stops.map((stop) => (
+              <li
+                key={`${stop.stationCode}-${stop.sequence}`}
+                className={stop.suspended ? "is-suspended" : ""}
+              >
+                <span className={`eta-sequence tone-${stop.trafficStatus}`}>
+                  {stop.sequence + 1}
+                </span>
+                <span className="eta-station">
+                  {stop.stationName}
+                  {stop.suspended ? (
+                    <em className="eta-suspended">{t("suspended")}</em>
+                  ) : null}
+                  {vehicleByStation.has(stop.stationCode) ? (
+                    <em className="eta-bus">
+                      {vehicleByStation.get(stop.stationCode)?.plate}
+                    </em>
+                  ) : null}
+                </span>
+                <strong>
+                  {stop.etaMinutes === null ? (
+                    "–"
+                  ) : stop.etaMinutes === 0 ? (
+                    <em className="eta-arriving">{t("arriving")}</em>
+                  ) : (
+                    <>
+                      {stop.etaMinutes}
+                      <small>{t("minutes")}</small>
+                    </>
+                  )}
+                </strong>
+              </li>
+            ))}
+          </ol>
+        </section>
+      ) : (
+        <p className="quiet-copy panel-empty">{t("chooseRoute")}</p>
+      )}
+    </div>
+  );
+}
+
+export function ParkingPanel({ facilities }: { facilities: ParkingFacility[] | null }) {
+  const { t } = useLanguage();
+  const [query, setQuery] = useState("");
+  const filtered = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return (facilities ?? [])
+      .filter((facility) => !needle || facility.name.toLowerCase().includes(needle))
+      .sort(
+        (a, b) =>
+          (b.availability.lightVehicle ?? -1) - (a.availability.lightVehicle ?? -1),
+      )
+      .slice(0, 80);
+  }, [facilities, query]);
+
+  return (
+    <div className="panel-stack">
+      <section className="panel-section">
+        <div className="section-heading">
+          <h2>{t("parking")}</h2>
+          <CircleParking size={16} aria-hidden="true" />
+        </div>
+        <label className="search-field">
+          <span className="sr-only">{t("parkingSearch")}</span>
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={t("parkingSearch")}
+          />
+        </label>
+        <div className="parking-list">
+          {filtered.map((facility) => {
+            const availability = facility.availability.lightVehicle;
+            const tone =
+              availability === null
+                ? "unknown"
+                : availability <= 5
+                  ? "low"
+                  : availability <= 20
+                    ? "medium"
+                    : "good";
+            return (
+              <article className="parking-row" key={facility.id}>
+                <div>
+                  <strong>{facility.name}</strong>
+                  <span>
+                    {facility.availability.motorcycle ?? "–"} {t("motorcycle")} ·{" "}
+                    {facility.availability.electricVehicle ?? "–"} {t("electricVehicle")}
+                  </span>
+                </div>
+                <div className={`parking-count tone-${tone}`}>
+                  <strong>{availability ?? "–"}</strong>
+                  <span>{t("lightVehicle")}</span>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+export function NoticesPanel({
+  notices,
+  lrtNotices,
+}: {
+  notices: TrafficNotice[];
+  lrtNotices: LrtNotice[];
+}) {
+  const { t, locale } = useLanguage();
+  return (
+    <div className="panel-stack">
+      <section className="panel-section">
+        <div className="section-heading">
+          <h2>{t("latestNotices")}</h2>
+          <AlertTriangle size={16} aria-hidden="true" />
+        </div>
+        <div className="notice-list">
+          {notices.map((notice) => (
+            <a href={notice.url} target="_blank" rel="noreferrer" key={notice.id}>
+              <span className={`notice-type type-${notice.category}`}>
+                {notice.category === "roadworks"
+                  ? t("roads")
+                  : notice.category === "bus-change"
+                    ? t("bus")
+                    : t("notices")}
+              </span>
+              <strong>{notice.title}</strong>
+              <p>{notice.content}</p>
+            </a>
+          ))}
+          {!notices.length ? <p className="quiet-copy">{t("noNotices")}</p> : null}
+        </div>
+      </section>
+
+      <section className="panel-section">
+        <div className="section-heading">
+          <h2>{t("lrtNotice")}</h2>
+          <Waves size={16} aria-hidden="true" />
+        </div>
+        <p className="quiet-copy">{t("lrtNoLive")}</p>
+        <p className="quiet-copy">{t("modelNote")}</p>
+        <div className="notice-list">
+          {lrtNotices.map((notice) => (
+            <article key={notice.id}>
+              <span className="notice-type type-lrt">{t("lrt")}</span>
+              <strong>{notice.title}</strong>
+              <p>{notice.content}</p>
+              <time>
+                {new Date(notice.publishedAt).toLocaleString(locale === "en" ? "en-GB" : "zh-MO")}
+              </time>
+            </article>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+export function LrtPanel({
+  network,
+  notices,
+  selectedLine,
+  onSelectLine,
+}: {
+  network: LrtNetwork | null;
+  notices: LrtNotice[];
+  selectedLine: string | null;
+  onSelectLine: (lineRef: string | null) => void;
+}) {
+  const { t, locale } = useLanguage();
+  const lines = network?.lines.features ?? [];
+  const stations = (network?.stations ?? []).filter((station) =>
+    selectedLine ? station.lines.includes(selectedLine) : false,
+  );
+
+  return (
+    <div className="panel-stack">
+      <section className="panel-section">
+        <div className="section-heading">
+          <h2>{t("lrt")}</h2>
+          <Waves size={16} aria-hidden="true" />
+        </div>
+        <div className="lrt-lines">
+          {lines.map((line) => {
+            const ref = line.properties.ref;
+            const isActive = selectedLine === ref;
+            const stationCount = (network?.stations ?? []).filter((station) =>
+              station.lines.includes(ref),
+            ).length;
+
+            return (
+              <button
+                type="button"
+                key={ref}
+                className={isActive ? "is-active" : ""}
+                aria-pressed={isActive}
+                onClick={() => onSelectLine(isActive ? null : ref)}
+              >
+                <span className="lrt-swatch" style={{ background: line.properties.color }} />
+                <span>
+                  <strong>{localized(line.properties.name, locale)}</strong>
+                  <small>
+                    {stationCount} {t("stops")}
+                  </small>
+                </span>
+              </button>
+            );
+          })}
+          {!network ? <p className="quiet-copy">{t("loading")}</p> : null}
+        </div>
+        <p className="quiet-copy">{t("lrtNoLive")}</p>
+
+        {selectedLine ? (
+          <ol className="lrt-stations">
+            {stations.map((station, index) => (
+              <li key={station.id}>
+                <span className="eta-sequence">{index + 1}</span>
+                <span className="eta-station">{localized(station.name, locale)}</span>
+                {station.interchange ? (
+                  <em className="lrt-interchange">{t("interchange")}</em>
+                ) : null}
+              </li>
+            ))}
+          </ol>
+        ) : null}
+      </section>
+
+      <section className="panel-section">
+        <div className="section-heading">
+          <h2>{t("lrtNotice")}</h2>
+          <AlertTriangle size={16} aria-hidden="true" />
+        </div>
+        <div className="notice-list">
+          {notices.slice(0, 5).map((notice) => (
+            <article key={notice.id}>
+              <span className="notice-type type-lrt">{t("lrt")}</span>
+              <strong>{notice.title}</strong>
+              <p>{notice.content}</p>
+              <time>
+                {new Date(notice.publishedAt).toLocaleString(locale === "en" ? "en-GB" : "zh-MO")}
+              </time>
+            </article>
+          ))}
+          {!notices.length ? <p className="quiet-copy">{t("noNotices")}</p> : null}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+export function CameraPanel({
+  cameras,
+  onSelect,
+}: {
+  cameras: Camera[] | null;
+  onSelect: (camera: Camera) => void;
+}) {
+  const { t, locale } = useLanguage();
+  const [zone, setZone] = useState("all");
+  const zones = useMemo(
+    () => [...new Set((cameras ?? []).map((camera) => camera.zone["zh-Hant"]))],
+    [cameras],
+  );
+  const filtered = (cameras ?? []).filter(
+    (camera) => zone === "all" || camera.zone["zh-Hant"] === zone,
+  );
+
+  return (
+    <div className="panel-stack">
+      <section className="panel-section">
+        <div className="section-heading">
+          <h2>{t("cameras")}</h2>
+          <Video size={16} aria-hidden="true" />
+        </div>
+        <div className="zone-tabs">
+          <button
+            type="button"
+            className={zone === "all" ? "is-active" : ""}
+            onClick={() => setZone("all")}
+          >
+            {t("all")}
+          </button>
+          {zones.map((item) => (
+            <button
+              type="button"
+              className={zone === item ? "is-active" : ""}
+              onClick={() => setZone(item)}
+              key={item}
+            >
+              {item}
+            </button>
+          ))}
+        </div>
+        <div className="camera-list">
+          {filtered.map((camera) => (
+            <button type="button" onClick={() => onSelect(camera)} key={camera.id}>
+              <MapPin size={15} aria-hidden="true" />
+              <span>{localized(camera.name, locale)}</span>
+              <ChevronRight size={15} aria-hidden="true" />
+            </button>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}

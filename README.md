@@ -1,36 +1,95 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 澳門交通情報
 
-## Getting Started
+Macau Traffic Intelligence is a map-first public transport dashboard for Macau. It combines live road congestion, bridge travel times, official HLS traffic cameras, bus arrivals, parking availability, weather warnings, border information, traffic notices, and the official LRT network.
 
-First, run the development server:
+The application is an independent implementation inspired by the architecture and open-source spirit of [HK Traffic Intelligence](https://github.com/keithligh/hk-traffic-intelligence). It does not reuse that project's source code.
+
+## Stack
+
+- Node.js 22 and Next.js 16 App Router
+- TypeScript, React, Tailwind CSS
+- MapLibre GL and OpenFreeMap
+- HLS.js for official camera streams
+- Zod contracts, Cheerio, fast-xml-parser
+- Render Web Service with shared Render Key Value
+
+## Local Development
 
 ```bash
+npm install
+cp .env.example .env.local
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Redis is optional locally. Without `REDIS_URL`, the cache uses an in-memory backend. Production uses Render Key Value so multiple instances share TTLs, locks, circuit state, and rate limits.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Commands
 
-## Learn More
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` | Start the local Next.js server |
+| `npm run build` | Build the production standalone server |
+| `npm run typecheck` | Run TypeScript checks |
+| `npm run lint` | Run ESLint |
+| `npm test` | Run fixture-based unit and integration tests |
+| `npm run test:e2e` | Run Playwright browser tests |
+| `npm run verify:sources` | Deliberately check live public sources |
+| `npm run build:lrt` | Rebuild the static LRT network from OpenStreetMap |
+| `npm run docs:check` | Verify engineering memory and source registry coverage |
 
-To learn more about Next.js, take a look at the following resources:
+## Public API
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+All response bodies use `{ data, meta }`. `meta` reports the source, source timestamp, generated time, TTL, and whether the payload is stale.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```text
+GET /api/v1/traffic/roads
+GET /api/v1/traffic/bridges
+GET /api/v1/traffic/notices
+GET /api/v1/cameras
+GET /api/v1/bus/routes
+GET /api/v1/bus/routes/{routeCode}/eta?direction=0|1
+GET /api/v1/parking
+GET /api/v1/weather
+GET /api/v1/borders
+GET /api/v1/lrt/network
+GET /api/v1/lrt/notices
+GET /api/v1/health
+```
 
-## Deploy on Vercel
+The API is read-only and rate limited. It does not provide bulk historical exports.
+The bus ETA payload also carries stop coordinates and the live vehicles the official station feed reports for that route.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Deploy To Render
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The repository contains `Dockerfile` and `render.yaml`. The blueprint creates:
+
+- A Docker Web Service running at least two instances
+- A private Render Key Value instance used only as shared cache
+- `/api/v1/health` as the health check
+
+Set the required source flags from `.env.example` only when a source must be disabled. No source credentials are required.
+
+## Data Notes
+
+- DSAT road, bridge, camera, bus, and parking feeds are public-facing feeds used by official DSAT web applications. Some are not formally documented and may change.
+- Weather comes from official SMG RSS.
+- Border information is a best-effort extraction of the Public Security Police live platform. The service keeps stale values visible with a delayed marker when that source blocks automated access.
+- LRT has no confirmed official live train-position API. The map shows the official network and official notice RSS only.
+- The map draws the full street network in grey; only the 1,268 segments DSAT monitors carry a congestion status.
+- DSAT reports buses per station segment rather than raw GPS, so live bus markers are placed between the previous and approaching stop.
+- The selected bus route is drawn from the official `route/traffic` polyline and coloured by the official traffic level of each segment.
+- Focusing a bus route hides the camera, LRT, congestion, and 3D building layers, keeps the route stops labelled, and shows buses as rotated 3D icons placed by estimating progress along the official segment.
+- The 3D map can be rotated and tilted freely; the compass in the navigation control resets the bearing.
+- At street zoom, buses and the selected LRT line switch from icon markers to rough extruded 3D models painted after the operators' current liveries (TCM orange/white, Transmac yellow/blue, LRT "Ocean Cruiser" pale blue with orange wave). The train model is a static showcase because no official live train position exists.
+- Route buttons only warn about real suspensions reported by the diversion feed, not the raw `routeChange` flag.
+- The LRT tab selects a line, highlights its stations on the map, and lists them with interchange badges; no live train positions are shown because DSAT/MLM publish none.
+- The 3D view uses extruded OpenFreeMap buildings and AWS Open Data terrain tiles; it can be switched off in the layer menu.
+- Camera streams are not recorded or proxied.
+
+The application code is MIT licensed. Data remains subject to the terms and attribution requirements of its publishing organisation.
+
+## Attribution
+
+Architecture and product direction were inspired by [HK Traffic Intelligence](https://github.com/keithligh/hk-traffic-intelligence) by Keith Li. See `LICENSE` and `docs/PROJECT_MEMORY.md`.

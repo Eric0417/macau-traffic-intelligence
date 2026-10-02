@@ -1,0 +1,544 @@
+import "server-only";
+import * as cheerio from "cheerio";
+import { z } from "zod";
+import { busEtaSchema, busRouteSchema } from "@/lib/contracts";
+import type { BusCompany, BusEtaStop, BusVehicle } from "@/lib/types";
+import { createDsatToken } from "@/server/dsat-token";
+import { fetchJson, fetchText } from "@/server/http";
+import { readSource } from "@/server/cache";
+import type { SourceDefinition } from "@/server/source";
+
+const BUS_API = "https://bis.dsat.gov.mo:37812/macauweb";
+const DDBUS_API = "https://bis.dsat.gov.mo:37812/ddbus";
+const PASSENGER_API = "https://bis.dsat.gov.mo:37812/ddbus/app/passenger/route";
+const ROUTE_PAGE = "https://www.dsat.gov.mo/dsat/bus_route.aspx";
+const HUID = "cc57da25-d5d8-4286-8712-d98df57c8af6";
+
+// Tile colours on the official route page. bc1 is Transmac, bc2 is TCM.
+const COMPANY_BY_TILE: Record<string, BusCompany> = {
+  bc1: { id: "blue", name: "新福利", color: "blue" },
+  bc2: { id: "orange", name: "澳巴", color: "orange" },
+};
+
+const rawRouteSchema = z.object({
+  color: z.enum(["Blue", "Orange"]),
+  routeChange: z.string(),
+  direction: z.string(),
+  routeName: z.string(),
+});
+
+const routeResponseSchema = z.object({
+  header: z.string(),
+  data: z.object({
+    companyList: z.array(z.object({ color: z.enum(["Blue", "Orange"]), name: z.string() })),
+    routeList: z.array(rawRouteSchema),
+  }),
+});
+
+const etaResponseSchema = z.object({
+  header: z.object({ status: z.string() }),
+  data: z.object({
+    data: z.array(
+      z.object({
+        msg: z.string(),
+        average: z.union([z.string(), z.number()]).nullable().optional(),
+        current: z.union([z.string(), z.number()]).nullable().optional(),
+        stationCode: z.string(),
+        stationName: z.string(),
+      }),
+    ),
+  }),
+});
+
+const stationLocationSchema = z.object({
+  header: z.string(),
+  data: z.object({
+    stationInfoList: z
+      .array(
+        z.object({
+          latitude: z.string(),
+          longitude: z.string(),
+          stationCode: z.string(),
+          stationName: z.string(),
+          laneName: z.string().nullish().transform((value) => value ?? ""),
+        }),
+      )
+      .nullish()
+      .transform((value) => value ?? []),
+  }),
+});
+
+const routeBusSchema = z.object({
+  header: z.string(),
+  data: z.object({
+    routeInfo: z
+      .array(
+        z.object({
+          staCode: z.string(),
+          busInfo: z
+            .array(
+              z.object({
+                busCode: z.string().nullish().transform((value) => value ?? ""),
+                busPlate: z.string(),
+                busType: z.string().nullish().transform((value) => value ?? ""),
+                status: z.string().nullish().transform((value) => value ?? ""),
+                isFacilities: z.string().nullish().transform((value) => value ?? "0"),
+                speed: z.string().nullish().transform((value) => value ?? ""),
+              }),
+            )
+            .nullish()
+            .transform((value) => value ?? []),
+        }),
+      )
+      .nullish()
+      .transform((value) => value ?? []),
+  }),
+});
+
+const routeTrafficSchema = z.object({
+  data: z
+    .array(
+      z.object({
+        routeCoordinates: z.string(),
+        newRouteTraffic: z.string().nullish().transform((value) => value ?? "-1"),
+      }),
+    )
+    .nullish()
+    .transform((value) => value ?? []),
+});
+
+const ROUTE_CATEGORY_IDS = "BCAFBD938B8D48B0B3F598B44DD32E6C";
+
+const diversionResponseSchema = z.object({
+  header: z.string(),
+  data: z
+    .object({
+      routeChange: z.boolean().nullish().transform((value) => value ?? false),
+      suspendBusStop: z
+        .array(z.string())
+        .nullish()
+        .transform((value) => value ?? []),
+    })
+    .nullish(),
+});
+
+function normalizeRouteCode(routeName: string): string {
+  return routeName.toUpperCase().padStart(5, "0");
+}
+
+function etaValue(value: string | number | null | undefined): number | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  if (value.trim().toLowerCase() === "x") return 0;
+  if (!/^\d+$/.test(value.trim())) return null;
+  return Number(value);
+}
+
+function numberOrNull(value: string): number | null {
+  const parsed = Number(value);
+  return value.trim() !== "" && Number.isFinite(parsed) ? parsed : null;
+}
+
+// DSAT uses 1 normal, 2 slow, 3 congested, 4 very congested, -1 unknown.
+function statusFromTrafficLevel(level: number): "normal" | "slow" | "congested" | "unknown" {
+  if (level === 1) return "normal";
+  if (level === 2) return "slow";
+  if (level >= 3) return "congested";
+  return "unknown";
+}
+
+function routeSortKey(routeName: string): [number, string] {
+  const match = /^(\d+)(.*)$/.exec(routeName);
+  return match ? [Number(match[1]), match[2]] : [Number.POSITIVE_INFINITY, routeName];
+}
+
+function compareRoutes(a: { routeName: string }, b: { routeName: string }): number {
+  const [aNumber, aSuffix] = routeSortKey(a.routeName);
+  const [bNumber, bSuffix] = routeSortKey(b.routeName);
+  return aNumber - bNumber || aSuffix.localeCompare(bSuffix);
+}
+
+export function parsePublishedRoutes(
+  html: string,
+): Array<{ routeName: string; company: BusCompany }> {
+  const $ = cheerio.load(html);
+  const routes = new Map<string, BusCompany>();
+
+  $("a.bus_link").each((_, element) => {
+    const href = $(element).attr("href") ?? "";
+    const matched = href.match(/route=busroute_([A-Za-z0-9]+)/);
+    if (!matched) return;
+
+    const routeName = $(element).find(".bus_route_text").first().text().trim() || matched[1];
+    const style = $(element).find("[style*='bc1'], [style*='bc2']").first().attr("style") ?? "";
+    const tile = style.includes("bc1") ? "bc1" : style.includes("bc2") ? "bc2" : "";
+    const company = COMPANY_BY_TILE[tile];
+    if (company) routes.set(routeName, company);
+  });
+
+  return [...routes].map(([routeName, company]) => ({ routeName, company }));
+}
+
+async function postBusApi<T>(
+  url: string,
+  data: Record<string, string>,
+  schema: z.ZodType<T>,
+): Promise<T> {
+  const payload = { lang: "zh_tw", device: "web", ...data };
+
+  return schema.parse(
+    await fetchJson(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        token: createDsatToken(payload),
+      },
+      body: new URLSearchParams(payload).toString(),
+      timeoutMs: 8_000,
+    }),
+  );
+}
+
+export async function loadBusRoutes() {
+  const data = { lang: "zh_tw", device: "web" };
+
+  const response = routeResponseSchema.parse(
+    await fetchJson(`${BUS_API}/getRouteAndCompanyList.html`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        token: createDsatToken(data),
+      },
+      body: new URLSearchParams(data).toString(),
+    }),
+  );
+
+  if (response.header !== "000") {
+    throw new Error(`DSAT route endpoint returned ${response.header}`);
+  }
+
+  const companies = new Map(
+    response.data.companyList.map((company) => [
+      company.color,
+      {
+        id: company.color.toLowerCase(),
+        name: company.name,
+        color: company.color === "Blue" ? ("blue" as const) : ("orange" as const),
+      },
+    ]),
+  );
+
+  const tracked = response.data.routeList.map((route) => ({
+    routeName: route.routeName,
+    routeCode: normalizeRouteCode(route.routeName),
+    routeType: route.direction === "2" ? (2 as const) : (0 as const),
+    company: companies.get(route.color),
+    hasChange: route.routeChange === "1",
+    live: true,
+  }));
+
+  // The arrival system omits seasonal routes, so the official route page fills the catalog.
+  const published = await fetchText(ROUTE_PAGE, { timeoutMs: 8_000 })
+    .then(parsePublishedRoutes)
+    .catch(() => []);
+  const trackedNames = new Set(tracked.map((route) => route.routeName));
+  const seasonal = published
+    .filter((route) => !trackedNames.has(route.routeName))
+    .map((route) => ({
+      routeName: route.routeName,
+      routeCode: normalizeRouteCode(route.routeName),
+      routeType: 0 as const,
+      company: route.company,
+      hasChange: false,
+      live: false,
+    }));
+
+  return [...tracked, ...seasonal].sort(compareRoutes).map((route) => busRouteSchema.parse(route));
+}
+
+export const busRoutesSource: SourceDefinition<Awaited<ReturnType<typeof loadBusRoutes>>> = {
+  id: "bus-routes",
+  name: "DSAT 巴士路線",
+  url: "https://bis.dsat.gov.mo:37812/macauweb/",
+  attribution: "交通事務局巴士報站及巴士路線公開資料",
+  envKey: "SOURCE_BUS_ENABLED",
+  ttlSeconds: 21_600,
+  staleTtlSeconds: 86_400,
+  schema: z.array(busRouteSchema),
+  load: loadBusRoutes,
+};
+
+// The route list flag marks 50 of 97 routes, so a diversion badge only counts when
+// the message feed actually reports suspended stops.
+function busDiversionSource(routeName: string): SourceDefinition<string[]> {
+  return {
+    id: `bus-diversion-${routeName}`,
+    name: `巴士 ${routeName} 改道`,
+    url: `${BUS_API}/`,
+    attribution: "交通事務局巴士改道消息",
+    envKey: "SOURCE_BUS_ENABLED",
+    ttlSeconds: 300,
+    staleTtlSeconds: 3_600,
+    schema: z.array(z.string()),
+    load: async () => {
+      const response = await postBusApi(
+        `${BUS_API}/getRouteChangeMessage.html`,
+        { routeName },
+        diversionResponseSchema,
+      );
+
+      if (response.header !== "000") {
+        throw new Error(`DSAT diversion endpoint returned ${response.header}`);
+      }
+
+      return (response.data?.suspendBusStop ?? [])
+        .map((entry) => entry.split("$")[0]?.trim() ?? "")
+        .filter(Boolean);
+    },
+  };
+}
+
+interface EtaStop {
+  msg: string;
+  average?: string | number | null;
+  current?: string | number | null;
+  stationCode: string;
+  stationName: string;
+}
+
+async function loadEtaStops(code: string, direction: 0 | 1): Promise<EtaStop[]> {
+  const query = new URLSearchParams({
+    routeCode: code,
+    direction: String(direction),
+    lang: "zh_tw",
+    device: "web",
+    HUID,
+  });
+
+  const response = etaResponseSchema.parse(
+    await fetchJson(`${PASSENGER_API}?${query}`, { timeoutMs: 8_000 }),
+  );
+
+  if (response.header.status !== "000") {
+    throw new Error(`DSAT ETA endpoint returned ${response.header.status}`);
+  }
+
+  return response.data.data;
+}
+
+async function loadStationCoordinates(code: string, direction: 0 | 1) {
+  const response = await postBusApi(
+    `${BUS_API}/routestation/location`,
+    { routeCode: code, dir: String(direction) },
+    stationLocationSchema,
+  );
+
+  if (response.header !== "000") {
+    throw new Error(`DSAT station endpoint returned ${response.header}`);
+  }
+
+  return response.data.stationInfoList.map((station) => ({
+    stationCode: station.stationCode,
+    stationName: station.stationName,
+    coordinates: [Number(station.longitude), Number(station.latitude)] as [number, number],
+  }));
+}
+
+async function loadRouteBuses(
+  routeName: string,
+  direction: 0 | 1,
+  routeType: 0 | 2,
+) {
+  const response = await postBusApi(
+    `${BUS_API}/routestation/bus`,
+    {
+      action: "dy",
+      routeName,
+      dir: String(direction),
+      routeType: String(routeType),
+    },
+    routeBusSchema,
+  );
+
+  if (response.header !== "000") {
+    throw new Error(`DSAT live bus endpoint returned ${response.header}`);
+  }
+
+  return response.data.routeInfo;
+}
+
+// The official map page draws this polyline; segment i runs from stop i to stop i + 1.
+async function loadRouteSegments(code: string, direction: 0 | 1) {
+  const response = await postBusApi(
+    `${DDBUS_API}/common/supermap/route/traffic`,
+    {
+      routeCode: code,
+      direction: String(direction),
+      indexType: "00",
+      lang: "zh-tw",
+      HUID,
+      categoryIds: ROUTE_CATEGORY_IDS,
+    },
+    routeTrafficSchema,
+  );
+
+  return response.data.flatMap((segment) => {
+    const coordinates = segment.routeCoordinates
+      .split(";")
+      .map((pair) => pair.split(",").map(Number))
+      .filter(
+        (pair): pair is [number, number] =>
+          pair.length === 2 && Number.isFinite(pair[0]) && Number.isFinite(pair[1]),
+      );
+    if (coordinates.length < 2) return [];
+
+    const trafficLevel = Number(segment.newRouteTraffic);
+    const level = Number.isFinite(trafficLevel) ? trafficLevel : -1;
+    return [
+      {
+        coordinates,
+        trafficLevel: level,
+        trafficStatus: statusFromTrafficLevel(level),
+      },
+    ];
+  });
+}
+
+// DSAT only says which stop a bus is approaching, so the vehicle is estimated
+// along the official polyline of that stop-to-stop segment.
+function pointAlongSegment(
+  coordinates: Array<[number, number]>,
+  fraction: number,
+): { point: [number, number]; bearing: number } | null {
+  if (coordinates.length < 2) return null;
+
+  const distances = [0];
+  let total = 0;
+  for (let index = 1; index < coordinates.length; index += 1) {
+    const [x1, y1] = coordinates[index - 1];
+    const [x2, y2] = coordinates[index];
+    const dx = (x2 - x1) * Math.cos((((y1 + y2) / 2) * Math.PI) / 180);
+    const dy = y2 - y1;
+    total += Math.hypot(dx, dy);
+    distances.push(total);
+  }
+  if (total === 0) return null;
+
+  const target = total * Math.min(Math.max(fraction, 0), 1);
+  for (let index = 1; index < coordinates.length; index += 1) {
+    if (distances[index] < target && index < coordinates.length - 1) continue;
+
+    const span = distances[index] - distances[index - 1] || 1;
+    const ratio = (target - distances[index - 1]) / span;
+    const [x1, y1] = coordinates[index - 1];
+    const [x2, y2] = coordinates[index];
+    const bearing = ((Math.atan2(x2 - x1, y2 - y1) * 180) / Math.PI + 360) % 360;
+
+    return {
+      point: [x1 + (x2 - x1) * ratio, y1 + (y2 - y1) * ratio],
+      bearing,
+    };
+  }
+
+  return null;
+}
+
+export async function loadBusEta(routeCodeValue: string, direction: 0 | 1) {
+  const code = routeCodeValue.toUpperCase().padStart(5, "0");
+  const routesRead = await readSource(busRoutesSource);
+  const route = routesRead?.result.data.find((item) => item.routeCode === code);
+
+  if (!route) {
+    throw new Error(`Unknown bus route code ${code}`);
+  }
+
+  const [etaStops, stations, routeBuses, routeSegments, diversion] = await Promise.all([
+    loadEtaStops(code, direction).catch(() => null),
+    loadStationCoordinates(code, direction).catch(() => []),
+    loadRouteBuses(route.routeName, direction, route.routeType).catch(() => []),
+    loadRouteSegments(code, direction).catch(() => []),
+    readSource(busDiversionSource(route.routeName)),
+  ]);
+
+  if (!etaStops && stations.length === 0 && routeBuses.length === 0 && routeSegments.length === 0) {
+    throw new Error(`DSAT bus data unavailable for route ${code}`);
+  }
+
+  const suspendedCodes = new Set(diversion?.result.data ?? []);
+
+  const stops: BusEtaStop[] = (
+    etaStops && etaStops.length > 0
+      ? etaStops.map((stop, index) => ({
+          sequence: index,
+          stationCode: stop.stationCode,
+          stationName: stop.stationName,
+          etaMinutes: etaValue(stop.current),
+          averageMinutes: etaValue(stop.average),
+          messageCode: stop.msg,
+        }))
+      : stations.map((station, index) => ({
+          sequence: index,
+          stationCode: station.stationCode,
+          stationName: station.stationName,
+          etaMinutes: null,
+          averageMinutes: null,
+          messageCode: "",
+        }))
+  ).map((stop, index) => {
+    // Traffic on the way to this stop; the first stop shows its departure segment.
+    const trafficLevel =
+      routeSegments[index - 1]?.trafficLevel ?? routeSegments[index]?.trafficLevel ?? -1;
+
+    return {
+      ...stop,
+      coordinates: stations[index]?.coordinates ?? null,
+      trafficStatus: statusFromTrafficLevel(trafficLevel),
+      trafficLevel,
+      suspended: suspendedCodes.has(stop.stationCode),
+    };
+  });
+
+  const suspendedStops = stops
+    .filter((stop) => stop.suspended)
+    .map((stop) => ({ stationCode: stop.stationCode, stationName: stop.stationName }));
+
+  const seen = new Set<string>();
+  const vehicles: BusVehicle[] = [];
+  routeBuses.forEach((entry, index) => {
+    for (const bus of entry.busInfo) {
+      const id = bus.busCode || bus.busPlate;
+      if (!id || seen.has(id)) continue;
+      seen.add(id);
+
+      // A bus reported against stop N is running on segment N - 1.
+      const segment = routeSegments[Math.max(0, index - 1)];
+      const estimate = segment
+        ? pointAlongSegment(segment.coordinates, index === 0 ? 0 : 0.5)
+        : null;
+
+      vehicles.push({
+        id,
+        plate: bus.busPlate,
+        lowFloor: bus.isFacilities === "1",
+        speedKph: numberOrNull(bus.speed),
+        status: bus.status,
+        stationCode: entry.staCode,
+        stationName: stops[index]?.stationName ?? "",
+        stationSequence: index,
+        coordinates: estimate?.point ?? null,
+        bearing: estimate?.bearing ?? null,
+        estimated: true,
+      });
+    }
+  });
+
+  return busEtaSchema.parse({
+    routeName: route.routeName,
+    routeCode: route.routeCode,
+    direction,
+    stops,
+    vehicles,
+    routeSegments,
+    diversion: { suspendedStops },
+  });
+}

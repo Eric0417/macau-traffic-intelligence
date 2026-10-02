@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: macau-traffic
+    runtime: docker
+    region: singapore
+    plan: starter
+    healthCheckPath: /api/v1/health
+    autoDeploy: true
+    scaling:
+      minInstances: 2
+      maxInstances: 3
+      targetCPUPercent: 70
+    envVars:
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: macau-traffic-cache
+          property: connectionString
+      - key: RATE_LIMIT_PER_MINUTE
+        value: "120"
+      - key: SOURCE_BORDERS_ENABLED
+        value: "true"
+
+  - type: keyvalue
+    name: macau-traffic-cache
+    region: singapore
+    ipAllowList: []
+    maxmemoryPolicy: allkeys-lru
+    persistenceMode: off
