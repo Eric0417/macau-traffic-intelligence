@@ -15,7 +15,7 @@ import type {
   RoadCollection,
 } from "@/lib/types";
 import { useLanguage } from "@/components/language-provider";
-import { vehicleModelCollection } from "@/components/dashboard/vehicle-3d";
+import { lrtTrainCollection } from "@/components/dashboard/vehicle-3d";
 
 export type MapLayer = "roads" | "cameras" | "lrt";
 
@@ -29,87 +29,6 @@ interface MacauMapProps {
   view3d: boolean;
   visibleLayers: Record<MapLayer, boolean>;
   onCameraSelect: (camera: Camera) => void;
-}
-
-function createBusIcon(): { width: number; height: number; data: Uint8Array } {
-  const size = 48;
-  const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return { width: size, height: size, data: new Uint8Array(size * size * 4) };
-
-  ctx.clearRect(0, 0, size, size);
-
-  // Ground shadow keeps the marker readable on light and dark tiles.
-  ctx.fillStyle = "rgba(12, 22, 18, 0.28)";
-  ctx.beginPath();
-  ctx.ellipse(24, 38, 14, 4.5, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Isometric bus body: roof, left flank, and front face.
-  ctx.fillStyle = "#f7faf8";
-  ctx.beginPath();
-  ctx.moveTo(14, 13);
-  ctx.lineTo(31, 8);
-  ctx.lineTo(40, 14);
-  ctx.lineTo(23, 19);
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.fillStyle = "#e2e8e4";
-  ctx.beginPath();
-  ctx.moveTo(14, 13);
-  ctx.lineTo(23, 19);
-  ctx.lineTo(23, 32);
-  ctx.lineTo(14, 26);
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.fillStyle = "#cfd8d3";
-  ctx.beginPath();
-  ctx.moveTo(23, 19);
-  ctx.lineTo(40, 14);
-  ctx.lineTo(40, 27);
-  ctx.lineTo(23, 32);
-  ctx.closePath();
-  ctx.fill();
-
-  // Windows and front windscreen.
-  ctx.fillStyle = "#243b52";
-  ctx.beginPath();
-  ctx.moveTo(26, 20.5);
-  ctx.lineTo(31, 19);
-  ctx.lineTo(31, 23.5);
-  ctx.lineTo(26, 25);
-  ctx.closePath();
-  ctx.fill();
-  ctx.beginPath();
-  ctx.moveTo(33, 18.4);
-  ctx.lineTo(38, 16.8);
-  ctx.lineTo(38, 21.2);
-  ctx.lineTo(33, 22.8);
-  ctx.closePath();
-  ctx.fill();
-  ctx.beginPath();
-  ctx.moveTo(17, 15.5);
-  ctx.lineTo(21, 17.6);
-  ctx.lineTo(21, 22.4);
-  ctx.lineTo(17, 20.4);
-  ctx.closePath();
-  ctx.fill();
-
-  // Wheels.
-  ctx.fillStyle = "#1b2521";
-  ctx.beginPath();
-  ctx.ellipse(19, 27, 3, 2, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(35, 25, 3, 2, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  const image = ctx.getImageData(0, 0, size, size);
-  return { width: size, height: size, data: new Uint8Array(image.data) };
 }
 
 function cameraCollection(cameras: Camera[]) {
@@ -130,7 +49,16 @@ function cameraCollection(cameras: Camera[]) {
   };
 }
 
-function busCollections(busRoute: BusEta | null) {
+// 16 Blender renders per livery, one every 22.5 degrees of travel bearing.
+const SPRITE_STEPS = 16;
+
+function busSpriteName(livery: "tcm" | "transmac", bearing: number): string {
+  const index = Math.round((((bearing % 360) + 360) % 360) / (360 / SPRITE_STEPS)) % SPRITE_STEPS;
+  return `bus-${livery}-${index}`;
+}
+
+function busCollections(busRoute: BusEta | null, busColor: "blue" | "orange" | null) {
+  const livery = busColor === "orange" ? ("tcm" as const) : ("transmac" as const);
   const stations = (busRoute?.stops ?? []).flatMap((stop) =>
     stop.coordinates
       ? [
@@ -153,6 +81,7 @@ function busCollections(busRoute: BusEta | null) {
               plate: vehicle.plate,
               station: vehicle.stationName,
               lowFloor: vehicle.lowFloor,
+              icon: busSpriteName(livery, vehicle.bearing ?? 0),
             },
             geometry: { type: "Point" as const, coordinates: vehicle.coordinates },
           },
@@ -228,6 +157,8 @@ export function MacauMap({
   const view3dRef = useRef(view3d);
   const fittedRouteRef = useRef<string | null>(null);
   const fittedLrtRef = useRef<string | null>(null);
+  const spritesLoadedRef = useRef(false);
+  const spritesLoadingRef = useRef(false);
 
   useEffect(() => {
     view3dRef.current = view3d;
@@ -346,7 +277,7 @@ export function MacauMap({
           data: { type: "FeatureCollection", features: [] },
         });
         // The LRT train uses extruded geometry; buses use the Blender GLB layer.
-        map.addSource("vehicle-3d", {
+        map.addSource("lrt-train-3d", {
           type: "geojson",
           data: { type: "FeatureCollection", features: [] },
         });
@@ -376,9 +307,9 @@ export function MacauMap({
         });
 
         map.addLayer({
-          id: "vehicle-3d",
+          id: "lrt-train-3d",
           type: "fill-extrusion",
-          source: "vehicle-3d",
+          source: "lrt-train-3d",
           minzoom: 15,
           layout: { visibility: "visible" },
           paint: {
@@ -525,37 +456,16 @@ export function MacauMap({
         });
 
         map.addLayer({
-          id: "bus-vehicles",
-          type: "circle",
-          source: "bus-vehicles",
-          maxzoom: 15,
-          layout: { visibility: "visible" },
-          paint: {
-            "circle-radius": ["interpolate", ["linear"], ["zoom"], 11, 7, 15, 11],
-            "circle-color": "#1d3557",
-            "circle-stroke-color": "#ffffff",
-            "circle-stroke-width": 2.2,
-          },
-        });
-
-        if (!map.hasImage("bus-3d")) {
-          map.addImage("bus-3d", createBusIcon(), { pixelRatio: 2 });
-        }
-
-        map.addLayer({
-          id: "bus-vehicle-icons",
+          id: "bus-sprites",
           type: "symbol",
           source: "bus-vehicles",
-          minzoom: 11,
-          maxzoom: 15,
           layout: {
             visibility: "visible",
-            "icon-image": "bus-3d",
-            "icon-size": ["interpolate", ["linear"], ["zoom"], 11, 0.55, 15, 0.85],
+            "icon-image": ["get", "icon"],
+            "icon-size": ["interpolate", ["linear"], ["zoom"], 11, 0.18, 14, 0.26, 16, 0.34, 17, 0.42],
             "icon-allow-overlap": true,
             "icon-rotation-alignment": "map",
-            "icon-pitch-alignment": "map",
-            "icon-rotate": ["coalesce", ["get", "bearing"], 0],
+            "icon-pitch-alignment": "viewport",
           },
           paint: {},
         });
@@ -722,13 +632,42 @@ export function MacauMap({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
-    const { stations, vehicles, line } = busCollections(busRoute);
+    const { stations, vehicles, line } = busCollections(busRoute, busColor);
     const routeSource = map.getSource("bus-route") as GeoJSONSource | undefined;
     const stationSource = map.getSource("bus-stations") as GeoJSONSource | undefined;
     const vehicleSource = map.getSource("bus-vehicles") as GeoJSONSource | undefined;
     routeSource?.setData(line);
     stationSource?.setData(stations);
-    vehicleSource?.setData(vehicles);
+
+    if (vehicles.features.length === 0) {
+      vehicleSource?.setData(vehicles);
+    } else if (spritesLoadedRef.current) {
+      vehicleSource?.setData(vehicles);
+    } else if (!spritesLoadingRef.current) {
+      // Load the 32 Blender renders once, then publish the vehicle features.
+      spritesLoadingRef.current = true;
+      void Promise.all(
+        (["tcm", "transmac"] as const).flatMap((livery) =>
+          Array.from({ length: SPRITE_STEPS }, async (_, index) => {
+            const name = `bus-${livery}-${index}`;
+            if (map.hasImage(name)) return;
+            const image = await map.loadImage(`/models/${name}.png`);
+            if (!map.hasImage(name)) map.addImage(name, image.data);
+          }),
+        ),
+      )
+        .then(() => {
+          spritesLoadedRef.current = true;
+          vehicleSource?.setData(vehicles);
+          map.triggerRepaint();
+        })
+        .catch((error: unknown) => {
+          console.error("Bus sprite loading failed", error);
+        })
+        .finally(() => {
+          spritesLoadingRef.current = false;
+        });
+    }
 
     const key = busRoute ? `${busRoute.routeCode}-${busRoute.direction}` : null;
     const points = (busRoute?.stops ?? []).flatMap((stop) =>
@@ -753,7 +692,7 @@ export function MacauMap({
       );
     }
     if (!key) fittedRouteRef.current = null;
-  }, [busRoute, mapReady]);
+  }, [busRoute, busColor, mapReady]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -775,16 +714,6 @@ export function MacauMap({
       duration: 700,
     });
   }, [view3d, busRoute, mapReady]);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !mapReady || !map.getLayer("bus-vehicles")) return;
-    map.setPaintProperty(
-      "bus-vehicles",
-      "circle-color",
-      busColor === "orange" ? "#d36822" : busColor === "blue" ? "#1d6fd0" : "#1d3557",
-    );
-  }, [busColor, mapReady]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -859,8 +788,8 @@ export function MacauMap({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
-    const source = map.getSource("vehicle-3d") as GeoJSONSource | undefined;
-    source?.setData(vehicleModelCollection(busRoute, busColor, lrt, selectedLrtLine));
+    const source = map.getSource("lrt-train-3d") as GeoJSONSource | undefined;
+    source?.setData(lrtTrainCollection(lrt, selectedLrtLine));
   }, [busRoute, busColor, lrt, selectedLrtLine, mapReady]);
 
   useEffect(() => {
@@ -880,8 +809,7 @@ export function MacauMap({
       ["lrt-selected-labels", !focus],
       ["bus-station-halo", focus],
       ["bus-stations", focus],
-      ["bus-vehicles", focus],
-      ["bus-vehicle-icons", focus],
+      ["bus-sprites", focus],
       ["bus-station-labels", focus],
       ["bus-labels", focus],
     ];

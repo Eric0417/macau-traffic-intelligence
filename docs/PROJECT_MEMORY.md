@@ -27,9 +27,9 @@ External data never enters a client component directly. Public contracts are def
 - Selecting a bus route zooms the map to the route, draws every official stop, and marks live buses with plate and bus icon.
 - While a bus route is focused, the camera, LRT, congestion, and 3D building layers hide so only the selected route, its stops, and its buses stay on the map.
 - Live bus markers are estimates along the official polyline, drawn with a rotated 3D bus icon, because DSAT publishes no GPS coordinates.
-- At street zoom the buses become rough extruded 3D models painted after the operators' current liveries (TCM orange/white, Transmac yellow/blue); the LRT line shows a static rough 3D "Ocean Cruiser" train because no live train feed exists.
-- Display models are intentionally exaggerated (about 3.6×) so a 12 m bus stays visible at city zoom; the UI states this.
-- The bus geometry was laid out in Blender 5.2 (see `docs/models/`) from photos of TCM route 50/28A and Transmac route 26, then ported to MapLibre extruded geometry. A three.js custom layer rendering the exported GLB produced draw calls that MapLibre 6 did not composite, so the GLB path is not used.
+- Buses are drawn from 32 Blender renders (`public/models/bus-{tcm,transmac}-0..15.png`), one per 22.5 degrees of travel bearing, picked per vehicle by bearing and kept upright with `icon-pitch-alignment: viewport`. Extruded bus geometry was tried first and rejected: the overlapping prisms read as striped blocks.
+- The LRT line still shows a static extruded "Ocean Cruiser" train because no live train feed or train sprite sheet exists.
+- Display models are exaggerated so a 12 m bus stays visible at city zoom; the UI states this.
 - The 3D map supports free rotate and tilt; the navigation control keeps a compass and pitch indicator.
 - The route `routeChange` flag is not used for badges because it covers most routes; diversions come from the suspended-stop message feed.
 - LRT has the same selection flow as buses: pick a line, see its stations highlighted on the map and listed with interchange badges. It shows only the official fixed network and service notices, with no simulated live positions.

@@ -4,6 +4,8 @@ All notable user-visible and architectural changes are recorded here.
 
 ## Bus model remodel - 2026-10-04
 
+- Buses on the map are now Blender-rendered sprites instead of extruded prisms: 16 headings per livery, drawn upright and rotated to the travel bearing, which reads as a bus at any pitch.
+- The extruded bus geometry produced overlapping prisms that looked like striped blocks on screen, so it was replaced by the sprite sheet.
 - Rebuilt the two bus models from the operator references: TCM (澳巴) orange body, white front and roof band, white window mullions; Transmac (新福利) yellow body, white front, blue skirt stripe.
 - The redesigned bus has a separate glazing band, five window mullions per side, two kerb-side doorways, roof air-conditioning unit, lit destination sign, head and tail lamps, mirrors, and visible wheels with hubs.
 - Models were laid out in Blender 5.2 and the proportions and parts were ported to the MapLibre extruded geometry the map uses. Previews are in `docs/models/`.

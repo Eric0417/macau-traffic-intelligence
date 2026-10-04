@@ -34,7 +34,7 @@ This registry is part of the implementation contract. Any source, field, TTL, fa
 - `bus-eta-{code}-{direction}`: DSAT reports buses per station segment, not raw GPS. Vehicle markers are estimated at the midpoint of the official polyline for the segment before the approaching stop, with `estimated: true` and a bearing for the 3D icon.
 - `bus-eta-{code}-{direction}`: The official map page draws `route/traffic` as one polyline per stop-to-stop segment. The adapter uses that geometry and its traffic level (1 normal, 2 slow, 3 congested, 4 very congested, -1 unknown) for the route line and stop badges, so the drawn path is the official alignment rather than a stop-to-stop straight line.
 - Map terrain uses the public AWS Open Data terrain tiles (`elevation-tiles-prod`, terrarium encoding) for the optional 3D view.
-- 3D vehicle models are drawn from MapLibre extruded geometry generated in the browser. Livery colours and part layout come from the operators' published paint schemes (TCM orange body with white front and roof, Transmac yellow body with white front and blue stripe) and from the official Macau LRT "Ocean Cruiser" design (pale body, deep blue front, orange wave). The layout was modelled in Blender; previews are in `docs/models/`. Model scale is exaggerated for legibility and labelled in the UI.
+- Bus models are Blender 5.2 renders shipped as `public/models/bus-{tcm,transmac}-0..15.png`, one sprite per 22.5 degrees of bearing, produced from photos of TCM route 50/28A and Transmac route 26. The LRT train stays as browser-generated extruded geometry based on the official "Ocean Cruiser" design. Previews are in `docs/models/`; model size is exaggerated for legibility and labelled in the UI.
 
 ## Reference Material Not Used
 
