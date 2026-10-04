@@ -345,11 +345,11 @@ export function MacauMap({
           type: "geojson",
           data: { type: "FeatureCollection", features: [] },
         });
+        // The LRT train uses extruded geometry; buses use the Blender GLB layer.
         map.addSource("vehicle-3d", {
           type: "geojson",
           data: { type: "FeatureCollection", features: [] },
         });
-
         map.addSource("terrain-dem", {
           type: "raster-dem",
           tiles: ["https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"],
@@ -372,6 +372,20 @@ export function MacauMap({
             "line-color": ["get", "color"],
             "line-width": ["interpolate", ["linear"], ["zoom"], 11, 2, 15, 5],
             "line-opacity": 0.9,
+          },
+        });
+
+        map.addLayer({
+          id: "vehicle-3d",
+          type: "fill-extrusion",
+          source: "vehicle-3d",
+          minzoom: 15,
+          layout: { visibility: "visible" },
+          paint: {
+            "fill-extrusion-color": ["get", "color"],
+            "fill-extrusion-height": ["get", "height"],
+            "fill-extrusion-base": ["get", "base"],
+            "fill-extrusion-opacity": 0.94,
           },
         });
 
@@ -572,20 +586,6 @@ export function MacauMap({
             "circle-color": "#ffffff",
             "circle-stroke-color": ["get", "color"],
             "circle-stroke-width": 2.5,
-          },
-        });
-
-        map.addLayer({
-          id: "vehicle-3d",
-          type: "fill-extrusion",
-          source: "vehicle-3d",
-          minzoom: 15,
-          layout: { visibility: "visible" },
-          paint: {
-            "fill-extrusion-color": ["get", "color"],
-            "fill-extrusion-height": ["get", "height"],
-            "fill-extrusion-base": ["get", "base"],
-            "fill-extrusion-opacity": 0.94,
           },
         });
 

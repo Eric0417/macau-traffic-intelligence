@@ -29,6 +29,7 @@ External data never enters a client component directly. Public contracts are def
 - Live bus markers are estimates along the official polyline, drawn with a rotated 3D bus icon, because DSAT publishes no GPS coordinates.
 - At street zoom the buses become rough extruded 3D models painted after the operators' current liveries (TCM orange/white, Transmac yellow/blue); the LRT line shows a static rough 3D "Ocean Cruiser" train because no live train feed exists.
 - Display models are intentionally exaggerated (about 3.6×) so a 12 m bus stays visible at city zoom; the UI states this.
+- The bus geometry was laid out in Blender 5.2 (see `docs/models/`) from photos of TCM route 50/28A and Transmac route 26, then ported to MapLibre extruded geometry. A three.js custom layer rendering the exported GLB produced draw calls that MapLibre 6 did not composite, so the GLB path is not used.
 - The 3D map supports free rotate and tilt; the navigation control keeps a compass and pitch indicator.
 - The route `routeChange` flag is not used for badges because it covers most routes; diversions come from the suspended-stop message feed.
 - LRT has the same selection flow as buses: pick a line, see its stations highlighted on the map and listed with interchange badges. It shows only the official fixed network and service notices, with no simulated live positions.

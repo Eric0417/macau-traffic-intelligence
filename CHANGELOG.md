@@ -2,6 +2,13 @@
 
 All notable user-visible and architectural changes are recorded here.
 
+## Bus model remodel - 2026-10-04
+
+- Rebuilt the two bus models from the operator references: TCM (澳巴) orange body, white front and roof band, white window mullions; Transmac (新福利) yellow body, white front, blue skirt stripe.
+- The redesigned bus has a separate glazing band, five window mullions per side, two kerb-side doorways, roof air-conditioning unit, lit destination sign, head and tail lamps, mirrors, and visible wheels with hubs.
+- Models were laid out in Blender 5.2 and the proportions and parts were ported to the MapLibre extruded geometry the map uses. Previews are in `docs/models/`.
+- Blender GLB export and a three.js custom layer were tried first and dropped: the layer produced draw calls that MapLibre 6 never composited onto the map, so the shipped model stays native extruded geometry.
+
 ## Deployment - 2026-10-03
 
 - Live at https://macau-traffic-intelligence.onrender.com on Render project `Macau Traffic Intelligence`, environment `production`.

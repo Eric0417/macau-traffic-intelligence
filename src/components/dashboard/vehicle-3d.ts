@@ -6,19 +6,25 @@ export type VehicleLivery = "tcm" | "transmac" | "lrt-taipa" | "lrt-seacpaivan" 
 // exaggerated to stay readable as a marker.
 const DISPLAY_SCALE = 3.6;
 
-// Rough liveries taken from the operators' current paint schemes:
-// TCM (澳巴) orange body with a white front, Transmac (新福利) yellow body with a blue
-// front, and the Macau LRT "Ocean Cruiser" in pale body with a deep blue front and an
-// orange wave accent.
+// Liveries follow the operators' current paint schemes, checked against photos of
+// TCM route 50/28A (orange body, white front and roof) and Transmac route 26
+// (yellow body, white front, blue stripe), plus the Macau LRT "Ocean Cruiser"
+// (pale body, deep blue front, orange wave).
 const LIVERIES: Record<
   VehicleLivery,
-  { body: string; front: string; accent: string; glass: string }
+  { body: string; mask: string; accent: string; glass: string; skirt: string }
 > = {
-  tcm: { body: "#e2661f", front: "#f4f6f5", accent: "#2f3437", glass: "#26303a" },
-  transmac: { body: "#f3c623", front: "#1f5fa8", accent: "#24303c", glass: "#26303a" },
-  "lrt-taipa": { body: "#eef4f7", front: "#14395f", accent: "#f08a24", glass: "#2c3b4a" },
-  "lrt-seacpaivan": { body: "#eef4f7", front: "#4b3a76", accent: "#f08a24", glass: "#2c3b4a" },
-  "lrt-hengqin": { body: "#eef4f7", front: "#8d1f2c", accent: "#f08a24", glass: "#2c3b4a" },
+  tcm: { body: "#e2661f", mask: "#f2f3f1", accent: "#e2661f", glass: "#26303a", skirt: "#1f2427" },
+  transmac: {
+    body: "#f2c723",
+    mask: "#f2f3f1",
+    accent: "#1257a8",
+    glass: "#26303a",
+    skirt: "#1f2427",
+  },
+  "lrt-taipa": { body: "#eef4f7", mask: "#eef4f7", accent: "#f08a24", glass: "#2c3b4a", skirt: "#2c3b4a" },
+  "lrt-seacpaivan": { body: "#eef4f7", mask: "#eef4f7", accent: "#f08a24", glass: "#2c3b4a", skirt: "#4b3a76" },
+  "lrt-hengqin": { body: "#eef4f7", mask: "#eef4f7", accent: "#f08a24", glass: "#2c3b4a", skirt: "#8d1f2c" },
 };
 
 function offsetPoint(
@@ -42,14 +48,15 @@ function footprint(
   bearing: number,
   length: number,
   width: number,
-  forwardOffset = 0,
+  sideOffset: number,
+  forwardOffset: number,
 ): Array<[number, number]> {
   const [lng, lat] = center;
   const corners: Array<[number, number]> = [
-    offsetPoint(lng, lat, -width / 2, forwardOffset + length / 2, bearing),
-    offsetPoint(lng, lat, width / 2, forwardOffset + length / 2, bearing),
-    offsetPoint(lng, lat, width / 2, forwardOffset - length / 2, bearing),
-    offsetPoint(lng, lat, -width / 2, forwardOffset - length / 2, bearing),
+    offsetPoint(lng, lat, sideOffset - width / 2, forwardOffset + length / 2, bearing),
+    offsetPoint(lng, lat, sideOffset + width / 2, forwardOffset + length / 2, bearing),
+    offsetPoint(lng, lat, sideOffset + width / 2, forwardOffset - length / 2, bearing),
+    offsetPoint(lng, lat, sideOffset - width / 2, forwardOffset - length / 2, bearing),
   ];
 
   return [...corners, corners[0]];
@@ -62,72 +69,90 @@ interface Part {
   color: string;
 }
 
-function part(
-  center: [number, number],
-  bearing: number,
-  options: {
-    length: number;
-    width: number;
-    offset?: number;
-    base: number;
-    height: number;
-    color: string;
-  },
-): Part {
+interface PartOptions {
+  length: number;
+  width: number;
+  base: number;
+  height: number;
+  color: string;
+  sideOffset?: number;
+  forwardOffset?: number;
+}
+
+function part(center: [number, number], bearing: number, options: PartOptions): Part {
+  const scale = DISPLAY_SCALE;
+
   return {
     coordinates: footprint(
       center,
       bearing,
-      options.length * DISPLAY_SCALE,
-      options.width * DISPLAY_SCALE,
-      (options.offset ?? 0) * DISPLAY_SCALE,
+      options.length * scale,
+      options.width * scale,
+      (options.sideOffset ?? 0) * scale,
+      (options.forwardOffset ?? 0) * scale,
     ),
-    base: options.base * DISPLAY_SCALE,
-    height: options.height * DISPLAY_SCALE,
+    base: options.base * scale,
+    height: options.height * scale,
     color: options.color,
   };
 }
 
-/** Rough 12 m city bus: skirt, livery body, window band, and contrasting front. */
+/** Rough 12 m low-floor city bus: skirt, painted body, glazing band, white roof band,
+ *  contrast front, doors on the kerb side, wheels, mirrors, and a lit destination sign. */
 export function busParts(
   coordinates: [number, number],
   bearing: number,
   livery: VehicleLivery,
 ): Part[] {
   const colors = LIVERIES[livery];
+  const parts: Part[] = [];
+  const half = 2.5 / 2;
 
-  return [
-    part(coordinates, bearing, {
-      length: 10.6,
-      width: 2.6,
-      base: 0,
-      height: 0.7,
-      color: colors.accent,
-    }),
-    part(coordinates, bearing, {
-      length: 11,
-      width: 2.5,
-      base: 0.7,
-      height: 3.1,
-      color: colors.body,
-    }),
-    part(coordinates, bearing, {
-      length: 7.4,
-      width: 2.62,
-      offset: -0.9,
-      base: 1.9,
-      height: 2.9,
-      color: colors.glass,
-    }),
-    part(coordinates, bearing, {
-      length: 1.4,
-      width: 2.5,
-      offset: 4.8,
-      base: 0.6,
-      height: 3.4,
-      color: colors.front,
-    }),
-  ];
+  parts.push(
+    part(coordinates, bearing, { length: 11.6, width: 2.3, base: 0.18, height: 0.5, color: colors.skirt }),
+    part(coordinates, bearing, { length: 12, width: 2.5, base: 0.66, height: 1.34, color: colors.body }),
+    part(coordinates, bearing, { length: 11.5, width: 2.54, base: 2, height: 0.95, color: colors.glass }),
+    part(coordinates, bearing, { length: 12, width: 2.5, base: 2.95, height: 0.42, color: colors.mask }),
+    part(coordinates, bearing, { length: 11.2, width: 2.28, base: 3.37, height: 0.14, color: colors.mask }),
+    part(coordinates, bearing, { length: 2.5, width: 1.4, base: 3.5, height: 0.26, color: colors.mask, forwardOffset: -1.8 }),
+    part(coordinates, bearing, { length: 0.5, width: 2.36, base: 0.66, height: 1.34, color: colors.mask, forwardOffset: 5.75 }),
+    part(coordinates, bearing, { length: 0.34, width: 2.5, base: 0.3, height: 0.5, color: colors.accent, forwardOffset: 5.83 }),
+    part(coordinates, bearing, { length: 0.34, width: 2.5, base: 0.3, height: 0.5, color: colors.accent, forwardOffset: -5.83 }),
+    part(coordinates, bearing, { length: 0.2, width: 1.8, base: 2.98, height: 0.34, color: "#3a2f12", forwardOffset: 5.95 }),
+  );
+
+  // window mullions and the two kerb-side doorways
+  for (const x of [3.5, 1.6, -0.4, -2.3, -4.2]) {
+    parts.push(
+      part(coordinates, bearing, { length: 0.16, width: 2.56, base: 2, height: 0.95, color: colors.mask, forwardOffset: x }),
+    );
+  }
+  for (const x of [2.7, -1.5]) {
+    parts.push(
+      part(coordinates, bearing, { length: 1.05, width: 0.16, base: 0.72, height: 2.2, color: colors.glass, sideOffset: half + 0.01, forwardOffset: x }),
+      part(coordinates, bearing, { length: 1.25, width: 0.1, base: 0.66, height: 2.36, color: colors.mask, sideOffset: half + 0.005, forwardOffset: x }),
+    );
+  }
+
+  // wheels, lamps, mirrors
+  for (const x of [3.9, -3.9]) {
+    for (const side of [-1, 1]) {
+      parts.push(
+        part(coordinates, bearing, { length: 1.08, width: 0.36, base: 0, height: 1.06, color: "#15181a", sideOffset: side * (half - 0.1), forwardOffset: x }),
+        part(coordinates, bearing, { length: 0.62, width: 0.4, base: 0.24, height: 0.58, color: "#9fa4a8", sideOffset: side * (half - 0.06), forwardOffset: x }),
+      );
+    }
+  }
+  for (const side of [-1, 1]) {
+    parts.push(
+      part(coordinates, bearing, { length: 0.24, width: 0.55, base: 1.05, height: 0.24, color: "#f4f4e8", sideOffset: side * 0.78, forwardOffset: 5.92 }),
+      part(coordinates, bearing, { length: 0.24, width: 0.5, base: 1.1, height: 0.26, color: "#8d1f1f", sideOffset: side * 0.78, forwardOffset: -5.92 }),
+      part(coordinates, bearing, { length: 0.12, width: 0.3, base: 3.05, height: 0.08, color: "#1f2427", sideOffset: side * (half + 0.12), forwardOffset: 5.4 }),
+      part(coordinates, bearing, { length: 0.12, width: 0.14, base: 2.72, height: 0.5, color: "#1f2427", sideOffset: side * (half + 0.28), forwardOffset: 5.4 }),
+    );
+  }
+
+  return parts;
 }
 
 /** Rough two-car Macau LRT "Ocean Cruiser" set (about 21 m). */
@@ -141,43 +166,14 @@ export function trainParts(
 
   for (const offset of [5.2, -5.2]) {
     parts.push(
-      part(coordinates, bearing, {
-        length: 10,
-        width: 2.9,
-        offset,
-        base: 0.4,
-        height: 3,
-        color: colors.body,
-      }),
-      part(coordinates, bearing, {
-        length: 8.2,
-        width: 2.92,
-        offset,
-        base: 1.6,
-        height: 2.7,
-        color: colors.glass,
-      }),
-      // Orange wave stripe along the flanks.
-      part(coordinates, bearing, {
-        length: 10,
-        width: 2.94,
-        offset,
-        base: 0.9,
-        height: 1.15,
-        color: colors.accent,
-      }),
+      part(coordinates, bearing, { length: 10, width: 2.9, base: 0.4, height: 3, color: colors.body, forwardOffset: offset }),
+      part(coordinates, bearing, { length: 8.2, width: 2.92, base: 1.6, height: 2.7, color: colors.glass, forwardOffset: offset }),
+      part(coordinates, bearing, { length: 10, width: 2.94, base: 0.9, height: 1.15, color: colors.accent, forwardOffset: offset }),
     );
   }
 
   parts.push(
-    part(coordinates, bearing, {
-      length: 1.3,
-      width: 2.9,
-      offset: 10.6,
-      base: 0.4,
-      height: 3.3,
-      color: colors.front,
-    }),
+    part(coordinates, bearing, { length: 1.3, width: 2.9, base: 0.4, height: 3.3, color: colors.skirt, forwardOffset: 10.6 }),
   );
 
   return parts;
