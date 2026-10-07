@@ -94,6 +94,7 @@ export interface BusEtaStop {
 export interface BusVehicle {
   id: string;
   plate: string;
+  busType: string;
   lowFloor: boolean;
   speedKph: number | null;
   status: string;
@@ -106,6 +107,8 @@ export interface BusVehicle {
 }
 
 export interface BusRouteSegment {
+  fromStationCode: string;
+  toStationCode: string;
   trafficStatus: TrafficStatus;
   trafficLevel: number;
   coordinates: Array<[number, number]>;

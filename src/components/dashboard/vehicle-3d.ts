@@ -1,7 +1,6 @@
 import type { LrtNetwork } from "@/lib/types";
 
-// Buses are drawn as Blender-rendered sprites; the LRT train stays extruded because
-// no train sprite sheet exists.
+// The LRT train stays extruded; buses render through bus-3d-layer.ts.
 export type TrainLivery = "lrt-taipa" | "lrt-seacpaivan" | "lrt-hengqin";
 
 // A real 21 m train is only a few pixels wide at city zoom, so the display model is

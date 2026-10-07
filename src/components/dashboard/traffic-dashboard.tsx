@@ -63,7 +63,15 @@ export function TrafficDashboard() {
   const [view3d, setView3d] = useState(true);
   const [layerOpen, setLayerOpen] = useState(false);
   const [sheetExpanded, setSheetExpanded] = useState(false);
-  const sheetStart = useRef<number | null>(null);
+  const sheetRef = useRef<HTMLElement | null>(null);
+  const sheetDrag = useRef<{
+    pointerId: number;
+    startY: number;
+    lastY: number;
+    startedAt: number;
+    moved: boolean;
+  } | null>(null);
+  const suppressGripClick = useRef(false);
   const [layers, setLayers] = useState<Record<MapLayer, boolean>>({
     roads: true,
     cameras: true,
@@ -82,7 +90,7 @@ export function TrafficDashboard() {
   const weather = useLiveJson<WeatherSnapshot>("/api/v1/weather", 60_000);
   const notices = useLiveJson<TrafficNotice[]>("/api/v1/traffic/notices", 300_000);
   const borders = useLiveJson<BorderStatus[]>("/api/v1/borders", 60_000);
-  const lrt = useLiveJson<LrtNetwork>("/api/v1/lrt/network", 86_400_000);
+  const lrt = useLiveJson<LrtNetwork>("/api/v1/lrt/network", 21_600_000);
   const lrtNotices = useLiveJson<LrtNotice[]>("/api/v1/lrt/notices", 300_000);
 
   const activeMeta =
@@ -98,21 +106,63 @@ export function TrafficDashboard() {
             ? notices.meta
             : cameras.meta;
 
-  const onPointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
-    sheetStart.current = event.clientY;
+  const onSheetPointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
+    suppressGripClick.current = false;
+    sheetDrag.current = {
+      pointerId: event.pointerId,
+      startY: event.clientY,
+      lastY: event.clientY,
+      startedAt: performance.now(),
+      moved: false,
+    };
     event.currentTarget.setPointerCapture(event.pointerId);
   };
 
-  const onPointerMove = (event: React.PointerEvent<HTMLButtonElement>) => {
-    if (sheetStart.current === null) return;
-    const delta = sheetStart.current - event.clientY;
-    if (delta > 45) setSheetExpanded(true);
-    if (delta < -45) setSheetExpanded(false);
+  const onSheetPointerMove = (event: React.PointerEvent<HTMLButtonElement>) => {
+    const drag = sheetDrag.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    drag.lastY = event.clientY;
+    const delta = event.clientY - drag.startY;
+    if (Math.abs(delta) > 6) drag.moved = true;
+    const sheet = sheetRef.current;
+    if (sheet) {
+      sheet.style.transform = `translateY(${Math.max(-140, Math.min(140, delta))}px)`;
+    }
   };
 
-  const onPointerUp = (event: React.PointerEvent<HTMLButtonElement>) => {
-    sheetStart.current = null;
-    event.currentTarget.releasePointerCapture(event.pointerId);
+  const finishSheetDrag = (
+    event: React.PointerEvent<HTMLButtonElement>,
+    cancelled: boolean,
+  ) => {
+    const drag = sheetDrag.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    const sheet = sheetRef.current;
+    const delta = drag.lastY - drag.startY;
+    const elapsed = Math.max(1, performance.now() - drag.startedAt);
+    const velocity = delta / elapsed;
+    const moved = drag.moved && !cancelled;
+    sheetDrag.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+
+    if (moved) {
+      suppressGripClick.current = true;
+      if (delta < -36 || velocity < -0.4) setSheetExpanded(true);
+      else if (delta > 36 || velocity > 0.4) setSheetExpanded(false);
+    } else {
+      suppressGripClick.current = false;
+    }
+
+    if (sheet) {
+      sheet.style.transition = "transform 180ms ease";
+      sheet.style.transform = "translateY(0)";
+      window.setTimeout(() => {
+        if (sheetDrag.current) return;
+        sheet.style.removeProperty("transform");
+        sheet.style.removeProperty("transition");
+      }, 200);
+    }
   };
 
   const panel = (
@@ -270,15 +320,23 @@ export function TrafficDashboard() {
           {panel}
         </aside>
 
-        <aside className="mobile-sheet" data-expanded={sheetExpanded}>
+        <aside className="mobile-sheet" data-expanded={sheetExpanded} ref={sheetRef}>
           <button
             type="button"
             className="sheet-grip"
             aria-label={sheetExpanded ? t("collapse") : t("expand")}
-            onPointerDown={onPointerDown}
-            onPointerMove={onPointerMove}
-            onPointerUp={onPointerUp}
-            onClick={() => setSheetExpanded((current) => !current)}
+            aria-expanded={sheetExpanded}
+            onPointerDown={onSheetPointerDown}
+            onPointerMove={onSheetPointerMove}
+            onPointerUp={(event) => finishSheetDrag(event, false)}
+            onPointerCancel={(event) => finishSheetDrag(event, true)}
+            onClick={() => {
+              if (suppressGripClick.current) {
+                suppressGripClick.current = false;
+                return;
+              }
+              setSheetExpanded((current) => !current);
+            }}
           >
             <span />
             <ChevronDown size={16} aria-hidden="true" />

@@ -29,3 +29,7 @@ Because DSAT reports the stop a bus is approaching and not its GPS fix, the map 
 - An upstream failure degrades to the previous payload with `stale: true`; partial upstream failures still return whichever feeds responded.
 - The route path is the official polyline from the map feed; DSAT also publishes printable route maps only as images.
 - The route line is coloured by the official per-stop traffic level, which is the same signal the official route page shows.
+
+## Superseded In Part
+
+ADR 0005 replaces the midpoint estimate and the sprite icon. Stops are now matched by `stationCode`, route segments carry `fromStationCode` and `toStationCode`, vehicles approaching the same stop are spread along the segment, and the map renders GLB models in a MapLibre custom layer at the maximum street zoom.

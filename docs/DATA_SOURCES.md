@@ -13,7 +13,7 @@ This registry is part of the implementation contract. Any source, field, TTL, fa
 | `parking` | DSAT | `https://www.dsat.gov.mo/dsat/carpark_realtime_core.aspx?lang=tc` | 30 s | 30 s / 5 min | Last parsed occupancy |
 | `weather` | SMG | Official RSS: `ActualWeather`, `WSignal`, `WForecast` | 60 s | 60 s / 30 min | Last weather and warnings |
 | `notices` | DSAT | `emergency.aspx`, `croad.aspx`, `bus_croad.aspx` | 5 min | 5 min / 1 day | Last notice list |
-| `lrt-network` | MLM / OpenStreetMap | Official route pages plus OSM ODbL geometry | 24 h static | 24 h / 30 days | Versioned `data/lrt-network.json` |
+| `lrt-network` | MLM / OpenStreetMap | `https://overpass-api.de/api/interpreter` route relations and stop nodes, with official names from the checked-in network | 6 h | 6 h / 30 days | Last valid network; checked-in `data/lrt-network.json` |
 | `lrt-notices` | MLM | `https://www.mlm.com.mo/rss/tc/notice.rss` | 5 min | 5 min / 1 day | Last official notice list |
 | `borders` | Public Security Police Force | `https://www.fsm.gov.mo/psp/pspmonitor/webservice.asmx/getStatus` | 60 s | 60 s / 30 min | Last valid values or official page link |
 
@@ -28,13 +28,16 @@ This registry is part of the implementation contract. Any source, field, TTL, fa
 ## Adapter Notes
 
 - `cameras`: the official catalog repeats some border cameras once per zone under a shared numeric id. The adapter keeps every zoned entry, drops byte-identical repeats, and appends a short deterministic suffix to colliding ids so map features, list keys, and camera selection stay stable.
+- `lrt-network`: the server rebuilds the network from OpenStreetMap route relations every 6 hours. Lines are grouped by `ref`; stations are merged by name and proximity under 400 m, so 協和醫院 and 蓮花 stay interchanges. Known stations keep the curated official names and ids from `data/lrt-network.json`; new stations use the OSM name tags. Overpass endpoints are tried in order (`LRT_OVERPASS_URL` overrides them), and failures or a result with fewer than 3 lines or 15 stations fall back to the checked-in file. `npm run build:lrt` refreshes that file with the same builder.
 - `roads`: DSAT publishes live levels for 1,268 monitored segments only. The map draws the full OpenStreetMap street network in grey underneath, and no status is claimed for roads outside the official set.
 - `bus-routes`: the arrival system lists 97 routes and omits seasonal services. The official route page adds them (currently `3AS`, `17S1`, `26S`, `52S`) and they are returned with `live: false`.
+- `bus-routes`: the catalog is fetched from DSAT at runtime every 6 hours. A new route appears without a redeploy; the cache keeps the previous list while the refresh runs.
 - `bus-routes`: the official `routeChange` flag is set for 50 of 97 routes and the message endpoint answers `routeChange: true` for routes without suspended stops, so the UI no longer badges that flag. Diversions are shown only when `bus-diversion-{routeName}` reports suspended stops.
-- `bus-eta-{code}-{direction}`: DSAT reports buses per station segment, not raw GPS. Vehicle markers are estimated at the midpoint of the official polyline for the segment before the approaching stop, with `estimated: true` and a bearing for the 3D icon.
-- `bus-eta-{code}-{direction}`: The official map page draws `route/traffic` as one polyline per stop-to-stop segment. The adapter uses that geometry and its traffic level (1 normal, 2 slow, 3 congested, 4 very congested, -1 unknown) for the route line and stop badges, so the drawn path is the official alignment rather than a stop-to-stop straight line.
+- `bus-eta-{code}-{direction}`: DSAT reports buses per station segment, not raw GPS. Stops are merged by `stationCode`, and a live vehicle is matched to the stop named by the feed's `staCode`. Its position is estimated along the official polyline using the stop ETA, with `estimated: true`; buses approaching the same stop are spread along that segment so they do not share one point.
+- `bus-eta-{code}-{direction}`: The official map page draws `route/traffic` as one polyline per stop-to-stop segment. Each returned segment carries `fromStationCode` and `toStationCode`, and its traffic level (1 normal, 2 slow, 3 congested, 4 very congested, -1 unknown) feeds the route line and stop badges. Invalid segments are omitted without shifting later pairings.
+- `bus-eta-{code}-{direction}`: The upstream `busType` value is exposed on each vehicle. It is descriptive only; the model does not claim a brand or vehicle type.
 - Map terrain uses the public AWS Open Data terrain tiles (`elevation-tiles-prod`, terrarium encoding) for the optional 3D view.
-- Bus models are Blender 5.2 renders shipped as `public/models/bus-{tcm,transmac}-0..15.png`, one sprite per 22.5 degrees of bearing, produced from photos of TCM route 50/28A and Transmac route 26. The LRT train stays as browser-generated extruded geometry based on the official "Ocean Cruiser" design. Previews are in `docs/models/`; model size is exaggerated for legibility and labelled in the UI.
+- Bus models are generic two-axle Blender 5.2 models. The source is `docs/models/bus-models.blend`; runtime exports are `public/models/bus-tcm.glb` and `public/models/bus-transmac.glb`. MapLibre renders them in a custom WebGL layer from z17. They use true meter scale through z19, then keep a fixed on-screen size so they stay readable without covering the map. Lower zooms use a marker and plate label. The UI states that the bus model is generic, not brand-specific.
 
 ## Reference Material Not Used
 

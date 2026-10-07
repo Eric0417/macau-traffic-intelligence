@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   ArrowDown,
@@ -243,6 +243,8 @@ export function BusPanel({
 }) {
   const { t } = useLanguage();
   const [query, setQuery] = useState("");
+  const detailRef = useRef<HTMLElement | null>(null);
+  const scrolledRouteRef = useRef<string | null>(null);
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return (routes ?? []).filter(
@@ -252,6 +254,17 @@ export function BusPanel({
 
   const vehicles = eta.data?.vehicles ?? [];
   const vehicleByStation = new Map(vehicles.map((vehicle) => [vehicle.stationCode, vehicle]));
+
+  useEffect(() => {
+    if (!selected) {
+      scrolledRouteRef.current = null;
+      return;
+    }
+    if (scrolledRouteRef.current === selected.routeCode) return;
+    if (selected.live && !eta.data && !eta.error) return;
+    scrolledRouteRef.current = selected.routeCode;
+    detailRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [selected, eta.data, eta.error]);
 
   return (
     <div className="panel-stack">
@@ -288,7 +301,7 @@ export function BusPanel({
       </section>
 
       {selected ? (
-        <section className="panel-section">
+        <section className="panel-section" ref={detailRef}>
           <div className="route-detail-head">
             <div>
               <span>{t("route")}</span>
@@ -489,7 +502,7 @@ export function NoticesPanel({
                     : t("notices")}
               </span>
               <strong>{notice.title}</strong>
-              <p>{notice.content}</p>
+              {notice.content === notice.title ? null : <p>{notice.content}</p>}
             </a>
           ))}
           {!notices.length ? <p className="quiet-copy">{t("noNotices")}</p> : null}
@@ -508,7 +521,7 @@ export function NoticesPanel({
             <article key={notice.id}>
               <span className="notice-type type-lrt">{t("lrt")}</span>
               <strong>{notice.title}</strong>
-              <p>{notice.content}</p>
+              {notice.content === notice.title ? null : <p>{notice.content}</p>}
               <time>
                 {new Date(notice.publishedAt).toLocaleString(locale === "en" ? "en-GB" : "zh-MO")}
               </time>
@@ -599,7 +612,7 @@ export function LrtPanel({
             <article key={notice.id}>
               <span className="notice-type type-lrt">{t("lrt")}</span>
               <strong>{notice.title}</strong>
-              <p>{notice.content}</p>
+              {notice.content === notice.title ? null : <p>{notice.content}</p>}
               <time>
                 {new Date(notice.publishedAt).toLocaleString(locale === "en" ? "en-GB" : "zh-MO")}
               </time>

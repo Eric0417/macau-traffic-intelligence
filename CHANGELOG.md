@@ -2,14 +2,38 @@
 
 All notable user-visible and architectural changes are recorded here.
 
+## Runtime refresh and local dev fixes - 2026-10-07
+
+- The LRT network now rebuilds from OpenStreetMap route relations at runtime every 6 hours, so new stations and lines appear without a redeploy. The checked-in `data/lrt-network.json` stays as the fallback and keeps the official names for known stations.
+- Documented that the bus catalog, notices, cameras, parking, weather, roads, bridges, borders, and LRT notices were already fetched at runtime by the server; a new bus route appears within the 6-hour catalog TTL.
+- Local development: `127.0.0.1` is an allowed dev origin, and Playwright reuses a running dev server on `localhost:3100` instead of starting a second one.
+- Selecting a bus route now scrolls its detail into view, and switching routes no longer shows the previous route's arrivals while the new payload loads.
+- Traffic notices do not repeat the title as the body when DSAT returns the same text for both.
+- Bus GLB models load only when a route is focused at street zoom. The 3D layer also attaches models correctly when vehicles arrive before the GLBs finish loading.
+- The bus panel no longer shows the raw DSAT `busType` code, which has no published meaning.
+- Mobile: the bottom sheet now follows the finger while dragging, snaps by distance or velocity, has a 38 px grip, 44 px route and map controls, 48 px camera rows, safe-area padding, and contained scrolling.
+- The LRT source tries an Overpass mirror list (overridable with `LRT_OVERPASS_URL`) and logs when it serves the checked-in fallback.
+- `/api/v1/health` now reports per-source failure counts, and `npm run warmup` primes the deployed cache after a release.
+- Client polling backs off with jitter while a source is failing, then returns to the base interval after recovery.
+- Added a Content-Security-Policy for the map, terrain tiles, and official camera streams.
+
+## Bus 3D layer and station alignment - 2026-10-05
+
+- Buses now render as GLB models in a MapLibre custom WebGL layer. The model uses true meter scale from z17 to z19, then keeps a fixed on-screen size so it stays readable without covering the map at z20+. Lower zoom levels use a marker and plate label.
+- Fixed the high-zoom flicker and disappearing model: each vehicle's transform is folded into the MapLibre projection in Float64, the model matrix is refreshed every frame, and the model ignores terrain depth/frustum culling so it remains visible and stable while zooming.
+- The map zoom ceiling moved from 17 to 24 so the true-scale bus model can be inspected closely. MapLibre does not provide mathematically infinite zoom; 24 is 128 times the previous scale at the bus layer.
+- The source model is `docs/models/bus-models.blend`, with runtime exports `public/models/bus-tcm.glb` and `public/models/bus-transmac.glb`. The 32 heading PNG sprites are removed.
+- The generic two-axle model now has front and rear axles and a rear engine grille. It is not presented as brand-specific; DSAT `busType` is exposed in the vehicle payload for later mapping.
+- Bus stops are merged by `stationCode` between the arrival and location feeds. Live buses use the feed's `staCode`, route segments carry `fromStationCode` and `toStationCode`, and invalid segments no longer shift later stop pairings.
+- Buses approaching the same stop are distributed along their official segment using the stop ETA, and plate labels are shown at route overview zoom.
+
 ## Bus model remodel - 2026-10-04
 
-- Buses on the map are now Blender-rendered sprites instead of extruded prisms: 16 headings per livery, drawn upright and rotated to the travel bearing, which reads as a bus at any pitch.
-- The extruded bus geometry produced overlapping prisms that looked like striped blocks on screen, so it was replaced by the sprite sheet.
+- Superseded 2026-10-05: buses were first rendered as 16 heading PNG sprites; the current implementation uses the GLB custom layer above.
 - Rebuilt the two bus models from the operator references: TCM (澳巴) orange body, white front and roof band, white window mullions; Transmac (新福利) yellow body, white front, blue skirt stripe.
 - The redesigned bus has a separate glazing band, five window mullions per side, two kerb-side doorways, roof air-conditioning unit, lit destination sign, head and tail lamps, mirrors, and visible wheels with hubs.
-- Models were laid out in Blender 5.2 and the proportions and parts were ported to the MapLibre extruded geometry the map uses. Previews are in `docs/models/`.
-- Blender GLB export and a three.js custom layer were tried first and dropped: the layer produced draw calls that MapLibre 6 never composited onto the map, so the shipped model stays native extruded geometry.
+- Models are laid out in Blender 5.2 and exported as GLB. Previews are in `docs/models/`.
+- An earlier custom-layer attempt did not composite. The current layer initializes Three.js on MapLibre's WebGL context after the map loads.
 
 ## Deployment - 2026-10-03
 

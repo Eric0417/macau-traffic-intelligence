@@ -83,6 +83,7 @@ export const busEtaStopSchema = z.object({
 export const busVehicleSchema = z.object({
   id: z.string(),
   plate: z.string(),
+  busType: z.string(),
   lowFloor: z.boolean(),
   speedKph: z.number().nonnegative().nullable(),
   status: z.string(),
@@ -95,6 +96,8 @@ export const busVehicleSchema = z.object({
 });
 
 export const busRouteSegmentSchema = z.object({
+  fromStationCode: z.string(),
+  toStationCode: z.string(),
   trafficStatus: trafficStatusSchema,
   trafficLevel: z.number().int(),
   coordinates: z.array(z.tuple([z.number(), z.number()])).min(2),

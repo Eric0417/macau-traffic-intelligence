@@ -24,11 +24,25 @@ render restart srv-davv87qjnfac73d9gkc0
 curl -s https://macau-traffic-intelligence.onrender.com/api/v1/health
 ```
 
+## Deploy And Warmup
+
+1. Push to `main` and let Render deploy.
+2. Wait for both instances to report healthy, then run:
+
+```bash
+WARMUP_BASE_URL=https://macau-traffic-intelligence.onrender.com npm run warmup
+```
+
+The warmup primes every public source. `/api/v1/lrt/network` can take several seconds on the
+first call because it rebuilds the network from OpenStreetMap; later calls are cached for 6 hours.
+
 ## Health
 
-`GET /api/v1/health` returns service status and the active cache backend.
+`GET /api/v1/health` returns service status, the active cache backend, and per-source failure counts.
 
 Production must report `"cache": "redis"`. A memory cache in production means `REDIS_URL` is missing or Redis was unreachable at process start.
+
+A non-zero failure count means that source fell back or failed recently. Counts reset after a successful fetch.
 
 ## Source Failure
 
@@ -37,6 +51,10 @@ Production must report `"cache": "redis"`. A memory cache in production means `R
 3. Check whether only the affected source failed. One failed source must not block the map or other panels.
 4. If the upstream shape changed, update its adapter, fixture, contract if needed, and `docs/DATA_SOURCES.md`.
 5. Record the behavior or schema change in `CHANGELOG.md`.
+
+The LRT network tries `overpass-api.de` and `overpass.kumi.systems` in order. Set
+`LRT_OVERPASS_URL` to force a different mirror. When both fail, the server logs
+`[lrt-network] live rebuild failed` and serves the checked-in network.
 
 ## Border Degradation
 

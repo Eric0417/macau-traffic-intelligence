@@ -210,6 +210,7 @@ async function mockDashboard(page: Page) {
               {
                 id: "E5054",
                 plate: "AD2767",
+                busType: "1",
                 lowFloor: true,
                 speedKph: 12,
                 status: "1",
@@ -223,6 +224,8 @@ async function mockDashboard(page: Page) {
             ],
             routeSegments: [
               {
+                fromStationCode: "M1/9",
+                toStationCode: "M1/9",
                 trafficStatus: "normal",
                 trafficLevel: 1,
                 coordinates: [
@@ -303,11 +306,15 @@ test("map layers paint after style load and respond to the layer toggle", async 
   await page.goto("/");
 
   const congested = [215, 71, 52] as [number, number, number];
-  await expect.poll(() => countCanvasColor(page, congested)).toBeGreaterThan(0);
+  await expect
+    .poll(() => countCanvasColor(page, congested), { timeout: 10_000 })
+    .toBeGreaterThan(0);
 
   await page.getByRole("button", { name: /圖層/ }).click();
   await page.getByRole("checkbox", { name: "道路" }).click();
-  await expect.poll(() => countCanvasColor(page, congested)).toBe(0);
+  await expect
+    .poll(() => countCanvasColor(page, congested), { timeout: 10_000 })
+    .toBe(0);
 });
 
 test("bus and parking panels use normalized API data", async ({ page, isMobile }) => {
@@ -326,6 +333,94 @@ test("bus and parking panels use normalized API data", async ({ page, isMobile }
   await panel.getByRole("tab", { name: "泊車" }).click();
   await expect(panel.getByText("下環街市")).toBeVisible();
   await expect(panel.getByText("13")).toBeVisible();
+});
+
+test("selecting a route from a long catalog scrolls its detail into view", async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(isMobile, "desktop project only");
+  await mockDashboard(page);
+  await page.route("**/api/v1/bus/routes", async (route) => {
+    const longCatalog = Array.from({ length: 40 }, (_, index) => ({
+      routeName: String(index + 1),
+      routeCode: String(index + 1).padStart(5, "0"),
+      routeType: 0,
+      company: { id: "orange", name: "澳巴", color: "orange" },
+      hasChange: false,
+      live: true,
+    }));
+    await route.fulfill({
+      json: {
+        data: longCatalog,
+        meta: meta({ id: "bus-routes", name: "Test source", url: "https://example.com/" }),
+      },
+    });
+  });
+  await page.goto("/");
+  const panel = page.locator(".desktop-panel");
+
+  await panel.getByRole("tab", { name: "巴士" }).click();
+  await expect(panel.locator(".route-grid button")).toHaveCount(40);
+  await panel.locator(".route-grid button").first().click();
+
+  await expect(panel.locator(".route-detail-head")).toBeInViewport();
+  await expect(panel.locator(".eta-list")).not.toBeEmpty();
+});
+
+test("traffic notices do not repeat the title as the body", async ({ page, isMobile }) => {
+  test.skip(isMobile, "desktop project only");
+  await mockDashboard(page);
+  await page.route("**/api/v1/traffic/notices", async (route) => {
+    await route.fulfill({
+      json: {
+        data: [
+          {
+            id: "notice-dup",
+            title: "同一段文字",
+            content: "同一段文字",
+            publishedAt: null,
+            category: "roadworks",
+            url: "https://www.dsat.gov.mo/",
+          },
+        ],
+        meta: meta({ id: "notices", name: "Test source", url: "https://example.com/" }),
+      },
+    });
+  });
+  await page.goto("/");
+  const panel = page.locator(".desktop-panel");
+
+  await panel.getByRole("tab", { name: "消息" }).click();
+  await expect(panel.locator(".notice-list a strong")).toHaveText("同一段文字");
+  await expect(panel.locator(".notice-list a p")).toHaveCount(0);
+});
+
+test("bus GLB models load only after a route is focused at street zoom", async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(isMobile, "desktop project only");
+  await mockDashboard(page);
+  const modelRequests: string[] = [];
+  page.on("request", (request) => {
+    if (request.url().includes(".glb")) modelRequests.push(request.url());
+  });
+  await page.goto("/");
+  await page.waitForTimeout(1_000);
+  expect(modelRequests).toHaveLength(0);
+
+  const panel = page.locator(".desktop-panel");
+  await panel.getByRole("tab", { name: "巴士" }).click();
+  await panel.locator(".route-grid button").first().click();
+  await expect(panel.locator(".eta-list")).toContainText("關閘總站");
+  expect(modelRequests).toHaveLength(0);
+
+  for (let index = 0; index < 6; index += 1) {
+    await page.locator(".maplibregl-ctrl-zoom-in").click();
+    await page.waitForTimeout(400);
+  }
+  await expect.poll(() => modelRequests.length, { timeout: 15_000 }).toBeGreaterThan(0);
 });
 
 test("LRT panel selects a line and lists its stations", async ({ page, isMobile }) => {
@@ -368,4 +463,32 @@ test("mobile bottom sheet expands and language changes", async ({ page, isMobile
 
   await page.getByTitle("English").click();
   await expect(sheet.getByText("Overview")).toBeVisible();
+});
+
+test("mobile bottom sheet drags between collapsed and expanded", async ({ page, isMobile }) => {
+  test.skip(!isMobile, "mobile project only");
+  await mockDashboard(page);
+  await page.goto("/");
+
+  const sheet = page.locator(".mobile-sheet");
+  const grip = page.locator(".sheet-grip");
+  await expect(sheet).toHaveAttribute("data-expanded", "false");
+
+  const drag = async (distance: number) => {
+    const box = await grip.boundingBox();
+    if (!box) throw new Error("sheet grip is not visible");
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.waitForTimeout(60);
+    await page.mouse.move(x, y + distance, { steps: 10 });
+    await page.waitForTimeout(60);
+    await page.mouse.up();
+  };
+
+  await drag(-90);
+  await expect(sheet).toHaveAttribute("data-expanded", "true", { timeout: 10_000 });
+  await drag(90);
+  await expect(sheet).toHaveAttribute("data-expanded", "false", { timeout: 10_000 });
 });

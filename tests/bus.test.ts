@@ -134,7 +134,11 @@ const diversionResponse = {
   data: { routeChange: true, suspendBusStop: ["M7/1$00003002"] },
 };
 
-function stubBusFetch() {
+function stubBusFetch(
+  overrides: {
+    routeBusResponse?: typeof routeBusResponse;
+  } = {},
+) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL) => {
@@ -144,7 +148,9 @@ function stubBusFetch() {
       if (url.includes("bus_route.aspx")) return new Response(routePage, { status: 200 });
       if (url.includes("/ddbus/app/passenger/route")) return Response.json(etaResponse);
       if (url.includes("routestation/location")) return Response.json(stationResponse);
-      if (url.includes("routestation/bus")) return Response.json(routeBusResponse);
+      if (url.includes("routestation/bus")) {
+        return Response.json(overrides.routeBusResponse ?? routeBusResponse);
+      }
       if (url.includes("supermap/route/traffic")) return Response.json(routeTrafficResponse);
       if (url.includes("getRouteChangeMessage.html")) return Response.json(diversionResponse);
 
@@ -242,6 +248,8 @@ describe("bus sources", () => {
 
     expect(eta.routeSegments).toEqual([
       {
+        fromStationCode: "M1/9",
+        toStationCode: "M7/1",
         trafficStatus: "normal",
         trafficLevel: 1,
         coordinates: [
@@ -250,6 +258,8 @@ describe("bus sources", () => {
         ],
       },
       {
+        fromStationCode: "M7/1",
+        toStationCode: "M16/1",
         trafficStatus: "congested",
         trafficLevel: 3,
         coordinates: [
@@ -269,19 +279,175 @@ describe("bus sources", () => {
       {
         id: "E5054",
         plate: "AD2767",
+        busType: "1",
         lowFloor: true,
         speedKph: 18,
         status: "1",
         stationCode: "M16/1",
         stationName: "提督馬路/雅廉訪",
         stationSequence: 2,
-        coordinates: [(113.54862 + 113.54549) / 2, (22.212759 + 22.206627) / 2],
+        coordinates: [
+          expect.closeTo(113.5469298, 7),
+          expect.closeTo(22.20944772, 7),
+        ],
         bearing: expect.closeTo(
-          (Math.atan2(113.54549 - 113.54862, 22.206627 - 22.212759) * 180) / Math.PI + 360,
+          207.0414504734597,
           5,
         ),
         estimated: true,
       },
     ]);
+  });
+
+  it("aligns feeds by stationCode when an ETA stop is missing", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+
+        if (url.includes("getRouteAndCompanyList.html")) return Response.json(routeResponse);
+        if (url.includes("bus_route.aspx")) return new Response(routePage, { status: 200 });
+        if (url.includes("/ddbus/app/passenger/route")) {
+          return Response.json({
+            header: { status: "000" },
+            data: {
+              data: [
+                {
+                  msg: "0",
+                  average: 28,
+                  current: 30,
+                  stationCode: "M1/9",
+                  stationName: "關閘總站",
+                },
+                {
+                  msg: "0",
+                  average: 4,
+                  current: 9,
+                  stationCode: "M16/1",
+                  stationName: "提督馬路/雅廉訪",
+                },
+              ],
+            },
+          });
+        }
+        if (url.includes("routestation/location")) return Response.json(stationResponse);
+        if (url.includes("routestation/bus")) {
+          return Response.json({
+            header: "000",
+            data: {
+              routeInfo: [
+                {
+                  staCode: "M16/1",
+                  busInfo: [
+                    {
+                      busCode: "E5054",
+                      busPlate: "AD2767",
+                      busType: "1",
+                      status: "1",
+                      isFacilities: "1",
+                      speed: "18",
+                    },
+                  ],
+                },
+              ],
+            },
+          });
+        }
+        if (url.includes("supermap/route/traffic")) {
+          return Response.json({
+            data: [
+              {
+                routeCoordinates: "113.54918,22.215502;113.54862,22.212759",
+                newRouteTraffic: "1",
+              },
+              {
+                routeCoordinates: "113.54862,22.212759",
+                newRouteTraffic: "-1",
+              },
+              {
+                routeCoordinates: "113.54862,22.212759;113.54549,22.206627",
+                newRouteTraffic: "3",
+              },
+            ],
+          });
+        }
+        if (url.includes("getRouteChangeMessage.html")) return Response.json(diversionResponse);
+
+        throw new Error(`Unexpected request ${url}`);
+      }),
+    );
+
+    const eta = await loadBusEta("00003", 0);
+
+    expect(eta.stops.map((stop) => stop.stationCode)).toEqual([
+      "M1/9",
+      "M7/1",
+      "M16/1",
+    ]);
+    expect(eta.routeSegments).toEqual([
+      {
+        fromStationCode: "M1/9",
+        toStationCode: "M7/1",
+        trafficStatus: "normal",
+        trafficLevel: 1,
+        coordinates: [
+          [113.54918, 22.215502],
+          [113.54862, 22.212759],
+        ],
+      },
+      {
+        fromStationCode: "M7/1",
+        toStationCode: "M16/1",
+        trafficStatus: "congested",
+        trafficLevel: 3,
+        coordinates: [
+          [113.54862, 22.212759],
+          [113.54549, 22.206627],
+        ],
+      },
+    ]);
+    expect(eta.vehicles[0]).toMatchObject({
+      stationCode: "M16/1",
+      stationName: "提督馬路/雅廉訪",
+      stationSequence: 2,
+    });
+  });
+
+  it("separates buses approaching the same stop", async () => {
+    stubBusFetch({
+      routeBusResponse: {
+        header: "000",
+        data: {
+          routeInfo: [
+            {
+              staCode: "M16/1",
+              busInfo: [
+                {
+                  busCode: "E5054",
+                  busPlate: "AD2767",
+                  busType: "1",
+                  status: "1",
+                  isFacilities: "1",
+                  speed: "18",
+                },
+                {
+                  busCode: "E5055",
+                  busPlate: "AD2768",
+                  busType: "1",
+                  status: "1",
+                  isFacilities: "0",
+                  speed: "10",
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+
+    const eta = await loadBusEta("00003", 0);
+
+    expect(eta.vehicles).toHaveLength(2);
+    expect(eta.vehicles[0].coordinates).not.toEqual(eta.vehicles[1].coordinates);
   });
 });

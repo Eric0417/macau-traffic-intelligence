@@ -15,6 +15,10 @@ import type {
   RoadCollection,
 } from "@/lib/types";
 import { useLanguage } from "@/components/language-provider";
+import type {
+  Bus3DLayer as Bus3DLayerType,
+  Bus3DVehicle,
+} from "@/components/dashboard/bus-3d-layer";
 import { lrtTrainCollection } from "@/components/dashboard/vehicle-3d";
 
 export type MapLayer = "roads" | "cameras" | "lrt";
@@ -49,16 +53,7 @@ function cameraCollection(cameras: Camera[]) {
   };
 }
 
-// 16 Blender renders per livery, one every 22.5 degrees of travel bearing.
-const SPRITE_STEPS = 16;
-
-function busSpriteName(livery: "tcm" | "transmac", bearing: number): string {
-  const index = Math.round((((bearing % 360) + 360) % 360) / (360 / SPRITE_STEPS)) % SPRITE_STEPS;
-  return `bus-${livery}-${index}`;
-}
-
-function busCollections(busRoute: BusEta | null, busColor: "blue" | "orange" | null) {
-  const livery = busColor === "orange" ? ("tcm" as const) : ("transmac" as const);
+function busCollections(busRoute: BusEta | null) {
   const stations = (busRoute?.stops ?? []).flatMap((stop) =>
     stop.coordinates
       ? [
@@ -81,7 +76,6 @@ function busCollections(busRoute: BusEta | null, busColor: "blue" | "orange" | n
               plate: vehicle.plate,
               station: vehicle.stationName,
               lowFloor: vehicle.lowFloor,
-              icon: busSpriteName(livery, vehicle.bearing ?? 0),
             },
             geometry: { type: "Point" as const, coordinates: vehicle.coordinates },
           },
@@ -157,8 +151,9 @@ export function MacauMap({
   const view3dRef = useRef(view3d);
   const fittedRouteRef = useRef<string | null>(null);
   const fittedLrtRef = useRef<string | null>(null);
-  const spritesLoadedRef = useRef(false);
-  const spritesLoadingRef = useRef(false);
+  const bus3dLayerRef = useRef<Bus3DLayerType | null>(null);
+  const bus3dVehiclesRef = useRef<Bus3DVehicle[]>([]);
+  const busRouteRef = useRef(busRoute);
 
   useEffect(() => {
     view3dRef.current = view3d;
@@ -171,6 +166,10 @@ export function MacauMap({
   useEffect(() => {
     onCameraSelectRef.current = onCameraSelect;
   }, [onCameraSelect]);
+
+  useEffect(() => {
+    busRouteRef.current = busRoute;
+  }, [busRoute]);
 
   useEffect(() => {
     let disposed = false;
@@ -187,7 +186,7 @@ export function MacauMap({
         zoom: 12.2,
         pitch: view3dRef.current ? 45 : 0,
         minZoom: 10.7,
-        maxZoom: 17,
+        maxZoom: 24,
         maxPitch: 65,
         maxBounds: MACAU_BOUNDS,
         attributionControl: false,
@@ -456,18 +455,30 @@ export function MacauMap({
         });
 
         map.addLayer({
-          id: "bus-sprites",
-          type: "symbol",
+          id: "bus-vehicle-points",
+          type: "circle",
           source: "bus-vehicles",
-          layout: {
-            visibility: "visible",
-            "icon-image": ["get", "icon"],
-            "icon-size": ["interpolate", ["linear"], ["zoom"], 11, 0.18, 14, 0.26, 16, 0.34, 17, 0.42],
-            "icon-allow-overlap": true,
-            "icon-rotation-alignment": "map",
-            "icon-pitch-alignment": "viewport",
+          // Stays visible if GLB loading fails; the 3D layer narrows it to z17.
+          maxzoom: 24,
+          layout: { visibility: "visible" },
+          paint: {
+            "circle-radius": [
+              "interpolate",
+              ["linear"],
+              ["zoom"],
+              11,
+              5.5,
+              14,
+              7.5,
+              16,
+              9,
+              17,
+              4.5,
+            ],
+            "circle-color": "#1d3557",
+            "circle-stroke-color": "#ffffff",
+            "circle-stroke-width": 2.2,
           },
-          paint: {},
         });
 
         map.addLayer({
@@ -546,15 +557,16 @@ export function MacauMap({
             id: "bus-labels",
             type: "symbol",
             source: "bus-vehicles",
-            minzoom: 13,
+            minzoom: 11,
             layout: {
               visibility: "visible",
               "text-font": ["Noto Sans Regular"],
               "text-field": ["get", "plate"],
-              "text-size": 10,
-              "text-offset": [0, 1.5],
+              "text-size": 11,
+              "text-offset": [0, 1.7],
               "text-anchor": "top",
-              "text-allow-overlap": false,
+              "text-allow-overlap": true,
+              "text-ignore-placement": true,
             },
             paint: {
               "text-color": "#10241d",
@@ -590,6 +602,28 @@ export function MacauMap({
             },
           });
         }
+
+        void import("@/components/dashboard/bus-3d-layer")
+          .then(({ Bus3DLayer }) => {
+            if (disposed || map.getLayer("bus-3d")) return;
+            const layer = new Bus3DLayer(() => {
+              // Once GLBs are ready, the 3D layer replaces the marker at z17+.
+              if (map.getLayer("bus-vehicle-points")) {
+                map.setLayerZoomRange("bus-vehicle-points", 10.7, 16.99);
+              }
+            });
+            bus3dLayerRef.current = layer;
+            map.addLayer(
+              layer,
+              map.getLayer("bus-labels") ? "bus-labels" : undefined,
+            );
+            layer.setVehicles(bus3dVehiclesRef.current);
+            layer.setVisible(Boolean(busRouteRef.current));
+            map.triggerRepaint();
+          })
+          .catch((error: unknown) => {
+            console.error("Bus 3D layer failed to load", error);
+          });
 
         map.on("mouseenter", "camera-points", () => {
           map.getCanvas().style.cursor = "pointer";
@@ -632,42 +666,30 @@ export function MacauMap({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
-    const { stations, vehicles, line } = busCollections(busRoute, busColor);
+    const { stations, vehicles, line } = busCollections(busRoute);
     const routeSource = map.getSource("bus-route") as GeoJSONSource | undefined;
     const stationSource = map.getSource("bus-stations") as GeoJSONSource | undefined;
     const vehicleSource = map.getSource("bus-vehicles") as GeoJSONSource | undefined;
     routeSource?.setData(line);
     stationSource?.setData(stations);
+    vehicleSource?.setData(vehicles);
 
-    if (vehicles.features.length === 0) {
-      vehicleSource?.setData(vehicles);
-    } else if (spritesLoadedRef.current) {
-      vehicleSource?.setData(vehicles);
-    } else if (!spritesLoadingRef.current) {
-      // Load the 32 Blender renders once, then publish the vehicle features.
-      spritesLoadingRef.current = true;
-      void Promise.all(
-        (["tcm", "transmac"] as const).flatMap((livery) =>
-          Array.from({ length: SPRITE_STEPS }, async (_, index) => {
-            const name = `bus-${livery}-${index}`;
-            if (map.hasImage(name)) return;
-            const image = await map.loadImage(`/models/${name}.png`);
-            if (!map.hasImage(name)) map.addImage(name, image.data);
-          }),
-        ),
-      )
-        .then(() => {
-          spritesLoadedRef.current = true;
-          vehicleSource?.setData(vehicles);
-          map.triggerRepaint();
-        })
-        .catch((error: unknown) => {
-          console.error("Bus sprite loading failed", error);
-        })
-        .finally(() => {
-          spritesLoadingRef.current = false;
-        });
-    }
+    const livery = busColor === "orange" ? ("tcm" as const) : ("transmac" as const);
+    const buses3d: Bus3DVehicle[] = (busRoute?.vehicles ?? []).flatMap((vehicle) =>
+      vehicle.coordinates
+        ? [
+            {
+              id: vehicle.id,
+              coordinates: vehicle.coordinates,
+              bearing: vehicle.bearing,
+              livery,
+            },
+          ]
+        : [],
+    );
+    bus3dVehiclesRef.current = buses3d;
+    bus3dLayerRef.current?.setVehicles(buses3d);
+    bus3dLayerRef.current?.setVisible(Boolean(busRoute));
 
     const key = busRoute ? `${busRoute.routeCode}-${busRoute.direction}` : null;
     const points = (busRoute?.stops ?? []).flatMap((stop) =>
@@ -809,7 +831,7 @@ export function MacauMap({
       ["lrt-selected-labels", !focus],
       ["bus-station-halo", focus],
       ["bus-stations", focus],
-      ["bus-sprites", focus],
+      ["bus-vehicle-points", focus],
       ["bus-station-labels", focus],
       ["bus-labels", focus],
     ];
@@ -819,6 +841,7 @@ export function MacauMap({
         map.setLayoutProperty(id, "visibility", visible ? "visible" : "none");
       }
     });
+    bus3dLayerRef.current?.setVisible(focus);
   }, [visibleLayers, busRoute, mapReady]);
 
   return (

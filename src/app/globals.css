@@ -348,6 +348,7 @@ input:focus-visible {
 .panel-scroll {
   flex: 1;
   overflow: auto;
+  -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
 }
 
@@ -1203,7 +1204,9 @@ input:focus-visible {
     height: 152px;
     overflow: hidden;
     flex-direction: column;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
     transition: height 220ms ease;
+    will-change: height, transform;
   }
 
   .mobile-sheet[data-expanded="true"] {
@@ -1212,18 +1215,22 @@ input:focus-visible {
 
   .sheet-grip {
     display: flex;
-    min-height: 29px;
+    min-height: 38px;
     align-items: center;
     justify-content: center;
+    padding: 4px 0 6px;
     cursor: grab;
     background: transparent;
     border: 0;
     border-bottom: 1px solid var(--line);
+    touch-action: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
   }
 
   .sheet-grip > span {
-    width: 38px;
-    height: 4px;
+    width: 44px;
+    height: 5px;
     background: #b6c1b9;
     border-radius: 999px;
   }
@@ -1238,7 +1245,8 @@ input:focus-visible {
   }
 
   .map-toolbar > button {
-    width: 42px;
+    width: 44px;
+    height: 44px;
     padding: 0;
     justify-content: center;
   }
@@ -1252,11 +1260,31 @@ input:focus-visible {
   }
 
   .panel-tabs {
-    min-height: 50px;
+    min-height: 58px;
   }
 
   .panel-tabs button {
-    font-size: 9px;
+    min-height: 52px;
+    font-size: 10px;
+  }
+
+  .route-grid button {
+    min-height: 44px;
+    font-size: 13px;
+  }
+
+  .camera-list button {
+    min-height: 48px;
+  }
+
+  .zone-tabs button {
+    min-height: 42px;
+    padding: 0 12px;
+  }
+
+  .map-stage .maplibregl-ctrl-group button {
+    width: 40px;
+    height: 40px;
   }
 }
 

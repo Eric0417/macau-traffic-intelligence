@@ -9,6 +9,8 @@ export const MACAU_BOUNDS: [[number, number], [number, number]] = [
   [113.62, 22.23],
 ];
 
+export const BUS_MODEL_MIN_ZOOM = 17;
+
 export const DEFAULT_LOCALE = "zh-Hant" as const;
 
 export const CACHE_PREFIX = "macau-traffic:v1";

@@ -1,59 +1,33 @@
 import "server-only";
 import { XMLParser } from "fast-xml-parser";
 import { z } from "zod";
-import networkJson from "../../../data/lrt-network.json";
 import { lrtNoticeSchema } from "@/lib/contracts";
 import { fetchText } from "@/server/http";
 import type { SourceDefinition } from "@/server/source";
+import {
+  fetchLrtNetworkFromOverpass,
+  lrtNetworkFallback,
+  lrtNetworkSchema,
+} from "@/server/sources/lrt-network";
 
 const NOTICE_RSS = "https://www.mlm.com.mo/rss/tc/notice.rss";
 const parser = new XMLParser({ ignoreAttributes: false, trimValues: true });
-
-const localizedSchema = z.object({
-  "zh-Hant": z.string(),
-  "zh-Hans": z.string(),
-  pt: z.string().optional(),
-  en: z.string(),
-});
-
-const lrtNetworkSchema = z.object({
-  lines: z.object({
-    type: z.literal("FeatureCollection"),
-    features: z.array(
-      z.object({
-        type: z.literal("Feature"),
-        properties: z.object({
-          id: z.string(),
-          ref: z.string(),
-          name: localizedSchema,
-          color: z.string(),
-        }),
-        geometry: z.object({
-          type: z.literal("LineString"),
-          coordinates: z.array(z.tuple([z.number(), z.number()])).min(2),
-        }),
-      }),
-    ),
-  }),
-  stations: z.array(
-    z.object({
-      id: z.string(),
-      name: localizedSchema,
-      coordinates: z.tuple([z.number(), z.number()]),
-      lines: z.array(z.string()),
-      interchange: z.boolean(),
-    }),
-  ),
-  timetableEdition: z.string(),
-  sourceUpdatedAt: z.string(),
-});
 
 function first<T>(value: T | T[] | undefined): T | undefined {
   return Array.isArray(value) ? value[0] : value;
 }
 
 export async function loadLrtNetwork() {
-  return lrtNetworkSchema.parse(networkJson);
+  try {
+    return await fetchLrtNetworkFromOverpass();
+  } catch (error) {
+    console.warn(
+      `[lrt-network] live rebuild failed; serving checked-in fallback: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+    return lrtNetworkFallback;
+  }
 }
 
 export async function loadLrtNotices() {
@@ -94,7 +68,7 @@ export const lrtNetworkSource: SourceDefinition<Awaited<ReturnType<typeof loadLr
   url: "https://www.mlm.com.mo/tc/route.html",
   attribution: "澳門輕軌官方路線站點及 OpenStreetMap ODbL 幾何資料",
   envKey: "SOURCE_LRT_ENABLED",
-  ttlSeconds: 86_400,
+  ttlSeconds: 21_600,
   staleTtlSeconds: 2_592_000,
   schema: lrtNetworkSchema,
   load: loadLrtNetwork,

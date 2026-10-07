@@ -27,6 +27,8 @@ Open `http://localhost:3000`.
 
 Redis is optional locally. Without `REDIS_URL`, the cache uses an in-memory backend. Production uses Render Key Value so multiple instances share TTLs, locks, circuit state, and rate limits.
 
+Next 16 allows one dev server per project and blocks dev assets from hostnames it did not start with. Open the app as `localhost`. If you need `127.0.0.1`, the origin is already allowed in `next.config.ts`. Playwright reuses an existing server on `http://localhost:3100`; start it with `npm run dev -- --port 3100` before running `npm run test:e2e`, or let Playwright start it.
+
 ## Commands
 
 | Command | Purpose |
@@ -38,8 +40,15 @@ Redis is optional locally. Without `REDIS_URL`, the cache uses an in-memory back
 | `npm test` | Run fixture-based unit and integration tests |
 | `npm run test:e2e` | Run Playwright browser tests |
 | `npm run verify:sources` | Deliberately check live public sources |
-| `npm run build:lrt` | Rebuild the static LRT network from OpenStreetMap |
+| `npm run warmup` | Warm the deployed API cache (set `WARMUP_BASE_URL`) |
+| `npm run build:lrt` | Refresh the checked-in LRT network fallback from OpenStreetMap |
 | `npm run docs:check` | Verify engineering memory and source registry coverage |
+
+## Data Refresh
+
+The server fetches live data at runtime, so a redeploy is not needed when a source changes. Bus routes and the LRT network refresh every 6 hours, bus arrivals every 10 seconds, roads every 60 seconds, parking every 30 seconds, and notices every 5 minutes. The LRT network is rebuilt from OpenStreetMap route relations with the checked-in `data/lrt-network.json` as fallback.
+
+After a deploy, run `WARMUP_BASE_URL=https://macau-traffic-intelligence.onrender.com npm run warmup` so the first real visitor does not wait for the cold LRT rebuild. The health endpoint also reports per-source failure counts.
 
 ## Public API
 
