@@ -280,15 +280,6 @@ export function MacauMap({
           type: "geojson",
           data: { type: "FeatureCollection", features: [] },
         });
-        map.addSource("terrain-dem", {
-          type: "raster-dem",
-          tiles: ["https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"],
-          encoding: "terrarium",
-          tileSize: 256,
-          maxzoom: 15,
-          attribution: "Terrain: AWS Open Data",
-        });
-
         map.addLayer({
           id: "lrt-lines",
           type: "line",
@@ -727,9 +718,9 @@ export function MacauMap({
         view3d && !busRoute ? "visible" : "none",
       );
     }
-    if (map.getSource("terrain-dem")) {
-      map.setTerrain(view3d ? { source: "terrain-dem", exaggeration: 1 } : null);
-    }
+    // The ground stays flat: no terrain elevation is applied, so roads are not
+    // bent by the DEM. The 3D toggle only tilts the camera and shows buildings.
+    map.setTerrain(null);
     map.easeTo({
       pitch: view3d ? 45 : 0,
       bearing: view3d ? map.getBearing() : 0,

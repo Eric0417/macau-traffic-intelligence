@@ -97,9 +97,9 @@ Set the required source flags from `.env.example` only when a source must be dis
 - At street zoom, buses and the selected LRT line switch from icon markers to rough extruded 3D models painted after the operators' current liveries (TCM orange/white, Transmac yellow/blue, LRT "Ocean Cruiser" pale blue with orange wave). The train model is a static showcase because no official live train position exists.
 - Route buttons only warn about real suspensions reported by the diversion feed, not the raw `routeChange` flag.
 - The LRT tab selects a line, highlights its stations on the map, and lists them with interchange badges; no live train positions are shown because DSAT/MLM publish none.
-- The 3D view uses extruded OpenFreeMap buildings and AWS Open Data terrain tiles; it can be switched off in the layer menu.
+- The 3D view tilts the camera and shows extruded OpenFreeMap buildings on a flat ground plane, so roads stay level; it can be switched off in the layer menu.
 - Camera streams are not recorded or proxied.
-- The AI learning assistant answers from a compact snapshot of the cached normalized data and never receives raw upstream payloads, credentials, or personal data. Answers are attributed to the configured model and are not stored.
+- The AI learning assistant answers from a compact snapshot of the cached normalized data. When a question names a bus route or a road, that live detail is loaded first; bus positions remain estimated segment positions from the official arrival feed, never GPS. The model never receives raw upstream payloads, credentials, or personal data. Answers are attributed to the configured model and are not stored.
 
 The application code is MIT licensed. Data remains subject to the terms and attribution requirements of its publishing organisation.
 

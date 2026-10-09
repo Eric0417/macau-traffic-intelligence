@@ -2,15 +2,15 @@ import type { NextConfig } from "next";
 
 const isProduction = process.env.NODE_ENV === "production";
 
-// Only the map, terrain tiles, and the official camera streams are loaded by
+// Only the map tiles and the official camera streams are loaded by
 // the browser; every other source is fetched by the server.
 const contentSecurityPolicy = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${isProduction ? "" : " 'unsafe-eval'"}`,
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://tiles.openfreemap.org https://s3.amazonaws.com",
+  "img-src 'self' data: blob: https://tiles.openfreemap.org",
   "font-src 'self' data:",
-  `connect-src 'self' https://tiles.openfreemap.org https://s3.amazonaws.com https://*.dsatmacau.com${
+  `connect-src 'self' https://tiles.openfreemap.org https://*.dsatmacau.com${
     isProduction ? "" : " ws: wss:"
   }`,
   "media-src 'self' blob: https://*.dsatmacau.com",

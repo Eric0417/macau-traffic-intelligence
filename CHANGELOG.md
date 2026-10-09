@@ -2,6 +2,14 @@
 
 All notable user-visible and architectural changes are recorded here.
 
+## Live-detail assistant and flat map with 3D buildings - 2026-10-09
+
+- The AI assistant now resolves names in the question. A named bus route triggers live fetches for that route (both directions when one route is named, at most three route-direction slices), so answers can use vehicle plates, the stop each bus is approaching, speed, the low-floor flag, next arrivals, suspended stops, and the per-segment traffic on the official route. A named road is matched against all 1,268 monitored segments and summarised with a segment count, status breakdown, and total length.
+- Road answers now list every congested segment and the slowest named segments, not only a count.
+- Bus answers state that positions are estimated from the official arrival feed, not GPS. Direction 0 is the outbound trip and direction 1 is the return trip.
+- The map ground is flat: terrain elevation is no longer applied, so roads no longer rise and fall with the DEM. The 3D view still tilts the camera and shows extruded buildings from the OpenFreeMap vector tiles. The AWS terrain source and its CSP entries are removed.
+- The assistant suggestions now include a bus-position example ("Where is bus 3 right now?").
+
 ## AI learning assistant - 2026-10-09
 
 - Added an AI learning assistant behind a server-only adapter (`src/server/sources/assistant.ts`). It answers student questions in Traditional Chinese, Simplified Chinese, or English, using a compact snapshot of the cached normalized data: road status, bridge times, weather, parking, borders, notices, LRT notices, and the focused bus route's arrivals.

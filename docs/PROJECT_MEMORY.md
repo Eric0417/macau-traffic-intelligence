@@ -25,7 +25,7 @@ External data never enters a client component directly. Public contracts are def
 - Public audience first: residents, visitors, and commuters.
 - Traditional Chinese is the default language.
 - Roads, buses, cameras, bridges, parking, weather, and active notices are prioritized above decorative presentation.
-- The map opens in a 3D view (pitch, extruded buildings, terrain) that users can switch back to flat in the layer menu.
+- The map opens in a 3D view (pitch and extruded buildings on a flat ground plane) that users can switch back to flat in the layer menu. Terrain elevation is not applied, so roads stay level.
 - Bus routes show the full official catalog, including seasonal services that are flagged as having no live tracking.
 - All live data refreshes at runtime. The bus catalog and the LRT network are fetched every 6 hours, so new routes, lines, and stations appear without a redeploy. Roads, bridges, parking, weather, notices, cameras, borders, and bus arrivals follow their documented TTLs.
 - Live bus markers use the official between-stop segments, not raw GPS, and the UI says so.
@@ -41,7 +41,7 @@ External data never enters a client component directly. Public contracts are def
 - The route `routeChange` flag is not used for badges because it covers most routes; diversions come from the suspended-stop message feed.
 - LRT has the same selection flow as buses: pick a line, see its stations highlighted on the map and listed with interchange badges. It shows only the official fixed network and service notices, with no simulated live positions.
 - The UI does not use a hero page or feature marketing copy.
-- The AI assistant answers in the selected locale and is grounded in a JSON snapshot of the normalized live data. The prompt requires the snapshot time, an explanation with a next check or a small follow-up task, and no personal data. The panel shows the snapshot time and the list of data that grounded the answer.
+- The AI assistant answers in the selected locale and is grounded in a JSON snapshot of the normalized live data. A bus route named in the question is fetched live (vehicle plates, approaching stops, next arrivals, per-segment traffic; both directions for a single route), and a named road is matched against the monitored segments with a status breakdown. The prompt requires the snapshot time, an explanation with a next check or a small follow-up task, no invented destinations, and no personal data. The panel shows the snapshot time and the list of data that grounded the answer.
 - Assistant replies are not cached and questions are not stored. The provider key stays server-side; without `ASSISTANT_API_KEY` the assistant endpoint returns 503 and the rest of the app is unaffected.
 
 ## Known Risks
@@ -49,7 +49,7 @@ External data never enters a client component directly. Public contracts are def
 - DSAT dynamic endpoints are used by official web applications but are not all formally documented. Response fields can change without notice.
 - The Public Security Police border status endpoint is used by its official mobile pages but is not a documented public API. It may change or block server requests; border data remains optional and other modules must continue to work.
 - OpenFreeMap and camera HLS availability are external runtime dependencies.
-- 3D terrain depends on AWS Open Data terrain tiles; extruded buildings depend on OpenFreeMap vector tiles.
+- Extruded buildings depend on OpenFreeMap vector tiles; the ground is flat because no terrain elevation source is loaded.
 - The 3D bus layer needs WebGL2 and successful GLB loading. If either fails, the 2D marker and plate label remain, but the 3D model does not render.
 - The LRT network refresh depends on the Overpass API. Outages or incomplete results fall back to the checked-in network; new lines and stations can carry OSM names instead of official MLM names.
 - DSAT `busType` values are exposed in the public payload but are not mapped to specific vehicle brands or models because no documented mapping exists.

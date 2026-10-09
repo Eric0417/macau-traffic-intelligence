@@ -10,6 +10,7 @@ import type {
   BorderStatus,
   BridgeTime,
   BusEta,
+  BusRoute,
   LearningAssistantAnswer,
   Locale,
   LocalizedText,
@@ -48,6 +49,14 @@ export interface LearningSnapshot {
     monitoredSegments: number;
     counts: { normal: number; slow: number; congested: number; unknown: number };
     congestedSegments: Array<{ name: string; lengthMeters: number }>;
+    slowSegments: Array<{ name: string; lengthMeters: number }>;
+    mentionedSegments: Array<{
+      name: string;
+      segmentCount: number;
+      statuses: { normal: number; slow: number; congested: number; unknown: number };
+      totalLengthMeters: number;
+    }>;
+    note: string;
   } | null;
   parking: Array<{
     name: string;
@@ -61,12 +70,40 @@ export interface LearningSnapshot {
   }> | null;
   notices: Array<{ title: string; category: string; publishedAt: string | null }> | null;
   lrtNotices: Array<{ title: string; active: boolean }> | null;
-  busRoute: {
-    routeName: string;
-    direction: 0 | 1;
-    liveVehicleCount: number;
-    suspendedStops: string[];
-    nextStops: Array<{ stationName: string; etaMinutes: number | null }>;
+  bus: {
+    catalogAvailable: boolean;
+    routeCount: number;
+    routeNames: string[];
+    matchedRoutes: Array<{
+      route: string;
+      company: string;
+      liveTracking: boolean;
+      liveDataLoaded: boolean;
+    }>;
+    liveRoutes: Array<{
+      routeName: string;
+      direction: 0 | 1;
+      liveVehicleCount: number;
+      vehicles: Array<{
+        plate: string;
+        approachingStop: string;
+        speedKph: number | null;
+        lowFloor: boolean;
+      }>;
+      nextStops: Array<{
+        stationName: string;
+        etaMinutes: number | null;
+        trafficStatus: string;
+      }>;
+      suspendedStops: string[];
+      segmentTraffic: {
+        normal: number;
+        slow: number;
+        congested: number;
+        unknown: number;
+      };
+    }>;
+    note: string;
   } | null;
 }
 
@@ -83,9 +120,87 @@ function truncate(value: string, maxLength: number): string {
   return value.length > maxLength ? `${value.slice(0, maxLength - 1)}…` : value;
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+export function matchNamedRoutes(question: string, routes: BusRoute[]): BusRoute[] {
+  if (!question.trim()) return [];
+  const haystack = question.toUpperCase();
+  const matched: BusRoute[] = [];
+  // Longest names first so "3X" wins over "3" and both can still match.
+  const sorted = [...routes].sort((a, b) => b.routeName.length - a.routeName.length);
+  for (const route of sorted) {
+    const name = route.routeName.toUpperCase();
+    if (!name) continue;
+    const pattern = new RegExp(
+      `(?<![A-Z0-9])${escapeRegExp(name)}(?![A-Z0-9])`,
+    );
+    if (pattern.test(haystack)) {
+      matched.push(route);
+      if (matched.length >= 2) break;
+    }
+  }
+  return matched;
+}
+
+export function looksBusRelated(question: string): boolean {
+  return (
+    /(巴士|公交|bus|route|路線|路线|班次|站|eta|arrival|departure)/i.test(question) ||
+    /(?<![A-Z0-9])[A-Z]{0,3}\d{1,3}[A-Z]?(?![A-Z0-9])/i.test(question)
+  );
+}
+
+export function findMentionedSegments(
+  question: string,
+  roads: RoadCollection | null,
+  locale: Locale,
+): NonNullable<LearningSnapshot["roads"]>["mentionedSegments"] {
+  if (!roads || !question.trim()) return [];
+  const haystack = question.toLowerCase();
+  const byName = new Map<
+    string,
+    NonNullable<LearningSnapshot["roads"]>["mentionedSegments"][number]
+  >();
+
+  for (const feature of roads.features) {
+    const names = [
+      feature.properties.name["zh-Hant"],
+      feature.properties.name["zh-Hans"],
+      feature.properties.name.en,
+    ].filter(Boolean);
+    const hit = names.some((name) => {
+      const normalized = name.trim().toLowerCase();
+      if (!normalized) return false;
+      const isCjk = /[\u3400-\u9fff]/.test(name);
+      if (isCjk ? normalized.length < 3 : normalized.length < 8) return false;
+      return haystack.includes(normalized);
+    });
+    if (!hit) continue;
+
+    const localized = pickName(feature.properties.name, locale);
+    const entry = byName.get(localized) ?? {
+      name: localized,
+      segmentCount: 0,
+      statuses: { normal: 0, slow: 0, congested: 0, unknown: 0 },
+      totalLengthMeters: 0,
+    };
+    entry.segmentCount += 1;
+    entry.statuses[feature.properties.status] += 1;
+    entry.totalLengthMeters += feature.properties.lengthMeters;
+    byName.set(localized, entry);
+  }
+
+  return [...byName.values()].slice(0, 5).map((entry) => ({
+    ...entry,
+    totalLengthMeters: Math.round(entry.totalLengthMeters),
+  }));
+}
+
 function summariseRoads(
   roads: RoadCollection | null,
   locale: Locale,
+  question: string,
 ): LearningSnapshot["roads"] {
   if (!roads) return null;
 
@@ -94,15 +209,29 @@ function summariseRoads(
     counts[feature.properties.status] += 1;
   }
 
+  const toEntry = (feature: RoadCollection["features"][number]) => ({
+    name: pickName(feature.properties.name, locale),
+    lengthMeters: Math.round(feature.properties.lengthMeters),
+  });
+
   const congestedSegments = roads.features
     .filter((feature) => feature.properties.status === "congested")
-    .slice(0, 6)
-    .map((feature) => ({
-      name: pickName(feature.properties.name, locale),
-      lengthMeters: Math.round(feature.properties.lengthMeters),
-    }));
+    .slice(0, 12)
+    .map(toEntry);
+  const slowSegments = roads.features
+    .filter((feature) => feature.properties.status === "slow")
+    .sort((a, b) => b.properties.lengthMeters - a.properties.lengthMeters)
+    .slice(0, 10)
+    .map(toEntry);
 
-  return { monitoredSegments: roads.features.length, counts, congestedSegments };
+  return {
+    monitoredSegments: roads.features.length,
+    counts,
+    congestedSegments,
+    slowSegments,
+    mentionedSegments: findMentionedSegments(question, roads, locale),
+    note: `Live status covers only the ${roads.features.length} segments the official feed monitors; streets outside that set have no live status.`,
+  };
 }
 
 function summariseBridges(
@@ -182,23 +311,41 @@ function summariseLrtNotices(
     .map((notice) => ({ title: notice.title, active: notice.active }));
 }
 
-function summariseBusRoute(eta: BusEta): NonNullable<LearningSnapshot["busRoute"]> {
+export const BUS_POSITION_NOTE =
+  "Live bus positions are estimated along the official route from the stop each bus is approaching; they are not GPS readings. Direction 0 is the outbound trip and direction 1 is the return trip.";
+
+function summariseBusSlice(
+  eta: BusEta,
+): NonNullable<LearningSnapshot["bus"]>["liveRoutes"][number] {
+  const segmentTraffic = { normal: 0, slow: 0, congested: 0, unknown: 0 };
+  for (const segment of eta.routeSegments) {
+    segmentTraffic[segment.trafficStatus] += 1;
+  }
+
   return {
     routeName: eta.routeName,
     direction: eta.direction,
     liveVehicleCount: eta.vehicles.length,
-    suspendedStops: eta.diversion.suspendedStops.map((stop) => stop.stationName),
+    vehicles: eta.vehicles.slice(0, 6).map((vehicle) => ({
+      plate: vehicle.plate,
+      approachingStop: vehicle.stationName,
+      speedKph: vehicle.speedKph,
+      lowFloor: vehicle.lowFloor,
+    })),
     nextStops: eta.stops.slice(0, 8).map((stop) => ({
       stationName: stop.stationName,
       etaMinutes: stop.etaMinutes,
+      trafficStatus: stop.trafficStatus,
     })),
+    suspendedStops: eta.diversion.suspendedStops.map((stop) => stop.stationName),
+    segmentTraffic,
   };
 }
 
-function busEtaSourceDefinition(focus: AssistantFocus): SourceDefinition<BusEta> {
-  const normalizedCode = focus.routeCode.toUpperCase();
+function busEtaSourceDefinition(slice: AssistantFocus): SourceDefinition<BusEta> {
+  const normalizedCode = slice.routeCode.toUpperCase();
   return {
-    id: `bus-eta-${normalizedCode}-${focus.direction}`,
+    id: `bus-eta-${normalizedCode}-${slice.direction}`,
     name: `Bus ${normalizedCode} arrivals`,
     url: "https://bis.dsat.gov.mo:37812/macauweb/",
     attribution: "DSAT public bus arrival data",
@@ -206,17 +353,19 @@ function busEtaSourceDefinition(focus: AssistantFocus): SourceDefinition<BusEta>
     ttlSeconds: 10,
     staleTtlSeconds: 60,
     schema: busEtaSchema,
-    load: () => loadBusEta(normalizedCode, focus.direction),
+    load: () => loadBusEta(normalizedCode, slice.direction),
   };
 }
 
 export async function buildLearningSnapshot(
   locale: Locale,
-  focus?: AssistantFocus,
+  options: { focus?: AssistantFocus; question?: string } = {},
 ): Promise<{ snapshot: LearningSnapshot; refreshes: Array<() => Promise<void>> }> {
   const refreshes: Array<() => Promise<void>> = [];
+  const question = options.question ?? "";
+  const focus = options.focus;
 
-  const [roads, bridges, weather, parking, borders, notices, lrtNotices, busEta] =
+  const [roads, bridges, weather, parking, borders, notices, lrtNotices] =
     await Promise.all([
       readSource(sources.roads),
       readSource(sources.bridges),
@@ -225,10 +374,9 @@ export async function buildLearningSnapshot(
       readSource(sources.borders),
       readSource(sources.notices),
       readSource(sources.lrtNotices),
-      focus ? readSource(busEtaSourceDefinition(focus)) : Promise.resolve(null),
     ]);
 
-  const reads: Array<SourceRead<unknown> | null> = [
+  const baseReads: Array<SourceRead<unknown> | null> = [
     roads,
     bridges,
     weather,
@@ -236,22 +384,80 @@ export async function buildLearningSnapshot(
     borders,
     notices,
     lrtNotices,
-    busEta,
   ];
-  for (const read of reads) {
+  for (const read of baseReads) {
     if (read?.refresh) refreshes.push(read.refresh);
   }
+
+  const busRelated =
+    Boolean(focus) || (question ? looksBusRelated(question) : false);
+  let catalog: BusRoute[] | null = null;
+  if (busRelated) {
+    const catalogRead = await readSource(sources.busRoutes);
+    if (catalogRead) {
+      catalog = catalogRead.result.data;
+      if (catalogRead.refresh) refreshes.push(catalogRead.refresh);
+    }
+  }
+  const matchedRoutes = catalog ? matchNamedRoutes(question, catalog) : [];
+
+  const wanted: AssistantFocus[] = [];
+  if (focus) wanted.push(focus);
+  for (const route of matchedRoutes) {
+    const directions: Array<0 | 1> = matchedRoutes.length > 1 ? [0] : [0, 1];
+    for (const direction of directions) {
+      wanted.push({ routeCode: route.routeCode, direction });
+    }
+  }
+  const uniqueWanted: AssistantFocus[] = [];
+  const seenWanted = new Set<string>();
+  for (const slice of wanted) {
+    const key = `${slice.routeCode.toUpperCase()}-${slice.direction}`;
+    if (seenWanted.has(key)) continue;
+    seenWanted.add(key);
+    uniqueWanted.push({
+      routeCode: slice.routeCode.toUpperCase(),
+      direction: slice.direction,
+    });
+    if (uniqueWanted.length >= 3) break;
+  }
+
+  const busReads = await Promise.all(
+    uniqueWanted.map((slice) => readSource(busEtaSourceDefinition(slice))),
+  );
+  for (const read of busReads) {
+    if (read?.refresh) refreshes.push(read.refresh);
+  }
+  const liveRoutes = busReads
+    .filter((read): read is SourceRead<BusEta> => Boolean(read))
+    .map((read) => summariseBusSlice(read.result.data));
 
   const snapshot: LearningSnapshot = {
     generatedAt: new Date().toISOString(),
     weather: summariseWeather(weather?.result.data ?? null),
     bridges: summariseBridges(bridges?.result.data ?? null, locale),
-    roads: summariseRoads(roads?.result.data ?? null, locale),
+    roads: summariseRoads(roads?.result.data ?? null, locale, question),
     parking: summariseParking(parking?.result.data ?? null),
     borders: summariseBorders(borders?.result.data ?? null, locale),
     notices: summariseNotices(notices?.result.data ?? null),
     lrtNotices: summariseLrtNotices(lrtNotices?.result.data ?? null),
-    busRoute: busEta ? summariseBusRoute(busEta.result.data) : null,
+    bus: busRelated
+      ? {
+          catalogAvailable: Boolean(catalog),
+          routeCount: catalog?.length ?? 0,
+          routeNames: catalog?.map((route) => route.routeName) ?? [],
+          matchedRoutes: matchedRoutes.map((route) => ({
+            route: route.routeName,
+            company: route.company.name,
+            liveTracking: route.live,
+            liveDataLoaded: liveRoutes.some(
+              (slice) => slice.routeName === route.routeName,
+            ),
+          })),
+          liveRoutes,
+          note: BUS_POSITION_NOTE,
+        }
+      : null,
   };
 
   return { snapshot, refreshes };
@@ -277,15 +483,18 @@ export function buildAssistantMessages(
     "Do not repeat or restate the user's question at the start of the reply.",
     "Before stating which item is highest or lowest, list the values you are comparing so the comparison can be checked.",
     "When the snapshot cannot explain why something happens, say which extra data or field observation would be needed instead of guessing a cause.",
+    "The snapshot may include roads.mentionedSegments (each with a segment count, status breakdown, and total length), roads.congestedSegments, roads.slowSegments, and bus.liveRoutes. Use them for questions about a specific road, bus route, bus position, or route traffic.",
+    "For bus answers, name the stop each bus is approaching and always state that positions are estimated from the official arrival feed, not GPS. When one route is named, bus.liveRoutes carries both directions: call direction 0 the outbound trip and direction 1 the return trip, and never invent destination or terminal names that are not written in the snapshot.",
+    "If a named route is not in bus.liveRoutes, or a named road is not in roads.mentionedSegments, say that the live detail was not loaded instead of guessing.",
     "Keep units as published (minutes, °C, km/h, number of spaces). Structure comparisons as short lists or sentences, not tables.",
     "Live readings change quickly; describe what the data shows now and never promise that a condition will persist.",
-    "Do not give turn-by-turn driving directions. For travel decisions, remind the student that official apps and on-site signs are authoritative.",
+    "Do not give turn-by-turn driving directions. For travel decisions, remind the user that official apps and on-site signs are authoritative.",
     "Never ask for or repeat personal data. The snapshot contains public government data only.",
     "Keep the whole reply under 220 words.",
   ].join("\n");
 
   const user = [
-    "STUDENT QUESTION:",
+    "USER QUESTION:",
     question,
     "",
     "LIVE DATA SNAPSHOT (JSON):",
@@ -425,12 +634,38 @@ function contextSummary(snapshot: LearningSnapshot, locale: Locale): string[] {
       ),
     );
   }
-  if (snapshot.busRoute) {
+  if (snapshot.bus && snapshot.bus.liveRoutes.length) {
+    const routes = snapshot.bus.liveRoutes
+      .map(
+        (route) =>
+          `${route.routeName}（${route.direction === 0 ? "去程" : "回程"}）`,
+      )
+      .join("、");
+    const routesHans = snapshot.bus.liveRoutes
+      .map(
+        (route) =>
+          `${route.routeName}（${route.direction === 0 ? "去程" : "回程"}）`,
+      )
+      .join("、");
+    const routesEn = snapshot.bus.liveRoutes
+      .map(
+        (route) =>
+          `${route.routeName} (${route.direction === 0 ? "outbound" : "return"})`,
+      )
+      .join(", ");
     items.push(
       join(
-        `巴士 ${snapshot.busRoute.routeName}：實時車輛 ${snapshot.busRoute.liveVehicleCount} 部及下一批到站`,
-        `巴士 ${snapshot.busRoute.routeName}：实时车辆 ${snapshot.busRoute.liveVehicleCount} 部及下一批到站`,
-        `Bus ${snapshot.busRoute.routeName}: ${snapshot.busRoute.liveVehicleCount} live vehicles and the next arrivals`,
+        `巴士實時：${routes} 的車輛位置、到站與沿線路況`,
+        `巴士实时：${routesHans} 的车辆位置、到站与沿线路况`,
+        `Live bus data: vehicles, arrivals, and route traffic for ${routesEn}`,
+      ),
+    );
+  } else if (snapshot.bus) {
+    items.push(
+      join(
+        `巴士路線目錄：${snapshot.bus.routeCount} 條`,
+        `巴士路线目录：${snapshot.bus.routeCount} 条`,
+        `Bus route catalog: ${snapshot.bus.routeCount} routes`,
       ),
     );
   }
@@ -445,7 +680,7 @@ export async function askLearningAssistant(params: {
 }): Promise<AssistantAnswerResult> {
   const { snapshot, refreshes } = await buildLearningSnapshot(
     params.locale,
-    params.focus,
+    { focus: params.focus, question: params.question },
   );
   const answerText = await callAssistantProvider(
     buildAssistantMessages(params.question, params.locale, snapshot),
