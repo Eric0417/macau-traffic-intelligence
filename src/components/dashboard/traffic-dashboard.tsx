@@ -98,7 +98,7 @@ export function TrafficDashboard() {
   const busEtaPath = selectedRoute
     ? `/api/v1/bus/routes/${encodeURIComponent(selectedRoute.routeCode)}/eta?direction=${busDirection}`
     : "/api/v1/health";
-  const busEta = useLiveJson<BusEta>(busEtaPath, 10_000, Boolean(selectedRoute));
+  const busEta = useLiveJson<BusEta>(busEtaPath, 5_000, Boolean(selectedRoute));
   const parking = useLiveJson<ParkingFacility[]>("/api/v1/parking", 30_000);
   const weather = useLiveJson<WeatherSnapshot>("/api/v1/weather", 60_000);
   const notices = useLiveJson<TrafficNotice[]>("/api/v1/traffic/notices", 300_000);
@@ -318,6 +318,7 @@ export function TrafficDashboard() {
           selectedLrtLine={
             tab === "lrt" || assistantFocus?.kind === "lrt" ? selectedLrtLine : null
           }
+          lrtFocus={tab === "lrt" || assistantFocus?.kind === "lrt"}
           busRoute={
             tab === "bus" || assistantFocus?.kind === "bus" ? busEta.data : null
           }

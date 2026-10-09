@@ -272,6 +272,10 @@ async function countCanvasColor(page: Page, rgb: [number, number, number]) {
       const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
       let matches = 0;
       for (let index = 0; index < pixels.length; index += 4) {
+        // The canvas screenshot also contains the overlaid desktop panel, so
+        // only count the map area to the right of the 448 px rail.
+        const column = (index / 4) % canvas.width;
+        if (column < 470) continue;
         // Tight tolerance: only the map layer's own colour, not translucent
         // chrome edges blended toward it.
         if (
@@ -315,6 +319,26 @@ test("map layers paint after style load and respond to the layer toggle", async 
 
   await page.getByRole("button", { name: /圖層/ }).click();
   await page.getByRole("checkbox", { name: "道路" }).click();
+  await expect
+    .poll(() => countCanvasColor(page, congested), { timeout: 10_000 })
+    .toBe(0);
+});
+
+test("LRT tab hides the road layers for a clean network view", async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(isMobile, "desktop project only");
+  await mockDashboard(page);
+  await page.goto("/");
+
+  const congested = [215, 71, 52] as [number, number, number];
+  await expect
+    .poll(() => countCanvasColor(page, congested), { timeout: 10_000 })
+    .toBeGreaterThan(0);
+
+  const panel = page.locator(".desktop-panel");
+  await panel.getByRole("tab", { name: "輕軌" }).click();
   await expect
     .poll(() => countCanvasColor(page, congested), { timeout: 10_000 })
     .toBe(0);

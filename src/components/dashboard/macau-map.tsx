@@ -37,6 +37,7 @@ interface MacauMapProps {
   cameras: Camera[] | null;
   lrt: LrtNetwork | null;
   selectedLrtLine: string | null;
+  lrtFocus: boolean;
   busRoute: BusEta | null;
   busColor: "blue" | "orange" | null;
   view3d: boolean;
@@ -127,6 +128,7 @@ export function MacauMap({
   cameras,
   lrt,
   selectedLrtLine,
+  lrtFocus,
   busRoute,
   busColor,
   view3d,
@@ -712,7 +714,7 @@ export function MacauMap({
         {
           padding:
             width >= 1024
-              ? { top: 90, right: 90, bottom: 120, left: 440 }
+              ? { top: 90, right: 90, bottom: 120, left: 500 }
               : { top: 90, right: 40, bottom: 260, left: 40 },
           maxZoom: 14.5,
           duration: 900,
@@ -824,7 +826,7 @@ export function MacauMap({
       map.setLayoutProperty(
         "buildings-3d",
         "visibility",
-        view3d && !busRoute ? "visible" : "none",
+        view3d && !busRoute && !lrtFocus ? "visible" : "none",
       );
     }
     // The ground stays flat: no terrain elevation is applied, so roads are not
@@ -835,7 +837,7 @@ export function MacauMap({
       bearing: view3d ? map.getBearing() : 0,
       duration: 700,
     });
-  }, [view3d, busRoute, mapReady]);
+  }, [view3d, busRoute, lrtFocus, mapReady]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -896,7 +898,7 @@ export function MacauMap({
           {
             padding:
               width >= 1024
-                ? { top: 90, right: 90, bottom: 120, left: 440 }
+              ? { top: 90, right: 90, bottom: 120, left: 500 }
                 : { top: 90, right: 40, bottom: 260, left: 40 },
             maxZoom: 15,
             duration: 900,
@@ -964,25 +966,30 @@ export function MacauMap({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
-    const focus = Boolean(busRoute);
+    const busFocus = Boolean(busRoute);
+    // The LRT tab is a clean, single-network view: roads, cameras, buildings,
+    // and other overlays step aside so the line and its stations stay legible.
+    const lrtOnly = lrtFocus && !busFocus;
+    const baseVisible = (enabled: boolean) => enabled && !busFocus && !lrtOnly;
+    const showTrain = !busFocus && (lrtOnly ? Boolean(selectedLrtLine) || visibleLayers.lrt : visibleLayers.lrt);
     const entries: Array<[string, boolean]> = [
-      ["road-network", visibleLayers.roads && !focus],
-      ["roads-casing", visibleLayers.roads && !focus],
-      ["roads-live", visibleLayers.roads && !focus],
-      ["camera-halo", visibleLayers.cameras && !focus],
-      ["camera-points", visibleLayers.cameras && !focus],
-      ["lrt-lines", visibleLayers.lrt && !focus],
-      ["lrt-stations", visibleLayers.lrt && !focus],
-      ["lrt-selected-line", !focus],
-      ["lrt-selected-stations", !focus],
-      ["lrt-selected-labels", !focus],
-      ["lrt-train-3d", visibleLayers.lrt && !focus],
-      ["lrt-train-label", visibleLayers.lrt && !focus],
-      ["bus-station-halo", focus],
-      ["bus-stations", focus],
-      ["bus-vehicle-points", focus],
-      ["bus-station-labels", focus],
-      ["bus-labels", focus],
+      ["road-network", baseVisible(visibleLayers.roads)],
+      ["roads-casing", baseVisible(visibleLayers.roads)],
+      ["roads-live", baseVisible(visibleLayers.roads)],
+      ["camera-halo", baseVisible(visibleLayers.cameras)],
+      ["camera-points", baseVisible(visibleLayers.cameras)],
+      ["lrt-lines", lrtOnly ? !selectedLrtLine : baseVisible(visibleLayers.lrt)],
+      ["lrt-stations", lrtOnly ? !selectedLrtLine : baseVisible(visibleLayers.lrt)],
+      ["lrt-selected-line", !busFocus && Boolean(selectedLrtLine)],
+      ["lrt-selected-stations", !busFocus && Boolean(selectedLrtLine)],
+      ["lrt-selected-labels", !busFocus && Boolean(selectedLrtLine)],
+      ["lrt-train-3d", showTrain],
+      ["lrt-train-label", showTrain],
+      ["bus-station-halo", busFocus],
+      ["bus-stations", busFocus],
+      ["bus-vehicle-points", busFocus],
+      ["bus-station-labels", busFocus],
+      ["bus-labels", busFocus],
     ];
 
     entries.forEach(([id, visible]) => {
@@ -990,8 +997,8 @@ export function MacauMap({
         map.setLayoutProperty(id, "visibility", visible ? "visible" : "none");
       }
     });
-    bus3dLayerRef.current?.setVisible(focus && view3d);
-  }, [visibleLayers, busRoute, mapReady, view3d]);
+    bus3dLayerRef.current?.setVisible(busFocus && view3d);
+  }, [visibleLayers, busRoute, selectedLrtLine, lrtFocus, mapReady, view3d]);
 
   return (
     <div

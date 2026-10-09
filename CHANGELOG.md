@@ -2,6 +2,12 @@
 
 All notable user-visible and architectural changes are recorded here.
 
+## Dark transit console and clean LRT view - 2026-10-10
+
+- Replaced the light frosted interface with a dark, data-first transit console: system typography, dark materials, a system-blue interactive tint, semantic status colours, a 66 px vertical navigation rail on desktop, and a bottom tab bar with a draggable sheet on mobile.
+- The LRT tab now isolates the network. Roads, cameras, congestion, buildings, and other overlays hide while the tab is open, and selecting a line leaves only that line, its stations, and the labelled schematic train on the map.
+- Bus arrivals now refresh every 5 seconds on both the client and the server, down from 10 seconds, so arrivals and markers react faster. The stale fallback stays at 60 seconds.
+
 ## Apple-inspired interface refresh - 2026-10-10
 
 - Rebuilt the interface chrome after Apple's design guidance: system font stack, a light translucent header, frosted floating panels, hairline separators, and a documented radius scale for controls and surfaces.

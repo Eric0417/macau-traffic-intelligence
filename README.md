@@ -4,7 +4,7 @@ Live: https://macau-traffic-intelligence.onrender.com
 
 Macau Traffic Intelligence is a map-first public transport dashboard for Macau. It combines live road congestion, bridge travel times, official HLS traffic cameras, bus arrivals, parking availability, weather warnings, border information, traffic notices, and the official LRT network.
 
-The interface borrows Apple's design guidance as a web approximation: system typography, translucent material chrome, one green accent, grouped menus with switches, and segmented controls. It uses the platform system font on Apple devices and a matching sans fallback elsewhere.
+The interface is a dark, data-first transit console: system typography, translucent dark materials, a single system-blue tint for interactive state, semantic status colours, a vertical navigation rail on desktop, and a bottom tab bar with a draggable sheet on mobile. It is a web approximation of Apple's design guidance, not an Apple component kit, and it uses the platform system font on Apple devices with a matching sans fallback elsewhere.
 
 The application is an independent implementation inspired by the architecture and open-source spirit of [HK Traffic Intelligence](https://github.com/keithligh/hk-traffic-intelligence). It does not reuse that project's source code.
 
@@ -48,7 +48,7 @@ Next 16 allows one dev server per project and blocks dev assets from hostnames i
 
 ## Data Refresh
 
-The server fetches live data at runtime, so a redeploy is not needed when a source changes. Bus routes and the LRT network refresh every 6 hours, bus arrivals every 10 seconds, roads every 60 seconds, parking every 30 seconds, and notices every 5 minutes. The LRT network is rebuilt from OpenStreetMap route relations with the checked-in `data/lrt-network.json` as fallback.
+The server fetches live data at runtime, so a redeploy is not needed when a source changes. Bus routes and the LRT network refresh every 6 hours, bus arrivals every 5 seconds, roads every 60 seconds, parking every 30 seconds, and notices every 5 minutes. The LRT network is rebuilt from OpenStreetMap route relations with the checked-in `data/lrt-network.json` as fallback.
 
 After a deploy, run `WARMUP_BASE_URL=https://macau-traffic-intelligence.onrender.com npm run warmup` so the first real visitor does not wait for the cold LRT rebuild. The health endpoint also reports per-source failure counts.
 

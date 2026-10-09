@@ -32,7 +32,7 @@ export async function GET(
     url: "https://bis.dsat.gov.mo:37812/macauweb/",
     attribution: "交通事務局巴士報站公開到站資料",
     envKey: "SOURCE_BUS_ENABLED",
-    ttlSeconds: 10,
+    ttlSeconds: 5,
     staleTtlSeconds: 60,
     schema: busEtaSchema,
     load: () => loadBusEta(normalizedCode, direction),
