@@ -121,10 +121,20 @@ function toFeatures(parts: Part[]): VehicleModelFeature[] {
   }));
 }
 
+export type TrainFeature =
+  | VehicleModelFeature
+  | {
+      type: "Feature";
+      properties: { label: string };
+      geometry: { type: "Point"; coordinates: [number, number] };
+    };
+
 export function lrtTrainCollection(
   network: LrtNetwork | null,
   selectedLine: string | null,
-): { type: "FeatureCollection"; features: VehicleModelFeature[] } {
+  position?: { coordinates: [number, number]; bearing: number },
+  label?: string,
+): { type: "FeatureCollection"; features: TrainFeature[] } {
   const line = network?.lines.features.find((feature) => feature.properties.ref === selectedLine);
   if (!line || !selectedLine) return { type: "FeatureCollection", features: [] };
 
@@ -132,7 +142,9 @@ export function lrtTrainCollection(
   const start = coordinates[0];
   const next = coordinates[Math.min(1, coordinates.length - 1)];
   const bearing =
-    ((Math.atan2(next[0] - start[0], next[1] - start[1]) * 180) / Math.PI + 360) % 360;
+    position?.bearing ??
+    (((Math.atan2(next[0] - start[0], next[1] - start[1]) * 180) / Math.PI + 360) % 360);
+  const center = position?.coordinates ?? start;
   const livery: TrainLivery =
     selectedLine === "Taipa"
       ? "lrt-taipa"
@@ -140,5 +152,14 @@ export function lrtTrainCollection(
         ? "lrt-seacpaivan"
         : "lrt-hengqin";
 
-  return { type: "FeatureCollection", features: toFeatures(trainParts(start, bearing, livery)) };
+  const features: TrainFeature[] = toFeatures(trainParts(center, bearing, livery));
+  if (label) {
+    features.push({
+      type: "Feature",
+      properties: { label },
+      geometry: { type: "Point", coordinates: center },
+    });
+  }
+
+  return { type: "FeatureCollection", features };
 }

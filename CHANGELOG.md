@@ -4,6 +4,8 @@ All notable user-visible and architectural changes are recorded here.
 
 ## Live-detail assistant and flat map with 3D buildings - 2026-10-09
 
+- Buses now animate between polls: each vehicle advances along its official segment using the feed's speed, falling back to the approaching stop's ETA when the speed is missing or near zero, and resets to the official estimate on every poll. The panel already states that positions are estimates.
+- The selected LRT line shows one train that moves along the official line geometry as an explicitly labelled schematic animation (ADR 0008). No live position, countdown, or timetable inference is presented.
 - The assistant now carries the official LRT network (lines, stations, interchanges) and answers LRT questions while stating that no official live train positions exist.
 - Answers can carry a UI action: a named bus route is drawn on the map with its stops and live vehicles while the answer stays on screen, and a named LRT line is highlighted. A button in the answer opens the matching bus or LRT panel.
 - Questions such as "does route 9 serve Taipa?" are checked against the official stop list on the server. The verified yes or no leads the answer, so a weak model cannot flip the result.

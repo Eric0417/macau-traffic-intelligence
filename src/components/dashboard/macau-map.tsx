@@ -19,6 +19,13 @@ import type {
   Bus3DLayer as Bus3DLayerType,
   Bus3DVehicle,
 } from "@/components/dashboard/bus-3d-layer";
+import type { BusLivery } from "@/components/dashboard/bus-3d-layer";
+import {
+  advanceBusMotion,
+  createBusMotion,
+  pathLengths,
+  pointAtDistance,
+} from "@/components/dashboard/bus-motion";
 import { lrtTrainCollection } from "@/components/dashboard/vehicle-3d";
 
 export type MapLayer = "roads" | "cameras" | "lrt";
@@ -300,13 +307,35 @@ export function MacauMap({
           id: "lrt-train-3d",
           type: "fill-extrusion",
           source: "lrt-train-3d",
-          minzoom: 15,
+          filter: ["==", ["geometry-type"], "Polygon"],
+          minzoom: 13,
           layout: { visibility: "visible" },
           paint: {
             "fill-extrusion-color": ["get", "color"],
             "fill-extrusion-height": ["get", "height"],
             "fill-extrusion-base": ["get", "base"],
             "fill-extrusion-opacity": 0.94,
+          },
+        });
+
+        map.addLayer({
+          id: "lrt-train-label",
+          type: "symbol",
+          source: "lrt-train-3d",
+          filter: ["==", ["geometry-type"], "Point"],
+          minzoom: 12,
+          layout: {
+            "text-field": ["get", "label"],
+            "text-font": ["Noto Sans Regular"],
+            "text-size": 11,
+            "text-offset": [0, -1.8],
+            "text-allow-overlap": true,
+            visibility: "visible",
+          },
+          paint: {
+            "text-color": "#0a4a35",
+            "text-halo-color": "rgba(255,255,255,0.92)",
+            "text-halo-width": 1.4,
           },
         });
 
@@ -709,6 +738,86 @@ export function MacauMap({
 
   useEffect(() => {
     const map = mapRef.current;
+    if (!map || !mapReady || !busRoute) return;
+
+    const vehicleSource = map.getSource("bus-vehicles") as GeoJSONSource | undefined;
+    const livery: BusLivery = busColor === "orange" ? "tcm" : "transmac";
+    const now = Date.now();
+    const motions = busRoute.vehicles.flatMap((vehicle) => {
+      const segment =
+        busRoute.routeSegments.find(
+          (item) => item.toStationCode === vehicle.stationCode,
+        ) ??
+        busRoute.routeSegments.find(
+          (item) =>
+            item.fromStationCode === vehicle.stationCode ||
+            item.toStationCode === vehicle.stationCode,
+        ) ??
+        null;
+      const stop = busRoute.stops.find(
+        (item) => item.stationCode === vehicle.stationCode,
+      );
+      const motion = createBusMotion(
+        vehicle,
+        segment,
+        livery,
+        stop?.etaMinutes ?? null,
+        now,
+      );
+      return motion ? [motion] : [];
+    });
+    if (motions.length === 0) return;
+
+    let frame = 0;
+    let lastSourceUpdate = 0;
+    let disposed = false;
+    // Advance each bus along its official segment between polls, using the
+    // feed's speed and, when that is missing or near zero, the approaching
+    // stop's ETA. Positions remain estimates and reset on every poll.
+    const tick = () => {
+      if (disposed) return;
+      if (document.visibilityState !== "visible") {
+        frame = window.requestAnimationFrame(tick);
+        return;
+      }
+      const timestamp = Date.now();
+      const states = motions.map((motion) => advanceBusMotion(motion, timestamp));
+      bus3dLayerRef.current?.setVehicles(
+        states.map((state) => ({
+          id: state.id,
+          coordinates: state.coordinates,
+          bearing: state.bearing,
+          livery: state.livery,
+        })),
+      );
+      if (vehicleSource && timestamp - lastSourceUpdate > 120) {
+        lastSourceUpdate = timestamp;
+        vehicleSource.setData({
+          type: "FeatureCollection",
+          features: states.map((state) => ({
+            type: "Feature",
+            properties: {
+              id: state.id,
+              plate: state.plate,
+              station: state.stationName,
+              lowFloor: state.lowFloor,
+            },
+            geometry: { type: "Point", coordinates: state.coordinates },
+          })),
+        });
+      }
+      frame = window.requestAnimationFrame(tick);
+    };
+    frame = window.requestAnimationFrame(tick);
+
+    return () => {
+      disposed = true;
+      window.cancelAnimationFrame(frame);
+    };
+  }, [busRoute, busColor, mapReady]);
+
+  useEffect(() => {
+    const map = mapRef.current;
     if (!map || !mapReady) return;
 
     if (map.getLayer("buildings-3d")) {
@@ -802,8 +911,55 @@ export function MacauMap({
     const map = mapRef.current;
     if (!map || !mapReady) return;
     const source = map.getSource("lrt-train-3d") as GeoJSONSource | undefined;
-    source?.setData(lrtTrainCollection(lrt, selectedLrtLine));
-  }, [busRoute, busColor, lrt, selectedLrtLine, mapReady]);
+    if (!source) return;
+
+    const line = lrt?.lines.features.find(
+      (feature) => feature.properties.ref === selectedLrtLine,
+    );
+    if (!line || !selectedLrtLine) {
+      source.setData({ type: "FeatureCollection", features: [] });
+      return;
+    }
+
+    const path = line.geometry.coordinates as Array<[number, number]>;
+    const lengths = pathLengths(path);
+    const total = lengths[lengths.length - 1] ?? 0;
+    // Labelled schematic animation only; the LRT publishes no live positions.
+    const speed = 35 / 3.6;
+    const startedAt = Date.now();
+    const schematicLabel = t("lrtSchematic");
+    let frame = 0;
+    let lastUpdate = 0;
+    let disposed = false;
+    const tick = () => {
+      if (disposed) return;
+      if (document.visibilityState !== "visible") {
+        frame = window.requestAnimationFrame(tick);
+        return;
+      }
+      const now = Date.now();
+      if (now - lastUpdate > 100) {
+        lastUpdate = now;
+        const travelled = total > 0 ? (speed * (now - startedAt)) / 1000 : 0;
+        const point = pointAtDistance(path, lengths, travelled % total);
+        source.setData(
+          lrtTrainCollection(
+            lrt,
+            selectedLrtLine,
+            { coordinates: point.coordinates, bearing: point.bearing },
+            schematicLabel,
+          ),
+        );
+      }
+      frame = window.requestAnimationFrame(tick);
+    };
+    frame = window.requestAnimationFrame(tick);
+
+    return () => {
+      disposed = true;
+      window.cancelAnimationFrame(frame);
+    };
+  }, [lrt, selectedLrtLine, locale, mapReady, t]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -820,6 +976,8 @@ export function MacauMap({
       ["lrt-selected-line", !focus],
       ["lrt-selected-stations", !focus],
       ["lrt-selected-labels", !focus],
+      ["lrt-train-3d", visibleLayers.lrt && !focus],
+      ["lrt-train-label", visibleLayers.lrt && !focus],
       ["bus-station-halo", focus],
       ["bus-stations", focus],
       ["bus-vehicle-points", focus],
