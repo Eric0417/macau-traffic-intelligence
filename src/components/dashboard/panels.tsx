@@ -417,7 +417,15 @@ export function BusPanel({
   );
 }
 
-export function ParkingPanel({ facilities }: { facilities: ParkingFacility[] | null }) {
+export function ParkingPanel({
+  facilities,
+  selectedId,
+  onSelect,
+}: {
+  facilities: ParkingFacility[] | null;
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+}) {
   const { t } = useLanguage();
   const [query, setQuery] = useState("");
   const filtered = useMemo(() => {
@@ -459,19 +467,29 @@ export function ParkingPanel({ facilities }: { facilities: ParkingFacility[] | n
                     ? "medium"
                     : "good";
             return (
-              <article className="parking-row" key={facility.id}>
+              <button
+                type="button"
+                className={`parking-row ${selectedId === facility.id ? "is-active" : ""} ${
+                  facility.coordinates ? "" : "is-unmapped"
+                }`}
+                key={facility.id}
+                onClick={() => onSelect(facility.id)}
+                disabled={!facility.coordinates}
+                aria-pressed={selectedId === facility.id}
+              >
                 <div>
                   <strong>{facility.name}</strong>
                   <span>
                     {facility.availability.motorcycle ?? "–"} {t("motorcycle")} ·{" "}
                     {facility.availability.electricVehicle ?? "–"} {t("electricVehicle")}
+                    {facility.coordinates ? null : ` · ${t("noLocation")}`}
                   </span>
                 </div>
                 <div className={`parking-count tone-${tone}`}>
                   <strong>{availability ?? "–"}</strong>
                   <span>{t("lightVehicle")}</span>
                 </div>
-              </article>
+              </button>
             );
           })}
         </div>
@@ -483,34 +501,79 @@ export function ParkingPanel({ facilities }: { facilities: ParkingFacility[] | n
 export function NoticesPanel({
   notices,
   lrtNotices,
+  selectedId,
+  onSelect,
 }: {
   notices: TrafficNotice[];
   lrtNotices: LrtNotice[];
+  selectedId: string | null;
+  onSelect: (id: string) => void;
 }) {
   const { t, locale } = useLanguage();
+  const incidents = notices.filter((notice) => notice.category === "incident");
+  const others = notices.filter((notice) => notice.category !== "incident");
+
+  const renderNotice = (notice: TrafficNotice) => (
+    <article
+      className={`notice-item ${selectedId === notice.id ? "is-active" : ""}`}
+      key={notice.id}
+    >
+      <button
+        type="button"
+        className="notice-select"
+        onClick={() => onSelect(notice.id)}
+        aria-pressed={selectedId === notice.id}
+      >
+        <span className={`notice-type type-${notice.category}`}>
+          {notice.category === "incident"
+            ? t("incident")
+            : notice.category === "roadworks"
+              ? t("roads")
+              : notice.category === "bus-change"
+                ? t("bus")
+                : t("notices")}
+        </span>
+        <strong>{notice.title}</strong>
+        {notice.content === notice.title ? null : <p>{notice.content}</p>}
+        {notice.publishedAt ? (
+          <time>
+            {new Date(notice.publishedAt).toLocaleString(
+              locale === "en" ? "en-GB" : "zh-MO",
+            )}
+          </time>
+        ) : null}
+      </button>
+      <a
+        className="notice-link"
+        href={notice.url}
+        target="_blank"
+        rel="noreferrer"
+        aria-label={t("openSource")}
+      >
+        <ChevronRight size={15} aria-hidden="true" />
+      </a>
+    </article>
+  );
+
   return (
     <div className="panel-stack">
       <section className="panel-section">
         <div className="section-heading">
-          <h2>{t("latestNotices")}</h2>
+          <h2>{t("incidents")}</h2>
           <AlertTriangle size={16} aria-hidden="true" />
         </div>
         <div className="notice-list">
-          {notices.map((notice) => (
-            <a href={notice.url} target="_blank" rel="noreferrer" key={notice.id}>
-              <span className={`notice-type type-${notice.category}`}>
-                {notice.category === "roadworks"
-                  ? t("roads")
-                  : notice.category === "bus-change"
-                    ? t("bus")
-                    : t("notices")}
-              </span>
-              <strong>{notice.title}</strong>
-              {notice.content === notice.title ? null : <p>{notice.content}</p>}
-            </a>
-          ))}
-          {!notices.length ? <p className="quiet-copy">{t("noNotices")}</p> : null}
+          {incidents.map(renderNotice)}
+          {!incidents.length ? <p className="quiet-copy">{t("noIncidents")}</p> : null}
         </div>
+        {others.length ? (
+          <details className="notice-more">
+            <summary>
+              {t("otherNotices")} ({others.length})
+            </summary>
+            <div className="notice-list">{others.map(renderNotice)}</div>
+          </details>
+        ) : null}
       </section>
 
       <section className="panel-section">
@@ -799,9 +862,11 @@ export function AssistantPanel({
 
 export function CameraPanel({
   cameras,
+  selectedId,
   onSelect,
 }: {
   cameras: Camera[] | null;
+  selectedId: string | null;
   onSelect: (camera: Camera) => void;
 }) {
   const { t, locale } = useLanguage();
@@ -842,7 +907,13 @@ export function CameraPanel({
         </div>
         <div className="camera-list">
           {filtered.map((camera) => (
-            <button type="button" onClick={() => onSelect(camera)} key={camera.id}>
+            <button
+              type="button"
+              className={selectedId === camera.id ? "is-active" : ""}
+              onClick={() => onSelect(camera)}
+              aria-pressed={selectedId === camera.id}
+              key={camera.id}
+            >
               <MapPin size={15} aria-hidden="true" />
               <span>{localized(camera.name, locale)}</span>
               <ChevronRight size={15} aria-hidden="true" />

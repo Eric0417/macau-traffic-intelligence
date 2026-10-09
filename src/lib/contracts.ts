@@ -123,6 +123,7 @@ export const parkingFacilitySchema = z.object({
   name: z.string(),
   updatedAt: z.string(),
   areaStatus: z.enum(["green", "yellow", "orange", "unknown"]),
+  coordinates: z.tuple([z.number(), z.number()]).nullable(),
   availability: z.object({
     lightVehicle: z.number().int().nullable(),
     motorcycle: z.number().int().nullable(),

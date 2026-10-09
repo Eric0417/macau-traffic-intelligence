@@ -12,7 +12,9 @@ import type {
   Camera,
   LrtNetwork,
   Locale,
+  ParkingFacility,
   RoadCollection,
+  TrafficNotice,
 } from "@/lib/types";
 import { useLanguage } from "@/components/language-provider";
 import type {
@@ -31,6 +33,14 @@ import type { BusMotion } from "@/components/dashboard/bus-motion";
 import { lrtTrainCollection } from "@/components/dashboard/vehicle-3d";
 
 export type MapLayer = "roads" | "cameras" | "lrt";
+export type MapFocus =
+  | "overview"
+  | "assistant"
+  | "bus"
+  | "lrt"
+  | "parking"
+  | "notices"
+  | "cameras";
 
 interface MacauMapProps {
   roads: RoadCollection | null;
@@ -40,6 +50,13 @@ interface MacauMapProps {
   lrtFocus: boolean;
   busRoute: BusEta | null;
   busColor: "blue" | "orange" | null;
+  mapFocus: MapFocus;
+  parking: ParkingFacility[] | null;
+  selectedParkingId: string | null;
+  onParkingSelect: (id: string) => void;
+  notices: TrafficNotice[];
+  selectedNoticeId: string | null;
+  selectedCameraId: string | null;
   view3d: boolean;
   visibleLayers: Record<MapLayer, boolean>;
   onCameraSelect: (camera: Camera) => void;
@@ -92,6 +109,49 @@ function busCollections(busRoute: BusEta | null) {
   };
 }
 
+function parkingTone(available: number | null): "good" | "medium" | "low" | "unknown" {
+  if (available === null) return "unknown";
+  if (available <= 5) return "low";
+  if (available <= 20) return "medium";
+  return "good";
+}
+
+function parkingFeatures(facilities: ParkingFacility[]) {
+  return facilities.flatMap((facility) =>
+    facility.coordinates
+      ? [
+          {
+            type: "Feature" as const,
+            properties: {
+              id: facility.id,
+              name: facility.name,
+              tone: parkingTone(facility.availability.lightVehicle),
+              available: facility.availability.lightVehicle ?? -1,
+            },
+            geometry: {
+              type: "Point" as const,
+              coordinates: facility.coordinates,
+            },
+          },
+        ]
+      : [],
+  );
+}
+
+// Official notices carry a location description, not coordinates. Highlight the
+// monitored road segments whose names appear in the notice text.
+function noticeRoadFeatures(
+  roads: RoadCollection | null,
+  notice: TrafficNotice | null,
+) {
+  if (!roads || !notice) return [];
+  const text = `${notice.title} ${notice.content}`;
+  return roads.features.filter((feature) => {
+    const name = feature.properties.name["zh-Hant"];
+    return name.length >= 3 && text.includes(name);
+  });
+}
+
 function lrtSelection(
   network: LrtNetwork | null,
   lineRef: string | null,
@@ -131,6 +191,13 @@ export function MacauMap({
   lrtFocus,
   busRoute,
   busColor,
+  mapFocus,
+  parking,
+  selectedParkingId,
+  onParkingSelect,
+  notices,
+  selectedNoticeId,
+  selectedCameraId,
   view3d,
   visibleLayers,
   onCameraSelect,
@@ -142,6 +209,7 @@ export function MacauMap({
   const [bus3dReady, setBus3dReady] = useState(false);
   const camerasRef = useRef(cameras);
   const onCameraSelectRef = useRef(onCameraSelect);
+  const onParkingSelectRef = useRef(onParkingSelect);
   const view3dRef = useRef(view3d);
   const fittedRouteRef = useRef<string | null>(null);
   const fittedLrtRef = useRef<string | null>(null);
@@ -149,6 +217,9 @@ export function MacauMap({
   const bus3dVehiclesRef = useRef<Bus3DVehicle[]>([]);
   const busTracksRef = useRef<Map<string, BusMotion>>(new Map());
   const busRouteRef = useRef(busRoute);
+  const flownParkingRef = useRef<string | null>(null);
+  const flownNoticeRef = useRef<string | null>(null);
+  const flownCameraRef = useRef<string | null>(null);
 
   useEffect(() => {
     view3dRef.current = view3d;
@@ -161,6 +232,10 @@ export function MacauMap({
   useEffect(() => {
     onCameraSelectRef.current = onCameraSelect;
   }, [onCameraSelect]);
+
+  useEffect(() => {
+    onParkingSelectRef.current = onParkingSelect;
+  }, [onParkingSelect]);
 
   useEffect(() => {
     busRouteRef.current = busRoute;
@@ -259,6 +334,18 @@ export function MacauMap({
           data: { type: "FeatureCollection", features: [] },
         });
         map.addSource("bus-vehicles", {
+          type: "geojson",
+          data: { type: "FeatureCollection", features: [] },
+        });
+        map.addSource("parking", {
+          type: "geojson",
+          data: { type: "FeatureCollection", features: [] },
+        });
+        map.addSource("parking-selected", {
+          type: "geojson",
+          data: { type: "FeatureCollection", features: [] },
+        });
+        map.addSource("notice-roads", {
           type: "geojson",
           data: { type: "FeatureCollection", features: [] },
         });
@@ -490,6 +577,80 @@ export function MacauMap({
         });
 
         map.addLayer({
+          id: "notice-roads",
+          type: "line",
+          source: "notice-roads",
+          layout: {
+            "line-cap": "round",
+            "line-join": "round",
+            visibility: "visible",
+          },
+          paint: {
+            "line-color": "#ff9f0a",
+            "line-width": ["interpolate", ["linear"], ["zoom"], 11, 3, 15, 7],
+            "line-opacity": 0.95,
+            "line-dasharray": [1.4, 0.8],
+          },
+        });
+
+        map.addLayer({
+          id: "parking-halo",
+          type: "circle",
+          source: "parking",
+          layout: { visibility: "visible" },
+          paint: {
+            "circle-radius": ["interpolate", ["linear"], ["zoom"], 11, 10, 15, 15],
+            "circle-color": [
+              "match",
+              ["get", "tone"],
+              "low",
+              "rgba(255, 69, 58, 0.18)",
+              "medium",
+              "rgba(255, 159, 10, 0.18)",
+              "unknown",
+              "rgba(142, 142, 147, 0.18)",
+              "rgba(48, 209, 88, 0.18)",
+            ],
+          },
+        });
+
+        map.addLayer({
+          id: "parking-points",
+          type: "circle",
+          source: "parking",
+          layout: { visibility: "visible" },
+          paint: {
+            "circle-radius": ["interpolate", ["linear"], ["zoom"], 11, 5.5, 15, 9],
+            "circle-color": [
+              "match",
+              ["get", "tone"],
+              "low",
+              "#ff453a",
+              "medium",
+              "#ff9f0a",
+              "unknown",
+              "#8e8e93",
+              "#30d158",
+            ],
+            "circle-stroke-color": "#ffffff",
+            "circle-stroke-width": 2,
+          },
+        });
+
+        map.addLayer({
+          id: "parking-selected",
+          type: "circle",
+          source: "parking-selected",
+          layout: { visibility: "visible" },
+          paint: {
+            "circle-radius": ["interpolate", ["linear"], ["zoom"], 11, 13, 15, 19],
+            "circle-color": "rgba(10, 132, 255, 0.14)",
+            "circle-stroke-color": "#0a84ff",
+            "circle-stroke-width": 3,
+          },
+        });
+
+        map.addLayer({
           id: "lrt-selected-line",
           type: "line",
           source: "lrt-selected-line",
@@ -582,6 +743,27 @@ export function MacauMap({
               "text-halo-width": 1.4,
             },
           });
+
+          map.addLayer({
+            id: "parking-labels",
+            type: "symbol",
+            source: "parking",
+            minzoom: 12.5,
+            layout: {
+              visibility: "visible",
+              "text-font": ["Noto Sans Regular"],
+              "text-field": ["get", "name"],
+              "text-size": 11,
+              "text-offset": [0, -1.6],
+              "text-anchor": "bottom",
+              "text-allow-overlap": false,
+            },
+            paint: {
+              "text-color": "#10241d",
+              "text-halo-color": "rgba(255,255,255,.92)",
+              "text-halo-width": 1.4,
+            },
+          });
         }
 
         if (hasBaseSource) {
@@ -640,6 +822,16 @@ export function MacauMap({
           const id = String(event.features?.[0]?.properties?.id ?? "");
           const camera = camerasRef.current?.find((item) => item.id === id);
           if (camera) onCameraSelectRef.current(camera);
+        });
+        map.on("mouseenter", "parking-points", () => {
+          map.getCanvas().style.cursor = "pointer";
+        });
+        map.on("mouseleave", "parking-points", () => {
+          map.getCanvas().style.cursor = "";
+        });
+        map.on("click", "parking-points", (event) => {
+          const id = String(event.features?.[0]?.properties?.id ?? "");
+          if (id) onParkingSelectRef.current(id);
         });
       });
 
@@ -821,12 +1013,95 @@ export function MacauMap({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
+    const source = map.getSource("parking") as GeoJSONSource | undefined;
+    const selectedSource = map.getSource("parking-selected") as GeoJSONSource | undefined;
+    const features = parkingFeatures(parking ?? []);
+    source?.setData({ type: "FeatureCollection", features });
+    selectedSource?.setData({
+      type: "FeatureCollection",
+      features: features.filter(
+        (feature) => feature.properties.id === selectedParkingId,
+      ),
+    });
+
+    const facility = selectedParkingId
+      ? (parking ?? []).find((item) => item.id === selectedParkingId)
+      : null;
+    if (facility?.coordinates && selectedParkingId !== flownParkingRef.current) {
+      flownParkingRef.current = selectedParkingId;
+      map.flyTo({
+        center: facility.coordinates,
+        zoom: Math.max(map.getZoom(), 15.5),
+        duration: 700,
+      });
+    }
+    if (!selectedParkingId) flownParkingRef.current = null;
+  }, [parking, selectedParkingId, mapReady]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    const source = map.getSource("notice-roads") as GeoJSONSource | undefined;
+    if (!source) return;
+    const notice = selectedNoticeId
+      ? notices.find((item) => item.id === selectedNoticeId) ?? null
+      : null;
+    const features = noticeRoadFeatures(roads, notice);
+    source.setData({ type: "FeatureCollection", features });
+
+    if (
+      notice &&
+      features.length &&
+      selectedNoticeId !== flownNoticeRef.current
+    ) {
+      flownNoticeRef.current = selectedNoticeId;
+      const coordinates = features.flatMap((feature) => feature.geometry.coordinates);
+      map.fitBounds(
+        [
+          [
+            Math.min(...coordinates.map((point) => point[0])),
+            Math.min(...coordinates.map((point) => point[1])),
+          ],
+          [
+            Math.max(...coordinates.map((point) => point[0])),
+            Math.max(...coordinates.map((point) => point[1])),
+          ],
+        ],
+        { padding: 90, maxZoom: 15, duration: 700 },
+      );
+    }
+    if (!selectedNoticeId) flownNoticeRef.current = null;
+  }, [roads, notices, selectedNoticeId, mapReady]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady || !selectedCameraId) return;
+    const camera = cameras?.find((item) => item.id === selectedCameraId);
+    if (camera && selectedCameraId !== flownCameraRef.current) {
+      flownCameraRef.current = selectedCameraId;
+      map.flyTo({
+        center: camera.coordinates,
+        zoom: Math.max(map.getZoom(), 14.5),
+        duration: 700,
+      });
+    }
+    if (!selectedCameraId) flownCameraRef.current = null;
+  }, [cameras, selectedCameraId, mapReady]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
 
     if (map.getLayer("buildings-3d")) {
       map.setLayoutProperty(
         "buildings-3d",
         "visibility",
-        view3d && !busRoute && !lrtFocus ? "visible" : "none",
+        view3d &&
+          !busRoute &&
+          !lrtFocus &&
+          (mapFocus === "overview" || mapFocus === "assistant")
+          ? "visible"
+          : "none",
       );
     }
     // The ground stays flat: no terrain elevation is applied, so roads are not
@@ -837,7 +1112,7 @@ export function MacauMap({
       bearing: view3d ? map.getBearing() : 0,
       duration: 700,
     });
-  }, [view3d, busRoute, lrtFocus, mapReady]);
+  }, [view3d, busRoute, lrtFocus, mapFocus, mapReady]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -967,24 +1242,37 @@ export function MacauMap({
     const map = mapRef.current;
     if (!map || !mapReady) return;
     const busFocus = Boolean(busRoute);
-    // The LRT tab is a clean, single-network view: roads, cameras, buildings,
-    // and other overlays step aside so the line and its stations stay legible.
     const lrtOnly = lrtFocus && !busFocus;
-    const baseVisible = (enabled: boolean) => enabled && !busFocus && !lrtOnly;
-    const showTrain = !busFocus && (lrtOnly ? Boolean(selectedLrtLine) || visibleLayers.lrt : visibleLayers.lrt);
+    const parkingFocus = mapFocus === "parking" && !busFocus;
+    const camerasFocus = mapFocus === "cameras" && !busFocus;
+    const noticesFocus = mapFocus === "notices" && !busFocus;
+    // Each tab shows its own subject. Overview and the assistant keep the
+    // general map; every other tab narrows the map to that module.
+    const baseFocus =
+      (mapFocus === "overview" || mapFocus === "assistant") && !busFocus && !lrtOnly;
+    const showTrain =
+      !busFocus &&
+      (lrtOnly
+        ? Boolean(selectedLrtLine) || visibleLayers.lrt
+        : baseFocus && visibleLayers.lrt);
     const entries: Array<[string, boolean]> = [
-      ["road-network", baseVisible(visibleLayers.roads)],
-      ["roads-casing", baseVisible(visibleLayers.roads)],
-      ["roads-live", baseVisible(visibleLayers.roads)],
-      ["camera-halo", baseVisible(visibleLayers.cameras)],
-      ["camera-points", baseVisible(visibleLayers.cameras)],
-      ["lrt-lines", lrtOnly ? !selectedLrtLine : baseVisible(visibleLayers.lrt)],
-      ["lrt-stations", lrtOnly ? !selectedLrtLine : baseVisible(visibleLayers.lrt)],
+      ["road-network", baseFocus && visibleLayers.roads],
+      ["roads-casing", baseFocus && visibleLayers.roads],
+      ["roads-live", baseFocus && visibleLayers.roads],
+      ["camera-halo", camerasFocus || (baseFocus && visibleLayers.cameras)],
+      ["camera-points", camerasFocus || (baseFocus && visibleLayers.cameras)],
+      ["lrt-lines", lrtOnly ? !selectedLrtLine : baseFocus && visibleLayers.lrt],
+      ["lrt-stations", lrtOnly ? !selectedLrtLine : baseFocus && visibleLayers.lrt],
       ["lrt-selected-line", !busFocus && Boolean(selectedLrtLine)],
       ["lrt-selected-stations", !busFocus && Boolean(selectedLrtLine)],
       ["lrt-selected-labels", !busFocus && Boolean(selectedLrtLine)],
       ["lrt-train-3d", showTrain],
       ["lrt-train-label", showTrain],
+      ["notice-roads", noticesFocus && Boolean(selectedNoticeId)],
+      ["parking-halo", parkingFocus],
+      ["parking-points", parkingFocus],
+      ["parking-selected", parkingFocus && Boolean(selectedParkingId)],
+      ["parking-labels", parkingFocus],
       ["bus-station-halo", busFocus],
       ["bus-stations", busFocus],
       ["bus-vehicle-points", busFocus],
@@ -998,7 +1286,17 @@ export function MacauMap({
       }
     });
     bus3dLayerRef.current?.setVisible(busFocus && view3d);
-  }, [visibleLayers, busRoute, selectedLrtLine, lrtFocus, mapReady, view3d]);
+  }, [
+    visibleLayers,
+    busRoute,
+    selectedLrtLine,
+    selectedParkingId,
+    selectedNoticeId,
+    lrtFocus,
+    mapFocus,
+    mapReady,
+    view3d,
+  ]);
 
   return (
     <div

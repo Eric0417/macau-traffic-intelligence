@@ -1428,8 +1428,37 @@ textarea:focus-visible {
   grid-template-columns: minmax(0, 1fr) 68px;
   align-items: center;
   gap: 10px;
+  width: 100%;
   min-height: 66px;
+  padding: 0 6px;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
   border-bottom: 0.5px solid var(--line);
+  border-radius: 0;
+  font: inherit;
+  transition: background-color 140ms ease, box-shadow 140ms ease;
+}
+
+.parking-row:hover {
+  background: var(--material-fill);
+}
+
+.parking-row.is-active {
+  background: var(--tint-soft);
+  border-radius: var(--radius-control);
+  box-shadow: inset 0 0 0 1px var(--tint);
+}
+
+.parking-row.is-unmapped {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.parking-row.is-unmapped:hover {
+  background: transparent;
 }
 
 .parking-row > div:first-child {
@@ -1493,6 +1522,83 @@ textarea:focus-visible {
 
 .notice-list {
   gap: 0;
+}
+
+.notice-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  border-bottom: 0.5px solid var(--line);
+}
+
+.notice-item.is-active {
+  background: var(--tint-soft);
+  border-radius: var(--radius);
+  box-shadow: inset 0 0 0 1px var(--tint);
+}
+
+.notice-select {
+  display: grid;
+  gap: 6px;
+  padding: 12px 4px 12px 8px;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  font: inherit;
+}
+
+.notice-select strong {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.notice-select p {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.55;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.notice-select time {
+  color: var(--faint);
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+}
+
+.notice-link {
+  display: grid;
+  width: 44px;
+  min-height: 44px;
+  place-items: center;
+  color: var(--faint);
+  text-decoration: none;
+}
+
+.notice-link:hover {
+  color: var(--tint-ink);
+}
+
+.notice-more {
+  margin-top: 12px;
+}
+
+.notice-more summary {
+  padding: 8px 0;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.notice-more .notice-list {
+  margin-top: 4px;
 }
 
 .notice-list > a,
@@ -1587,6 +1693,13 @@ textarea:focus-visible {
 
 .camera-list button:hover {
   color: var(--tint-ink);
+}
+
+.camera-list button.is-active {
+  color: var(--tint-ink);
+  background: var(--tint-soft);
+  border-radius: var(--radius-control);
+  box-shadow: inset 0 0 0 1px var(--tint);
 }
 
 .mobile-sheet {

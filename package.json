@@ -21,6 +21,7 @@
     "verify:sources": "NODE_OPTIONS='--conditions=react-server' tsx scripts/verify-sources.ts",
     "warmup": "tsx scripts/warmup.ts",
     "build:lrt": "tsx scripts/build-lrt-network.ts",
+    "build:parking": "tsx scripts/build-parking-locations.ts",
     "docs:check": "tsx scripts/check-memory.ts"
   },
   "dependencies": {

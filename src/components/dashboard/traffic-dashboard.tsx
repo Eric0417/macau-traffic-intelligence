@@ -68,6 +68,8 @@ export function TrafficDashboard() {
   const { locale, setLocale, t } = useLanguage();
   const [tab, setTab] = useState<PanelTab>("overview");
   const [selectedCamera, setSelectedCamera] = useState<Camera | null>(null);
+  const [selectedParkingId, setSelectedParkingId] = useState<string | null>(null);
+  const [selectedNoticeId, setSelectedNoticeId] = useState<string | null>(null);
   const [selectedRoute, setSelectedRoute] = useState<BusRoute | null>(null);
   const [busDirection, setBusDirection] = useState<0 | 1>(0);
   const [selectedLrtLine, setSelectedLrtLine] = useState<string | null>(null);
@@ -105,6 +107,16 @@ export function TrafficDashboard() {
   const borders = useLiveJson<BorderStatus[]>("/api/v1/borders", 60_000);
   const lrt = useLiveJson<LrtNetwork>("/api/v1/lrt/network", 21_600_000);
   const lrtNotices = useLiveJson<LrtNotice[]>("/api/v1/lrt/notices", 300_000);
+
+  const incidentNotices = (notices.data ?? []).filter(
+    (notice) => notice.category === "incident",
+  );
+  // Keep an explicit choice, otherwise highlight the newest incident while the
+  // Alerts tab is open.
+  const activeNoticeId =
+    selectedNoticeId && notices.data?.some((notice) => notice.id === selectedNoticeId)
+      ? selectedNoticeId
+      : incidentNotices[0]?.id ?? null;
 
   const applyAssistantAction = (action: LearningAssistantAction | null) => {
     if (!action) {
@@ -257,7 +269,13 @@ export function TrafficDashboard() {
             onDirectionChange={setBusDirection}
           />
         ) : null}
-        {tab === "parking" ? <ParkingPanel facilities={parking.data} /> : null}
+        {tab === "parking" ? (
+          <ParkingPanel
+            facilities={parking.data}
+            selectedId={selectedParkingId}
+            onSelect={setSelectedParkingId}
+          />
+        ) : null}
         {tab === "lrt" ? (
           <LrtPanel
             network={lrt.data}
@@ -267,10 +285,19 @@ export function TrafficDashboard() {
           />
         ) : null}
         {tab === "notices" ? (
-          <NoticesPanel notices={notices.data ?? []} lrtNotices={lrtNotices.data ?? []} />
+          <NoticesPanel
+            notices={notices.data ?? []}
+            lrtNotices={lrtNotices.data ?? []}
+            selectedId={activeNoticeId}
+            onSelect={setSelectedNoticeId}
+          />
         ) : null}
         {tab === "cameras" ? (
-          <CameraPanel cameras={cameras.data} onSelect={setSelectedCamera} />
+          <CameraPanel
+            cameras={cameras.data}
+            selectedId={selectedCamera?.id ?? null}
+            onSelect={setSelectedCamera}
+          />
         ) : null}
       </div>
     </>
@@ -319,6 +346,7 @@ export function TrafficDashboard() {
             tab === "lrt" || assistantFocus?.kind === "lrt" ? selectedLrtLine : null
           }
           lrtFocus={tab === "lrt" || assistantFocus?.kind === "lrt"}
+          mapFocus={tab}
           busRoute={
             tab === "bus" || assistantFocus?.kind === "bus" ? busEta.data : null
           }
@@ -327,6 +355,12 @@ export function TrafficDashboard() {
               ? (selectedRoute?.company.color ?? null)
               : null
           }
+          parking={parking.data}
+          selectedParkingId={tab === "parking" ? selectedParkingId : null}
+          onParkingSelect={setSelectedParkingId}
+          notices={notices.data ?? []}
+          selectedNoticeId={tab === "notices" ? activeNoticeId : null}
+          selectedCameraId={selectedCamera?.id ?? null}
           view3d={view3d}
           visibleLayers={layers}
           onCameraSelect={setSelectedCamera}

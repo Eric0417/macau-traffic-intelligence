@@ -101,6 +101,7 @@ const responses: Record<string, unknown> = {
       name: "下環街市",
       updatedAt: "2026-10-03T00:00:00.000Z",
       areaStatus: "yellow",
+      coordinates: [113.5345, 22.1908],
       availability: {
         lightVehicle: 13,
         motorcycle: 48,
@@ -419,8 +420,24 @@ test("traffic notices do not repeat the title as the body", async ({ page, isMob
   const panel = page.locator(".desktop-panel");
 
   await panel.getByRole("tab", { name: "消息" }).click();
-  await expect(panel.locator(".notice-list a strong")).toHaveText("同一段文字");
-  await expect(panel.locator(".notice-list a p")).toHaveCount(0);
+  await panel.locator(".notice-more summary").click();
+  await expect(panel.locator(".notice-select strong")).toHaveText("同一段文字");
+  await expect(panel.locator(".notice-select p")).toHaveCount(0);
+});
+
+test("parking list selects and highlights a car park", async ({ page, isMobile }) => {
+  test.skip(isMobile, "desktop project only");
+  await mockDashboard(page);
+  await page.goto("/");
+  const panel = page.locator(".desktop-panel");
+
+  await panel.getByRole("tab", { name: "泊車" }).click();
+  const row = panel.locator(".parking-row").first();
+  await expect(row).toBeVisible();
+  await expect(row).toHaveAttribute("aria-pressed", "false");
+  await row.click();
+  await expect(row).toHaveAttribute("aria-pressed", "true");
+  await expect(row).toHaveClass(/is-active/);
 });
 
 test("bus GLB models load only after a route is focused at street zoom", async ({

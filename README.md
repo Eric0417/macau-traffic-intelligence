@@ -44,6 +44,7 @@ Next 16 allows one dev server per project and blocks dev assets from hostnames i
 | `npm run verify:sources` | Deliberately check live public sources |
 | `npm run warmup` | Warm the deployed API cache (set `WARMUP_BASE_URL`) |
 | `npm run build:lrt` | Refresh the checked-in LRT network fallback from OpenStreetMap |
+| `npm run build:parking` | Refresh the DSAT car park coordinates from OpenStreetMap |
 | `npm run docs:check` | Verify engineering memory and source registry coverage |
 
 ## Data Refresh
@@ -98,6 +99,8 @@ Set the required source flags from `.env.example` only when a source must be dis
 - The 3D map can be rotated and tilted freely; the compass in the navigation control resets the bearing.
 - At street zoom, buses switch from livery-coloured markers to generic GLB models rendered at 1.8x display scale, and the selected LRT line shows its extruded schematic train. The bus models are painted after the operators' current liveries (TCM orange/white, Transmac yellow/blue, LRT "Ocean Cruiser" pale blue with orange wave). The train moves along the line as a labelled schematic animation; it is not a live position.
 - Route buttons only warn about real suspensions reported by the diversion feed, not the raw `routeChange` flag.
+- Each tab narrows the map to its subject: parking lists and maps the DSAT car parks (OpenStreetMap coordinates, ODbL, 78 of 92 matched), clicking one flies to it and highlights it, cameras show only camera markers, and Alerts highlights the monitored roads named in the selected incident.
+- The Alerts tab leads with incident-classified DSAT messages (accidents, fires, flooding, fallen trees, collisions, urgent repairs); planned roadworks and diversions are collapsed below. There is no separate official real-time accident feed, and the Macau news portals block automated access, so DSAT special messages remain the source.
 - The LRT tab selects a line, highlights its stations on the map, and lists them with interchange badges; no live train positions are claimed because DSAT/MLM publish none, and the moving train is labelled as a schematic animation.
 - The 3D view tilts the camera and shows extruded OpenFreeMap buildings on a flat ground plane, so roads stay level; it can be switched off in the layer menu.
 - Camera streams are not recorded or proxied.

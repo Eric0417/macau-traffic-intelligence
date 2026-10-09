@@ -1,6 +1,8 @@
 import "server-only";
 import * as cheerio from "cheerio";
 import type { AnyNode } from "domhandler";
+import { z } from "zod";
+import locationsJson from "../../../data/parking-locations.json";
 import { parkingFacilitySchema } from "@/lib/contracts";
 import { fetchText } from "@/server/http";
 import type { SourceDefinition } from "@/server/source";
@@ -8,6 +10,21 @@ import type { ParkingAvailability } from "@/lib/types";
 
 const PARKING_URL =
   "https://www.dsat.gov.mo/dsat/carpark_realtime_core.aspx?lang=tc";
+
+const parkingLocationsSchema = z.object({
+  generatedAt: z.string(),
+  source: z.string(),
+  license: z.string(),
+  locations: z.record(
+    z.string(),
+    z.object({
+      name: z.string(),
+      coordinates: z.tuple([z.number(), z.number()]),
+    }),
+  ),
+});
+
+const parkingLocations = parkingLocationsSchema.parse(locationsJson);
 
 const iconFields: Record<string, keyof ParkingAvailability> = {
   "carpark_car.png": "lightVehicle",
@@ -89,6 +106,7 @@ export function parseParkingHtml(html: string) {
         name,
         updatedAt: macauIso(updatedText),
         areaStatus,
+        coordinates: parkingLocations.locations[id]?.coordinates ?? null,
         availability: availabilityForRow(element),
       });
     })

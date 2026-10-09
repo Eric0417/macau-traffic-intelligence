@@ -8,30 +8,144 @@ import type { SourceDefinition } from "@/server/source";
 const noticePages = [
   {
     url: "https://www.dsat.gov.mo/dsat/emergency.aspx",
-    category: "incident" as const,
+    kind: "emergency" as const,
   },
   {
     url: "https://www.dsat.gov.mo/dsat/croad.aspx",
-    category: "roadworks" as const,
+    kind: "croad" as const,
   },
   {
     url: "https://www.dsat.gov.mo/dsat/bus_croad.aspx",
-    category: "bus-change" as const,
+    kind: "bus" as const,
   },
 ];
+
+// Unexpected events, not scheduled works: accidents, fires, flooding, fallen
+// trees, urgent repairs, and similar interruptions.
+const INCIDENT_PATTERN =
+  /意外|事故|火警|起火|水浸|塌樹|樹木倒塌|倒塌|倒樹|相撞|撞車|撞傷|撞倒|碰撞|失控|傷者|救援|危險品|油污|緊急/;
 
 function absoluteUrl(href: string, base: string): string {
   return new URL(href, base).toString();
 }
 
-function publishedAt(text: string): string | null {
-  const match = text.match(/(\d{2})-(\d{2})-(\d{4})|(\d{4})-(\d{2})-(\d{2})/);
-  if (!match) return null;
-  const value = match[0].includes("-") && match[0].startsWith("20")
-    ? match[0]
-    : `${match[3]}-${match[2]}-${match[1]}`;
-  const date = new Date(`${value}T00:00:00+08:00`);
-  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+function parseDate(text: string): string | null {
+  const iso = text.match(/20\d{2}-\d{2}-\d{2}/g);
+  if (iso?.length) {
+    // A roadwork window "start - end" sorts by when it starts.
+    const value = iso[0];
+    const date = new Date(`${value}T00:00:00+08:00`);
+    if (!Number.isNaN(date.getTime())) return date.toISOString();
+  }
+  const local = [...text.matchAll(/(\d{2})-(\d{2})-(20\d{2})/g)];
+  if (local.length) {
+    const match = local[local.length - 1];
+    const date = new Date(`${match[3]}-${match[2]}-${match[1]}T00:00:00+08:00`);
+    if (!Number.isNaN(date.getTime())) return date.toISOString();
+  }
+  return null;
+}
+
+function clean(value: string): string {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function categoryFor(
+  fallback: TrafficNotice["category"],
+  text: string,
+): TrafficNotice["category"] {
+  return INCIDENT_PATTERN.test(text) ? "incident" : fallback;
+}
+
+export function parseEmergencyHtml(html: string, base: string): TrafficNotice[] {
+  const $ = cheerio.load(html);
+  const notices: TrafficNotice[] = [];
+
+  $(".my_news_list").each((_, block) => {
+    const element = $(block);
+    const anchor = element.find('a[href*="emergency_detail.aspx"]').first();
+    const href = anchor.attr("href");
+    if (!href) return;
+    const title = clean(
+      element.find(".news_content span").first().text() || anchor.text(),
+    );
+    if (title.length < 4) return;
+
+    // The list hides the location summary in an HTML comment. Read it back so
+    // the map can match road names in the message.
+    const raw = $.html(element) ?? "";
+    const comment = raw.match(/<!--([\s\S]*?)-->/)?.[1] ?? "";
+    const summary = comment ? clean(cheerio.load(comment).text()) : "";
+
+    notices.push(
+      trafficNoticeSchema.parse({
+        id: `emergency:${href}`,
+        title,
+        content: summary || title,
+        publishedAt: parseDate(element.find(".news_date").text()),
+        category: categoryFor("roadworks", `${title} ${summary}`),
+        url: absoluteUrl(href, base),
+      }),
+    );
+  });
+
+  return notices;
+}
+
+export function parseCroadHtml(html: string, base: string): TrafficNotice[] {
+  const $ = cheerio.load(html);
+  const notices: TrafficNotice[] = [];
+
+  $(".my_news_list").each((_, block) => {
+    const element = $(block);
+    const anchor = element.find('a[href*="croad_detail.aspx"]').first();
+    const href = anchor.attr("href");
+    if (!href) return;
+    const text = clean(element.find(".news_content").text());
+    if (text.length < 8) return;
+
+    notices.push(
+      trafficNoticeSchema.parse({
+        id: `roadworks:${href}`,
+        title: text,
+        content: text,
+        publishedAt: parseDate(text),
+        category: categoryFor("roadworks", text),
+        url: absoluteUrl(href, base),
+      }),
+    );
+  });
+
+  return notices;
+}
+
+export function parseBusCroadHtml(html: string, base: string): TrafficNotice[] {
+  const $ = cheerio.load(html);
+  const notices: TrafficNotice[] = [];
+
+  $(".my_news_list").each((_, block) => {
+    const element = $(block);
+    const anchor = element.find('a[href*="bus_croad_detail.aspx"]').first();
+    const href = anchor.attr("href");
+    if (!href) return;
+    const paragraphs = element.find(".news_content p");
+    const title = clean(paragraphs.eq(0).text());
+    const summary = clean(paragraphs.eq(1).text());
+    if (title.length < 4) return;
+
+    notices.push(
+      trafficNoticeSchema.parse({
+        id: `bus-change:${href}`,
+        title,
+        content: summary || title,
+        publishedAt: parseDate(element.find(".news_date").text()),
+        category: categoryFor("bus-change", `${title} ${summary}`),
+        url: absoluteUrl(href, base),
+      }),
+    );
+  });
+
+  return notices;
 }
 
 function dedupe(notices: TrafficNotice[]): TrafficNotice[] {
@@ -44,51 +158,37 @@ function dedupe(notices: TrafficNotice[]): TrafficNotice[] {
   });
 }
 
+function byDateDesc(a: TrafficNotice, b: TrafficNotice): number {
+  return Date.parse(b.publishedAt ?? "1970-01-01") - Date.parse(a.publishedAt ?? "1970-01-01");
+}
+
 export async function loadNotices() {
   const results = await Promise.allSettled(
     noticePages.map(async (page) => {
       const html = await fetchText(page.url, { timeoutMs: 8_000 });
-      const $ = cheerio.load(html);
-      const notices: TrafficNotice[] = [];
-
-      $("a[href]").each((_, anchor) => {
-        const href = $(anchor).attr("href") ?? "";
-        const title = $(anchor).text().replace(/\s+/g, " ").trim();
-        if (
-          title.length < 8 ||
-          title.length > 160 ||
-          !/(events_detail|news_detail|notice_detail|subpage)\.aspx/i.test(href)
-        ) {
-          return;
-        }
-
-        const container = $(anchor).closest("tr, li, article, div");
-        const context = container.text().replace(/\s+/g, " ").trim();
-        notices.push(
-          trafficNoticeSchema.parse({
-            id: `${page.category}:${href}`,
-            title,
-            content: context.slice(0, 320),
-            publishedAt: publishedAt(context),
-            category: page.category,
-            url: absoluteUrl(href, page.url),
-          }),
-        );
-      });
-
-      return notices.slice(0, 30);
+      const notices =
+        page.kind === "emergency"
+          ? parseEmergencyHtml(html, page.url)
+          : page.kind === "croad"
+            ? parseCroadHtml(html, page.url)
+            : parseBusCroadHtml(html, page.url);
+      return notices.slice(0, 40);
     }),
   );
 
-  const notices = results.flatMap((result) => (result.status === "fulfilled" ? result.value : []));
-  return dedupe(notices).slice(0, 60);
+  const notices = dedupe(
+    results.flatMap((result) => (result.status === "fulfilled" ? result.value : [])),
+  );
+  const incidents = notices.filter((notice) => notice.category === "incident").sort(byDateDesc);
+  const rest = notices.filter((notice) => notice.category !== "incident").sort(byDateDesc);
+  return [...incidents, ...rest].slice(0, 60);
 }
 
 export const noticesSource: SourceDefinition<Awaited<ReturnType<typeof loadNotices>>> = {
   id: "notices",
   name: "DSAT 特別交通消息",
   url: "https://www.dsat.gov.mo/dsat/emergency.aspx",
-  attribution: "交通事務局臨時交通、道路工程及巴士改道消息",
+  attribution: "交通事務局突發交通、臨時交通安排及巴士改道消息",
   envKey: "SOURCE_NOTICES_ENABLED",
   ttlSeconds: 300,
   staleTtlSeconds: 86_400,

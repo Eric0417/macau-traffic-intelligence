@@ -2,6 +2,13 @@
 
 All notable user-visible and architectural changes are recorded here.
 
+## Per-tab map focus, parking markers, and incident-first alerts - 2026-10-10
+
+- Each tab now narrows the map to its own subject: parking shows only mapped car parks, cameras show only camera markers, and Alerts shows only the monitored road segments named in the selected incident. The bus and LRT tabs keep their focused views, and Overview keeps the general map.
+- Clicking a car park in the list flies the map to it and draws a blue selection ring. `data/parking-locations.json` maps 78 of 92 DSAT car parks to OpenStreetMap `amenity=parking` coordinates (ODbL); the rest show 未定位 and cannot be selected. `npm run build:parking` regenerates the file.
+- The DSAT 特別消息, 交通改道, and 巴士改道 lists are parsed correctly now; the previous parser missed their detail links and the summary the 特別消息 page hides in an HTML comment. Messages with accident, fire, flooding, fallen-tree, collision, or urgent-repair keywords are classified as incidents and shown first.
+- Planned roadworks, diversions, and events moved into a collapsed section under the incident list.
+
 ## Dark transit console and clean LRT view - 2026-10-10
 
 - Replaced the light frosted interface with a dark, data-first transit console: system typography, dark materials, a system-blue interactive tint, semantic status colours, a 66 px vertical navigation rail on desktop, and a bottom tab bar with a draggable sheet on mobile.

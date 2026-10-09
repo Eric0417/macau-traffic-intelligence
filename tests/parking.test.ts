@@ -31,6 +31,8 @@ describe("loadParking", () => {
     const facilities = parseParkingHtml(parkingHtml);
 
     expect(facilities).toHaveLength(2);
+    expect(facilities[0].coordinates).toEqual([113.5345126, 22.1907894]);
+    expect(facilities[1].coordinates).toEqual([113.5612192, 22.1390714]);
     expect(facilities[0].availability).toMatchObject({
       lightVehicle: 13,
       motorcycle: 48,
