@@ -217,6 +217,7 @@ async function mockDashboard(page: Page) {
                 stationCode: "M1/9",
                 stationName: "關閘總站",
                 stationSequence: 0,
+                segmentIndex: 0,
                 coordinates: [113.54918, 22.215502],
                 bearing: 180,
                 estimated: true,
@@ -271,10 +272,12 @@ async function countCanvasColor(page: Page, rgb: [number, number, number]) {
       const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
       let matches = 0;
       for (let index = 0; index < pixels.length; index += 4) {
+        // Tight tolerance: only the map layer's own colour, not translucent
+        // chrome edges blended toward it.
         if (
-          Math.abs(pixels[index] - rgb[0]) < 24 &&
-          Math.abs(pixels[index + 1] - rgb[1]) < 24 &&
-          Math.abs(pixels[index + 2] - rgb[2]) < 24
+          Math.abs(pixels[index] - rgb[0]) < 15 &&
+          Math.abs(pixels[index + 1] - rgb[1]) < 15 &&
+          Math.abs(pixels[index + 2] - rgb[2]) < 15
         ) {
           matches += 1;
         }
@@ -423,6 +426,36 @@ test("bus GLB models load only after a route is focused at street zoom", async (
   await expect.poll(() => modelRequests.length, { timeout: 15_000 }).toBeGreaterThan(0);
 });
 
+test("2D mode keeps flat bus markers and loads no GLB models", async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(isMobile, "desktop project only");
+  await mockDashboard(page);
+  const modelRequests: string[] = [];
+  page.on("request", (request) => {
+    if (request.url().includes(".glb")) modelRequests.push(request.url());
+  });
+  await page.goto("/");
+
+  await page.getByRole("button", { name: /圖層/ }).click();
+  await page.locator(".layer-mode button").filter({ hasText: "2D" }).click();
+  const panel = page.locator(".desktop-panel");
+  await panel.getByRole("tab", { name: "巴士" }).click();
+  await panel.locator(".route-grid button").first().click();
+  await expect(panel.locator(".eta-list")).toContainText("關閘總站");
+
+  for (let index = 0; index < 6; index += 1) {
+    await page.locator(".maplibregl-ctrl-zoom-in").click();
+    await page.waitForTimeout(300);
+  }
+  await page.waitForTimeout(1_000);
+  expect(modelRequests).toHaveLength(0);
+
+  await page.locator(".layer-mode button").filter({ hasText: "3D" }).click();
+  await expect.poll(() => modelRequests.length, { timeout: 15_000 }).toBeGreaterThan(0);
+});
+
 test("LRT panel selects a line and lists its stations", async ({ page, isMobile }) => {
   test.skip(isMobile, "desktop project only");
   await mockDashboard(page);
@@ -489,6 +522,9 @@ test("mobile bottom sheet drags between collapsed and expanded", async ({ page, 
 
   await drag(-90);
   await expect(sheet).toHaveAttribute("data-expanded", "true", { timeout: 10_000 });
+  // The sheet height animates for 220 ms. Let it settle before measuring the
+  // grip again, otherwise the second drag starts from a stale box.
+  await page.waitForTimeout(400);
   await drag(90);
   await expect(sheet).toHaveAttribute("data-expanded", "false", { timeout: 10_000 });
 });

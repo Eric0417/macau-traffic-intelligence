@@ -336,6 +336,7 @@ export function TrafficDashboard() {
             type="button"
             onClick={() => setLayerOpen((current) => !current)}
             aria-expanded={layerOpen}
+            aria-label={t("layers")}
           >
             <Layers3 size={17} aria-hidden="true" />
             <span>{t("layers")}</span>
@@ -344,6 +345,7 @@ export function TrafficDashboard() {
             <div className="layer-menu">
               {(["roads", "cameras", "lrt"] as const).map((layer) => (
                 <label key={layer}>
+                  <span>{t(layer)}</span>
                   <input
                     type="checkbox"
                     checked={layers[layer]}
@@ -351,19 +353,26 @@ export function TrafficDashboard() {
                       setLayers((current) => ({ ...current, [layer]: !current[layer] }))
                     }
                   />
-                  <span>{t(layer)}</span>
                 </label>
               ))}
-              <label>
-                <input
-                  type="checkbox"
-                  checked={view3d}
-                  onChange={() => setView3d((current) => !current)}
-                />
-                <span>
-                  {t("view3d")} · {t("buildings")}
-                </span>
-              </label>
+              <div className="layer-mode" role="group" aria-label={t("mapMode")}>
+                <button
+                  type="button"
+                  className={view3d ? "is-active" : ""}
+                  aria-pressed={view3d}
+                  onClick={() => setView3d(true)}
+                >
+                  {t("view3d")}
+                </button>
+                <button
+                  type="button"
+                  className={!view3d ? "is-active" : ""}
+                  aria-pressed={!view3d}
+                  onClick={() => setView3d(false)}
+                >
+                  {t("view2d")}
+                </button>
+              </div>
               <p className="layer-note">{t("unmonitoredRoads")}</p>
             </div>
           ) : null}

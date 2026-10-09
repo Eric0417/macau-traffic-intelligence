@@ -6,7 +6,7 @@ Version `0.1.0` is implemented as a standalone Next.js 16 application. The first
 
 It is deployed on Render as project `Macau Traffic Intelligence`, environment `production`, at https://macau-traffic-intelligence.onrender.com. The service runs two instances in Singapore with a private Render Key Value instance for cache, locks, circuit state, and rate limiting; autoscaling remains declarative until the workspace is on a Pro plan.
 
-The `competition/` folder holds the 2026 competition submission package: English documents and poster sources, the scripted video pipeline, the user-testing kit, and the submission checklist. See `competition/README.md`.
+The `competition/` folder holds the 2026 competition submission package: English documents and poster sources, the scripted video pipeline, the user-testing kit, and the submission checklist. The submitted demo video uses the `edge-tts` Andrew male voice (`en-US-AndrewMultilingualNeural`). `video/scripts/revoice.mjs` replaces narration in an already-cut video and time-fits each cue to its existing slot; `tts.mjs` uses the same voice for full rebuilds. See `competition/README.md`.
 
 ## Architecture
 
@@ -24,19 +24,20 @@ External data never enters a client component directly. Public contracts are def
 
 - Public audience first: residents, visitors, and commuters.
 - Traditional Chinese is the default language.
+- The interface follows Apple's Human Interface Guidelines as a web approximation: a platform system font stack (`-apple-system`, SF Pro, PingFang, Segoe UI, Roboto), translucent material surfaces with blur, one green accent, hairline separators, grouped menus with iOS-style switches, and a documented radius scale (8 px cards and chips, 10 px controls, 14-16 px floating surfaces). These are CSS approximations, not Apple components. `prefers-reduced-transparency` falls back to solid surfaces.
 - Roads, buses, cameras, bridges, parking, weather, and active notices are prioritized above decorative presentation.
-- The map opens in a 3D view (pitch and extruded buildings on a flat ground plane) that users can switch back to flat in the layer menu. Terrain elevation is not applied, so roads stay level.
+- The map opens in a 3D view (pitch and extruded buildings on a flat ground plane) with a 3D/2D mode control in the layer menu. 2D flattens the camera, hides the buildings, and switches buses to enlarged flat livery-coloured markers at every zoom. Terrain elevation is not applied, so roads stay level.
 - Bus routes show the full official catalog, including seasonal services that are flagged as having no live tracking.
 - All live data refreshes at runtime. The bus catalog and the LRT network are fetched every 6 hours, so new routes, lines, and stations appear without a redeploy. Roads, bridges, parking, weather, notices, cameras, borders, and bus arrivals follow their documented TTLs.
 - Live bus markers use the official between-stop segments, not raw GPS, and the UI says so.
 - Selecting a bus route zooms the map to the route, draws every official stop, and marks live buses with plate and bus icon.
 - While a bus route is focused, the camera, LRT, congestion, and 3D building layers hide so only the selected route, its stops, and its buses stay on the map.
-- Live bus positions are estimates along the official polyline, placed by the approaching stop's `stationCode` and spread within a segment when more than one bus is approaching the same stop. Between polls the map animates each bus along its segment using the feed speed, falling back to the approaching stop ETA; the animation resets to the official estimate on every poll.
-- Buses render as generic two-axle GLB models in a MapLibre custom WebGL layer at the maximum street zoom. Lower zoom levels use a marker and plate label. The Blender source is `docs/models/bus-models.blend`; runtime exports are `public/models/bus-tcm.glb` and `public/models/bus-transmac.glb`.
+- Live bus positions are estimates along the official polyline, placed by the approaching stop's `stationCode` and spread within a segment when more than one bus is approaching the same stop. Each vehicle names the `routeSegments` entry used for its estimate in `segmentIndex`. The map concatenates the official stop-to-stop segments into one path and glides each marker from its drawn position toward the newest official estimate at a bounded bus speed, so a coarse ETA step cannot teleport a bus; the marker holds when the estimate does not change, and loop routes continue into the next lap.
+- Buses render as generic two-axle GLB models in a MapLibre custom WebGL layer at street zoom, at a 1.8x display scale for legibility. Lower zoom levels, and the whole 2D mode, use a livery-coloured marker and plate label. The Blender source is `docs/models/bus-models.blend`; runtime exports are `public/models/bus-tcm.glb` and `public/models/bus-transmac.glb`.
 - The bus custom layer folds each vehicle transform into the MapLibre projection in Float64, refreshes its matrices every frame, and ignores terrain depth and frustum culling so the model does not flicker or disappear above z19.
 - The map allows zoom up to 24 so the true-scale bus model can be inspected; MapLibre does not provide infinite zoom.
 - The LRT line shows an extruded "Ocean Cruiser" train that moves along the selected line as an explicitly labelled schematic animation (ADR 0008); it is not live data.
-- The 3D bus model is true scale from z17 to z19. Above z19 its on-screen size is fixed so the model remains readable instead of filling the viewport.
+- The 3D bus model uses a 1.8x display scale from z17 to z19. Above z19 its on-screen size is fixed so the model remains readable without filling the viewport.
 - The 3D map supports free rotate and tilt; the navigation control keeps a compass and pitch indicator.
 - The route `routeChange` flag is not used for badges because it covers most routes; diversions come from the suspended-stop message feed.
 - LRT has the same selection flow as buses: pick a line, see its stations highlighted on the map and listed with interchange badges. It shows the official fixed network and service notices, plus the labelled schematic train animation; no live positions are claimed.

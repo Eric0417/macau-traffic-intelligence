@@ -10,6 +10,8 @@ export const MACAU_BOUNDS: [[number, number], [number, number]] = [
 ];
 
 export const BUS_MODEL_MIN_ZOOM = 17;
+// Display exaggeration that keeps the generic bus readable at street zoom.
+export const BUS_MODEL_DISPLAY_SCALE = 1.8;
 
 export const DEFAULT_LOCALE = "zh-Hant" as const;
 

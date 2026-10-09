@@ -33,7 +33,8 @@ function envelope(value: string) {
 describe("useLiveJson", () => {
   it("clears the previous payload when the url changes", async () => {
     let resolveSecond: (() => void) | undefined;
-    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      void init;
       if (String(input).endsWith("/a")) {
         return Promise.resolve({
           ok: true,
@@ -54,6 +55,7 @@ describe("useLiveJson", () => {
     try {
       const { rerender } = render(<Probe url="/a" />);
       await waitFor(() => expect(screen.getByTestId("value").textContent).toBe("A"));
+      expect(fetchMock.mock.calls[0][1]).toMatchObject({ cache: "no-store" });
 
       rerender(<Probe url="/b" />);
       await waitFor(() => expect(screen.getByTestId("value").textContent).not.toBe("A"));

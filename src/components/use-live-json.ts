@@ -40,7 +40,12 @@ export function useLiveJson<T>(
       }
 
       try {
-        const response = await fetch(url, { signal: controller.signal });
+        // Live sources are cached by the server, so the browser must not serve
+        // its own stale copy for up to the same TTL plus a revalidation window.
+        const response = await fetch(url, {
+          signal: controller.signal,
+          cache: "no-store",
+        });
         const body = (await response.json()) as ApiEnvelope<T> | { message?: string };
         if (!response.ok || !("data" in body)) {
           throw new Error("message" in body ? body.message : `HTTP ${response.status}`);

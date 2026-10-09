@@ -2,6 +2,28 @@
 
 All notable user-visible and architectural changes are recorded here.
 
+## Apple-inspired interface refresh - 2026-10-10
+
+- Rebuilt the interface chrome after Apple's design guidance: system font stack, a light translucent header, frosted floating panels, hairline separators, and a documented radius scale for controls and surfaces.
+- The language switcher, direction control, and 3D/2D control use segmented styles; the active desktop and mobile tab uses a soft tinted pill instead of an underline.
+- The layer menu is now an iOS-style popover with grouped rows and switches for roads, cameras, and LRT.
+- The mobile bottom sheet uses the same material, radius, and grabber treatment as the desktop panel.
+- Surfaces fall back to solid backgrounds under `prefers-reduced-transparency`, and all existing keyboard, ARIA, and focus behavior is unchanged.
+
+## Bigger bus models and a 2D preview mode - 2026-10-10
+
+- The 3D bus models render at 1.8x display scale so they stay readable at street zoom. Above z19 the on-screen size still stays fixed.
+- The layer menu replaces the 3D/buildings checkbox with a 3D/2D mode control. 2D flattens the camera, hides the buildings, and shows enlarged livery-coloured bus markers with plate labels at every zoom.
+- The GLB models are not requested or drawn while 2D is active, and switching back to 3D loads them on demand.
+- The bus panel note and the source registry now describe both modes.
+
+## Bus marker motion fix - 2026-10-09
+
+- Live bus markers no longer dead-reckon ahead of the feed and snap back on the next poll. Each marker glides from its drawn position toward the newest official estimate along the concatenated official route polyline at a bounded bus speed, so a coarse ETA step never teleports the bus. A marker holds its position when the official estimate does not change.
+- The bus ETA payload now names the `routeSegments` index used for each vehicle estimate in `segmentIndex`. A repeated stop code on a loop route can no longer send the marker to a different part of the route.
+- Loop routes carry a marker forward into the next lap instead of snapping it back to the first segment, and backward corrections are eased instead of stepped.
+- Live polls send `cache: "no-store"` so the browser cannot serve a bus payload from its own HTTP cache for the 10 s TTL plus the 60 s revalidation window.
+
 ## Competition video male voiceover - 2026-10-09
 
 - Replaced the demo video narration with the male `edge-tts` voice `en-US-AndrewMultilingualNeural` at a +12% rate. Each cue is time-fitted to its existing narration slot, so the picture and the SRT keep their original timing. 7 of 31 cues needed up to 10% extra pace.

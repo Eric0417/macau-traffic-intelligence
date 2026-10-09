@@ -286,6 +286,7 @@ describe("bus sources", () => {
         stationCode: "M16/1",
         stationName: "提督馬路/雅廉訪",
         stationSequence: 2,
+        segmentIndex: 1,
         coordinates: [
           expect.closeTo(113.5469298, 7),
           expect.closeTo(22.20944772, 7),

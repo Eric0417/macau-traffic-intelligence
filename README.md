@@ -4,6 +4,8 @@ Live: https://macau-traffic-intelligence.onrender.com
 
 Macau Traffic Intelligence is a map-first public transport dashboard for Macau. It combines live road congestion, bridge travel times, official HLS traffic cameras, bus arrivals, parking availability, weather warnings, border information, traffic notices, and the official LRT network.
 
+The interface borrows Apple's design guidance as a web approximation: system typography, translucent material chrome, one green accent, grouped menus with switches, and segmented controls. It uses the platform system font on Apple devices and a matching sans fallback elsewhere.
+
 The application is an independent implementation inspired by the architecture and open-source spirit of [HK Traffic Intelligence](https://github.com/keithligh/hk-traffic-intelligence). It does not reuse that project's source code.
 
 ## Stack
@@ -90,11 +92,11 @@ Set the required source flags from `.env.example` only when a source must be dis
 - Border information is a best-effort extraction of the Public Security Police live platform. The service keeps stale values visible with a delayed marker when that source blocks automated access.
 - LRT has no confirmed official live train-position API. The map shows the official network and official notice RSS, and the train on the selected line is an explicitly labelled schematic animation, never live data.
 - The map draws the full street network in grey; only the 1,268 segments DSAT monitors carry a congestion status.
-- DSAT reports buses per station segment rather than raw GPS, so live bus markers are placed between the previous and approaching stop and animate along that segment between polls using the feed speed, falling back to the approaching stop ETA.
+- DSAT reports buses per station segment rather than raw GPS, so live bus markers are placed between the previous and approaching stop and glide along the official route polyline toward the newest estimate at a bounded speed; a coarse ETA step is absorbed as motion instead of a jump. A 3D/2D mode control in the layer menu switches to flat, enlarged livery-coloured markers when the 3D models are hard to read.
 - The selected bus route is drawn from the official `route/traffic` polyline and coloured by the official traffic level of each segment.
 - Focusing a bus route hides the camera, LRT, congestion, and 3D building layers, keeps the route stops labelled, and shows buses as rotated 3D icons placed by estimating progress along the official segment.
 - The 3D map can be rotated and tilted freely; the compass in the navigation control resets the bearing.
-- At street zoom, buses and the selected LRT line switch from icon markers to rough extruded 3D models painted after the operators' current liveries (TCM orange/white, Transmac yellow/blue, LRT "Ocean Cruiser" pale blue with orange wave). The train moves along the line as a labelled schematic animation; it is not a live position.
+- At street zoom, buses switch from livery-coloured markers to generic GLB models rendered at 1.8x display scale, and the selected LRT line shows its extruded schematic train. The bus models are painted after the operators' current liveries (TCM orange/white, Transmac yellow/blue, LRT "Ocean Cruiser" pale blue with orange wave). The train moves along the line as a labelled schematic animation; it is not a live position.
 - Route buttons only warn about real suspensions reported by the diversion feed, not the raw `routeChange` flag.
 - The LRT tab selects a line, highlights its stations on the map, and lists them with interchange badges; no live train positions are claimed because DSAT/MLM publish none, and the moving train is labelled as a schematic animation.
 - The 3D view tilts the camera and shows extruded OpenFreeMap buildings on a flat ground plane, so roads stay level; it can be switched off in the layer menu.

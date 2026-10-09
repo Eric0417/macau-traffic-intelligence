@@ -101,6 +101,8 @@ export interface BusVehicle {
   stationCode: string;
   stationName: string;
   stationSequence: number;
+  /** Index into routeSegments for the segment the estimate is drawn on. */
+  segmentIndex: number | null;
   coordinates: [number, number] | null;
   bearing: number | null;
   estimated: boolean;

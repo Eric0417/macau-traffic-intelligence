@@ -90,6 +90,7 @@ export const busVehicleSchema = z.object({
   stationCode: z.string(),
   stationName: z.string(),
   stationSequence: z.number().int().nonnegative(),
+  segmentIndex: z.number().int().nonnegative().nullable(),
   coordinates: z.tuple([z.number(), z.number()]).nullable(),
   bearing: z.number().nullable(),
   estimated: z.boolean(),

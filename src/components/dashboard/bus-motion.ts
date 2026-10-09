@@ -4,12 +4,15 @@ import type { BusLivery } from "@/components/dashboard/bus-3d-layer";
 export type LngLat = [number, number];
 
 const METERS_PER_DEGREE_LAT = 111_320;
-const MAX_SPEED_METERS_PER_SECOND = 22; // about 80 km/h
-const EASE_RADIUS_METERS = 70;
-const POLL_WINDOW_SECONDS = 12;
-const STOP_MARGIN_METERS = 2;
-const HANDOFF_WINDOW_MS = 30_000;
-const HANDOFF_BLEND_MS = 1_600;
+const POINT_EPSILON_DEGREES = 1e-9;
+const CLOSED_LOOP_RADIUS_METERS = 120;
+// The marker glides between feed estimates instead of dead-reckoning ahead of
+// them. Peak speed stays inside a plausible bus range so a coarse ETA step
+// cannot teleport the vehicle across the route.
+const MIN_FORWARD_SPEED = 6; // 21.6 km/h
+const MAX_FORWARD_SPEED = 20; // 72 km/h
+const MIN_BACKWARD_SPEED = 1.2;
+const MAX_BACKWARD_SPEED = 5;
 
 export function metersBetween(a: LngLat, b: LngLat): number {
   const latRadians = ((a[1] + b[1]) / 2) * (Math.PI / 180);
@@ -113,23 +116,138 @@ export function projectOnPath(
   return bestDistance;
 }
 
+export interface RoutePathSegment {
+  fromStationCode: string;
+  toStationCode: string;
+  path: LngLat[];
+  lengths: number[];
+  length: number;
+  /** Distance from the start of the concatenated path to this segment's first point. */
+  start: number;
+}
+
+export interface RoutePath {
+  path: LngLat[];
+  lengths: number[];
+  total: number;
+  closed: boolean;
+  segments: RoutePathSegment[];
+}
+
+// Concatenate the official stop-to-stop polylines into one path so a vehicle
+// can move across segment boundaries without being re-projected or snapped.
+export function buildRoutePath(routeSegments: BusRouteSegment[]): RoutePath {
+  const path: LngLat[] = [];
+  const lengths: number[] = [];
+  const segments: RoutePathSegment[] = [];
+  let total = 0;
+
+  const append = (point: LngLat) => {
+    const last = path[path.length - 1];
+    if (
+      last &&
+      Math.abs(last[0] - point[0]) < POINT_EPSILON_DEGREES &&
+      Math.abs(last[1] - point[1]) < POINT_EPSILON_DEGREES
+    ) {
+      return;
+    }
+    if (last) total += metersBetween(last, point);
+    path.push(point);
+    lengths.push(total);
+  };
+
+  for (const segment of routeSegments) {
+    if (segment.coordinates.length < 2) continue;
+    const segmentLengths = pathLengths(segment.coordinates);
+    const length = segmentLengths[segmentLengths.length - 1];
+    if (!(length > 0)) continue;
+
+    append(segment.coordinates[0]);
+    const start = total;
+    for (let index = 1; index < segment.coordinates.length; index += 1) {
+      append(segment.coordinates[index]);
+    }
+    segments.push({
+      fromStationCode: segment.fromStationCode,
+      toStationCode: segment.toStationCode,
+      path: segment.coordinates,
+      lengths: segmentLengths,
+      length,
+      start,
+    });
+  }
+
+  const first = path[0];
+  const last = path[path.length - 1];
+  return {
+    path,
+    lengths,
+    total,
+    closed:
+      path.length > 3 &&
+      first !== undefined &&
+      last !== undefined &&
+      metersBetween(first, last) < CLOSED_LOOP_RADIUS_METERS,
+    segments,
+  };
+}
+
+function segmentIndexForVehicle(route: RoutePath, vehicle: BusVehicle): number {
+  const segments = route.segments;
+  const declared = vehicle.segmentIndex;
+  if (typeof declared === "number" && declared >= 0 && declared < segments.length) {
+    return declared;
+  }
+
+  // Fallback for cached payloads from before segmentIndex existed: mirror the
+  // adapter's stop-based pairing, latest match first for return trips.
+  if (vehicle.stationSequence > 0) {
+    for (let index = segments.length - 1; index >= 0; index -= 1) {
+      if (segments[index].toStationCode === vehicle.stationCode) return index;
+    }
+  } else {
+    for (let index = 0; index < segments.length; index += 1) {
+      if (segments[index].fromStationCode === vehicle.stationCode) return index;
+    }
+  }
+  for (let index = segments.length - 1; index >= 0; index -= 1) {
+    if (segments[index].toStationCode === vehicle.stationCode) return index;
+  }
+  return segments.findIndex(
+    (segment) =>
+      segment.fromStationCode === vehicle.stationCode ||
+      segment.toStationCode === vehicle.stationCode,
+  );
+}
+
+export function vehicleAnchorDistance(
+  route: RoutePath,
+  vehicle: BusVehicle,
+): number | null {
+  if (!vehicle.coordinates) return null;
+  const index = segmentIndexForVehicle(route, vehicle);
+  if (index < 0) return null;
+  const segment = route.segments[index];
+  const local = projectOnPath(segment.path, segment.lengths, vehicle.coordinates);
+  return segment.start + Math.min(Math.max(local, 0), segment.length);
+}
+
 export interface BusMotion {
   id: string;
   livery: BusLivery;
   plate: string;
   stationName: string;
   lowFloor: boolean;
-  path: LngLat[];
-  lengths: number[];
+  routeKey: string;
+  route: RoutePath;
+  /** Current displayed route distance, unwrapped across loop laps. */
   distance: number;
-  maxDistance: number;
-  speedMetersPerSecond: number;
-  startedAt: number;
-  handoff: { distance: number; startedAt: number } | null;
-}
-
-export interface BusMotionHandoff {
-  coordinates: LngLat;
+  /** Official estimate the marker moves toward, unwrapped across loop laps. */
+  target: number;
+  /** Signed speed along the route in metres per second. */
+  speed: number;
+  peakForward: number;
+  peakBackward: number;
   at: number;
 }
 
@@ -143,38 +261,94 @@ export interface BusMotionState {
   bearing: number;
 }
 
+function resolvedDistance(route: RoutePath, distance: number): number {
+  if (!(route.total > 0)) return distance;
+  if (route.closed) {
+    const wrapped = distance % route.total;
+    return wrapped < 0 ? wrapped + route.total : wrapped;
+  }
+  return Math.min(Math.max(distance, 0), route.total);
+}
+
+const RESPONSE_SECONDS = 2.5;
+const SPEED_SMOOTHING_SECONDS = 0.8;
+const INTEGRATION_STEP_SECONDS = 0.25;
+
+interface PursuitState {
+  distance: number;
+  speed: number;
+}
+
+// A speed-limited pursuit controller. The displayed distance moves toward the
+// official estimate with a bounded speed, so a coarse ETA step anywhere on the
+// route can only change the direction of travel, never the position.
+function pursue(motion: BusMotion, now: number): PursuitState {
+  let remaining = Math.max(0, (now - motion.at) / 1_000);
+  if (remaining > 60) {
+    // The tab or the machine was away long enough that gliding from the stale
+    // position would be meaningless. Resume at the latest estimate instead.
+    motion.distance = motion.target;
+    motion.speed = 0;
+    motion.at = now;
+    return { distance: motion.distance, speed: motion.speed };
+  }
+  while (remaining > 0) {
+    const step = Math.min(remaining, INTEGRATION_STEP_SECONDS);
+    const gap = motion.target - motion.distance;
+    const desired = Math.min(
+      motion.peakForward,
+      Math.max(-motion.peakBackward, gap / RESPONSE_SECONDS),
+    );
+    motion.speed +=
+      (desired - motion.speed) * (1 - Math.exp(-step / SPEED_SMOOTHING_SECONDS));
+
+    if (Math.abs(gap) < 0.5 && Math.abs(motion.speed) < 0.05) {
+      motion.distance = motion.target;
+      motion.speed = 0;
+    } else {
+      const next = motion.distance + motion.speed * step;
+      const passedTarget =
+        (gap > 0 && next >= motion.target) || (gap < 0 && next <= motion.target);
+      if (passedTarget) {
+        motion.distance = motion.target;
+        motion.speed = 0;
+      } else {
+        motion.distance = next;
+      }
+    }
+    remaining -= step;
+  }
+  if (now > motion.at) motion.at = now;
+  return { distance: motion.distance, speed: motion.speed };
+}
+
 export function createBusMotion(
   vehicle: BusVehicle,
-  segment: BusRouteSegment | null,
+  route: RoutePath,
+  routeKey: string,
   livery: BusLivery,
-  etaMinutes: number | null,
   now: number,
-  handoff?: BusMotionHandoff | null,
+  previous?: BusMotion | null,
 ): BusMotion | null {
-  if (!vehicle.coordinates) return null;
-  const path = segment?.coordinates ?? null;
-  if (!path || path.length < 2) return null;
+  const anchor = vehicleAnchorDistance(route, vehicle);
+  if (anchor === null) return null;
 
-  const lengths = pathLengths(path);
-  const total = lengths[lengths.length - 1];
-  const distance = Math.min(projectOnPath(path, lengths, vehicle.coordinates), total);
-  const remaining = Math.max(0, total - distance);
-  const etaSeconds = (etaMinutes ?? 0) * 60;
-
-  let speed = (vehicle.speedKph ?? 0) / 3.6;
-  if (speed <= 0.8 && etaSeconds > 5 && remaining > 0) {
-    speed = remaining / etaSeconds;
+  let distance = anchor;
+  let speed = 0;
+  if (previous && previous.routeKey === routeKey) {
+    const state = pursue(previous, now);
+    distance = state.distance;
+    speed = state.speed;
   }
-  speed = Math.min(Math.max(speed, 0), MAX_SPEED_METERS_PER_SECOND);
 
-  const maxDistance = Math.max(
-    distance,
-    Math.min(total - STOP_MARGIN_METERS, distance + speed * POLL_WINDOW_SECONDS),
-  );
-  const handoffDistance =
-    handoff && now - handoff.at < HANDOFF_WINDOW_MS
-      ? projectOnPath(path, lengths, handoff.coordinates)
-      : null;
+  let target = anchor;
+  if (previous && previous.routeKey === routeKey && route.closed) {
+    // The vehicle started another lap at the same terminal. Keep advancing
+    // along the loop instead of snapping back to the first segment.
+    while (target + route.total / 2 < distance) target += route.total;
+  }
+
+  const feedSpeed = (vehicle.speedKph ?? 0) / 3.6;
 
   return {
     id: vehicle.id,
@@ -182,70 +356,27 @@ export function createBusMotion(
     plate: vehicle.plate,
     stationName: vehicle.stationName,
     lowFloor: vehicle.lowFloor,
-    path,
-    lengths,
+    routeKey,
+    route,
     distance,
-    maxDistance,
-    speedMetersPerSecond: speed,
-    startedAt: now,
-    handoff:
-      handoffDistance === null
-        ? null
-        : { distance: handoffDistance, startedAt: now },
+    target,
+    speed,
+    peakForward: Math.min(
+      MAX_FORWARD_SPEED,
+      Math.max(MIN_FORWARD_SPEED, feedSpeed * 1.4),
+    ),
+    peakBackward: Math.min(
+      MAX_BACKWARD_SPEED,
+      Math.max(MIN_BACKWARD_SPEED, feedSpeed * 0.6),
+    ),
+    at: now,
   };
 }
 
-function distanceWithEase(
-  start: number,
-  speed: number,
-  cap: number,
-  elapsed: number,
-): number {
-  if (speed <= 0) return start;
-  const easeStart = Math.max(start, cap - EASE_RADIUS_METERS);
-  const straight = start + speed * elapsed;
-  if (straight <= easeStart) return Math.min(straight, cap);
-
-  const remaining = cap - easeStart;
-  if (remaining <= 0.01) return cap;
-  const overshoot = straight - easeStart;
-  return cap - remaining * Math.exp(-overshoot / remaining);
-}
-
 export function advanceBusMotion(motion: BusMotion, now: number): BusMotionState {
-  const elapsed = Math.max(0, now - motion.startedAt) / 1000;
-  const target = distanceWithEase(
-    motion.distance,
-    motion.speedMetersPerSecond,
-    motion.maxDistance,
-    elapsed,
-  );
-  let distance = target;
-  if (motion.handoff) {
-    const sinceHandoff = now - motion.handoff.startedAt;
-    if (motion.handoff.distance > target + 0.5) {
-      // The new poll placed the bus slightly behind where it was drawn. Hold
-      // the drawn position briefly instead of stepping back, then ease onto
-      // the new estimate. This stops the marker jittering around the stop.
-      const holdMs = 4_000;
-      if (sinceHandoff < holdMs) {
-        distance = motion.handoff.distance;
-      } else {
-        const blend = Math.min(1, (sinceHandoff - holdMs) / HANDOFF_BLEND_MS);
-        const smooth = blend * blend * (3 - 2 * blend);
-        distance =
-          motion.handoff.distance + (target - motion.handoff.distance) * smooth;
-      }
-    } else {
-      const blend = Math.min(1, Math.max(0, sinceHandoff / HANDOFF_BLEND_MS));
-      if (blend < 1) {
-        const smooth = blend * blend * (3 - 2 * blend);
-        distance =
-          motion.handoff.distance + (target - motion.handoff.distance) * smooth;
-      }
-    }
-  }
-  const point = pointAtDistance(motion.path, motion.lengths, distance);
+  const state = pursue(motion, now);
+  const distance = resolvedDistance(motion.route, state.distance);
+  const point = pointAtDistance(motion.route.path, motion.route.lengths, distance);
   return {
     id: motion.id,
     plate: motion.plate,

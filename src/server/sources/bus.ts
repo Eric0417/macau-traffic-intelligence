@@ -566,8 +566,8 @@ export async function loadBusEta(routeCodeValue: string, direction: 0 | 1) {
   });
   const stopByCode = new Map(stopsWithoutTraffic.map((stop) => [stop.stationCode, stop]));
 
-  const segmentByFromCode = new Map<string, BusRouteSegment>();
-  const segmentByToCode = new Map<string, BusRouteSegment>();
+  const segmentIndexByFromCode = new Map<string, number>();
+  const segmentIndexByToCode = new Map<string, number>();
   const routeSegments: BusRouteSegment[] = [];
 
   routeTrafficSegments.forEach((raw, index) => {
@@ -591,17 +591,21 @@ export async function loadBusEta(routeCodeValue: string, direction: 0 | 1) {
       trafficLevel: raw.trafficLevel,
       coordinates: raw.coordinates,
     };
+    const segmentIndex = routeSegments.length;
     routeSegments.push(segment);
-    segmentByFromCode.set(from.stationCode, segment);
-    segmentByToCode.set(to.stationCode, segment);
+    segmentIndexByFromCode.set(from.stationCode, segmentIndex);
+    segmentIndexByToCode.set(to.stationCode, segmentIndex);
   });
 
+  const stopSegmentIndex = new Map<string, number>();
   const stops: BusEtaStop[] = stopsWithoutTraffic.map((stop) => {
     // Traffic on the way to this stop; the first stop shows its departure segment.
-    const segment =
+    const segmentIndex =
       stop.sequence === 0
-        ? segmentByFromCode.get(stop.stationCode)
-        : segmentByToCode.get(stop.stationCode);
+        ? segmentIndexByFromCode.get(stop.stationCode)
+        : segmentIndexByToCode.get(stop.stationCode);
+    if (segmentIndex !== undefined) stopSegmentIndex.set(stop.stationCode, segmentIndex);
+    const segment = segmentIndex === undefined ? undefined : routeSegments[segmentIndex];
     const trafficLevel = segment?.trafficLevel ?? -1;
     return {
       ...stop,
@@ -645,10 +649,8 @@ export async function loadBusEta(routeCodeValue: string, direction: 0 | 1) {
       const baseFraction = vehicleFraction(stop, stop?.etaMinutes ?? null);
       const spread = (index - (group.length - 1) / 2) * 0.16;
       const fraction = clampFraction(baseFraction + spread);
-      const segment =
-        stop?.sequence === 0
-          ? segmentByFromCode.get(stationCode)
-          : segmentByToCode.get(stationCode);
+      const mappedIndex = stopSegmentIndex.get(stationCode);
+      const segment = mappedIndex === undefined ? undefined : routeSegments[mappedIndex];
       const fallback = routeTrafficSegments[stop ? Math.max(0, stop.sequence - 1) : 0];
       const coordinates = segment?.coordinates ?? fallback?.coordinates ?? null;
       const estimate = coordinates ? pointAlongSegment(coordinates, fraction) : null;
@@ -663,6 +665,7 @@ export async function loadBusEta(routeCodeValue: string, direction: 0 | 1) {
         stationCode,
         stationName: stop?.stationName ?? stationCode,
         stationSequence: stop?.sequence ?? 0,
+        segmentIndex: segment && mappedIndex !== undefined ? mappedIndex : null,
         coordinates: estimate?.point ?? null,
         bearing: estimate?.bearing ?? null,
         estimated: true,

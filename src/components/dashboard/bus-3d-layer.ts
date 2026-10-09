@@ -6,7 +6,7 @@ import type {
 } from "maplibre-gl";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { BUS_MODEL_MIN_ZOOM } from "@/lib/config";
+import { BUS_MODEL_DISPLAY_SCALE, BUS_MODEL_MIN_ZOOM } from "@/lib/config";
 
 const BUS_MODEL_FULL_SCALE_MAX_ZOOM = 19;
 
@@ -203,7 +203,10 @@ export class Bus3DLayer implements CustomLayerInterface {
       zoom > BUS_MODEL_FULL_SCALE_MAX_ZOOM
         ? 2 ** (BUS_MODEL_FULL_SCALE_MAX_ZOOM - zoom)
         : 1;
-    const scale = mercator.meterInMercatorCoordinateUnits() * screenSizeFactor;
+    const scale =
+      mercator.meterInMercatorCoordinateUnits() *
+      screenSizeFactor *
+      BUS_MODEL_DISPLAY_SCALE;
     const bearing = vehicle.bearing ?? 0;
     return new THREE.Matrix4()
       .makeTranslation(mercator.x, mercator.y, mercator.z)
