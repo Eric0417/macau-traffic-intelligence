@@ -4,6 +4,9 @@ All notable user-visible and architectural changes are recorded here.
 
 ## Live-detail assistant and flat map with 3D buildings - 2026-10-09
 
+- The assistant now carries the official LRT network (lines, stations, interchanges) and answers LRT questions while stating that no official live train positions exist.
+- Answers can carry a UI action: a named bus route is drawn on the map with its stops and live vehicles while the answer stays on screen, and a named LRT line is highlighted. A button in the answer opens the matching bus or LRT panel.
+- Questions such as "does route 9 serve Taipa?" are checked against the official stop list on the server. The verified yes or no leads the answer, so a weak model cannot flip the result.
 - The AI assistant now resolves names in the question. A named bus route triggers live fetches for that route (both directions when one route is named, at most three route-direction slices), so answers can use vehicle plates, the stop each bus is approaching, speed, the low-floor flag, next arrivals, suspended stops, and the per-segment traffic on the official route. A named road is matched against all 1,268 monitored segments and summarised with a segment count, status breakdown, and total length.
 - Road answers now list every congested segment and the slowest named segments, not only a count.
 - Bus answers state that positions are estimated from the official arrival feed, not GPS. Direction 0 is the outbound trip and direction 1 is the return trip.

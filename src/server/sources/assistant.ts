@@ -12,8 +12,10 @@ import type {
   BusEta,
   BusRoute,
   LearningAssistantAnswer,
+  LearningAssistantAction,
   Locale,
   LocalizedText,
+  LrtNetwork,
   LrtNotice,
   ParkingFacility,
   RoadCollection,
@@ -80,6 +82,11 @@ export interface LearningSnapshot {
       liveTracking: boolean;
       liveDataLoaded: boolean;
     }>;
+    placeCheck: {
+      place: string;
+      served: boolean;
+      direction: 0 | 1 | null;
+    } | null;
     liveRoutes: Array<{
       routeName: string;
       direction: 0 | 1;
@@ -95,6 +102,7 @@ export interface LearningSnapshot {
         etaMinutes: number | null;
         trafficStatus: string;
       }>;
+      stops: string[];
       suspendedStops: string[];
       segmentTraffic: {
         normal: number;
@@ -103,6 +111,18 @@ export interface LearningSnapshot {
         unknown: number;
       };
     }>;
+    note: string;
+  } | null;
+  lrt: {
+    edition: string;
+    sourceUpdatedAt: string;
+    lines: Array<{
+      ref: string;
+      name: string;
+      stationCount: number;
+      stations: string[];
+    }>;
+    stations: Array<{ name: string; lines: string[]; interchange: boolean }>;
     note: string;
   } | null;
 }
@@ -151,6 +171,23 @@ export function looksBusRelated(question: string): boolean {
   );
 }
 
+export function extractPlaceQuery(question: string): string | null {
+  const zh = question.match(
+    /(?:去唔去(?:到)?|去不去(?:到)?|會唔會去|會唔會到|有冇去|到唔到)([^？?！!，,。.；;：:]+)/,
+  );
+  if (zh?.[1]) return zh[1].trim().slice(0, 12);
+  const en = question.match(
+    /(?:serve|serves|go(?:es)? to|reach(?:es)?)\s+([^?.,;:!]+)/i,
+  );
+  if (en?.[1]) {
+    return en[1]
+      .trim()
+      .replace(/^(the|to)\s+/i, "")
+      .slice(0, 30);
+  }
+  return null;
+}
+
 export function findMentionedSegments(
   question: string,
   roads: RoadCollection | null,
@@ -195,6 +232,95 @@ export function findMentionedSegments(
     ...entry,
     totalLengthMeters: Math.round(entry.totalLengthMeters),
   }));
+}
+
+function summariseLrt(
+  network: LrtNetwork | null,
+  locale: Locale,
+): LearningSnapshot["lrt"] {
+  if (!network) return null;
+  const stationCountByLine = new Map<string, number>();
+  const stationsByLine = new Map<string, string[]>();
+  for (const station of network.stations) {
+    for (const line of station.lines) {
+      stationCountByLine.set(line, (stationCountByLine.get(line) ?? 0) + 1);
+      const names = stationsByLine.get(line) ?? [];
+      names.push(pickName(station.name, locale));
+      stationsByLine.set(line, names);
+    }
+  }
+  return {
+    edition: network.timetableEdition,
+    sourceUpdatedAt: network.sourceUpdatedAt,
+    lines: network.lines.features.map((feature) => ({
+      ref: feature.properties.ref,
+      name: pickName(feature.properties.name, locale),
+      stationCount: stationCountByLine.get(feature.properties.ref) ?? 0,
+      stations: stationsByLine.get(feature.properties.ref) ?? [],
+    })),
+    stations: network.stations.map((station) => ({
+      name: pickName(station.name, locale),
+      lines: station.lines,
+      interchange: station.interchange,
+    })),
+    note: "The LRT publishes no official live train positions. This is the official network and service notices only.",
+  };
+}
+
+export function matchLrtLine(
+  question: string,
+  network: LrtNetwork | null,
+): { ref: string; name: string } | null {
+  if (!network || !question.trim()) return null;
+  const haystack = question.toLowerCase();
+  for (const feature of network.lines.features) {
+    const baseNames = [
+      feature.properties.name["zh-Hant"],
+      feature.properties.name["zh-Hans"],
+      feature.properties.name.en,
+    ]
+      .filter(Boolean)
+      .map((name) => name.split(/[（(]/)[0].trim());
+    const names = [...baseNames, feature.properties.ref].filter(Boolean);
+    const hit = names.some((name) => {
+      const normalized = name.trim().toLowerCase();
+      if (!normalized) return false;
+      const isCjk = /[\u3400-\u9fff]/.test(name);
+      if (isCjk ? normalized.length < 3 : normalized.length < 4) return false;
+      return haystack.includes(normalized);
+    });
+    if (hit) {
+      return {
+        ref: feature.properties.ref,
+        name: pickName(feature.properties.name, "zh-Hant"),
+      };
+    }
+  }
+  return null;
+}
+
+export function matchLrtStation(
+  question: string,
+  network: LrtNetwork | null,
+): LrtNetwork["stations"][number] | null {
+  if (!network || !question.trim()) return null;
+  const haystack = question.toLowerCase();
+  for (const station of network.stations) {
+    const names = [
+      station.name["zh-Hant"],
+      station.name["zh-Hans"],
+      station.name.en,
+    ].filter(Boolean);
+    const hit = names.some((name) => {
+      const normalized = name.trim().toLowerCase();
+      if (!normalized) return false;
+      const isCjk = /[\u3400-\u9fff]/.test(name);
+      if (isCjk ? normalized.length < 3 : normalized.length < 4) return false;
+      return haystack.includes(normalized);
+    });
+    if (hit) return station;
+  }
+  return null;
 }
 
 function summariseRoads(
@@ -337,6 +463,7 @@ function summariseBusSlice(
       etaMinutes: stop.etaMinutes,
       trafficStatus: stop.trafficStatus,
     })),
+    stops: eta.stops.map((stop) => stop.stationName),
     suspendedStops: eta.diversion.suspendedStops.map((stop) => stop.stationName),
     segmentTraffic,
   };
@@ -360,21 +487,34 @@ function busEtaSourceDefinition(slice: AssistantFocus): SourceDefinition<BusEta>
 export async function buildLearningSnapshot(
   locale: Locale,
   options: { focus?: AssistantFocus; question?: string } = {},
-): Promise<{ snapshot: LearningSnapshot; refreshes: Array<() => Promise<void>> }> {
+): Promise<{
+  snapshot: LearningSnapshot;
+  refreshes: Array<() => Promise<void>>;
+  action?: LearningAssistantAction;
+}> {
   const refreshes: Array<() => Promise<void>> = [];
   const question = options.question ?? "";
   const focus = options.focus;
 
-  const [roads, bridges, weather, parking, borders, notices, lrtNotices] =
-    await Promise.all([
-      readSource(sources.roads),
-      readSource(sources.bridges),
-      readSource(sources.weather),
-      readSource(sources.parking),
-      readSource(sources.borders),
-      readSource(sources.notices),
-      readSource(sources.lrtNotices),
-    ]);
+  const [
+    roads,
+    bridges,
+    weather,
+    parking,
+    borders,
+    notices,
+    lrtNotices,
+    lrtNetwork,
+  ] = await Promise.all([
+    readSource(sources.roads),
+    readSource(sources.bridges),
+    readSource(sources.weather),
+    readSource(sources.parking),
+    readSource(sources.borders),
+    readSource(sources.notices),
+    readSource(sources.lrtNotices),
+    readSource(sources.lrtNetwork),
+  ]);
 
   const baseReads: Array<SourceRead<unknown> | null> = [
     roads,
@@ -384,6 +524,7 @@ export async function buildLearningSnapshot(
     borders,
     notices,
     lrtNotices,
+    lrtNetwork,
   ];
   for (const read of baseReads) {
     if (read?.refresh) refreshes.push(read.refresh);
@@ -432,6 +573,45 @@ export async function buildLearningSnapshot(
     .filter((read): read is SourceRead<BusEta> => Boolean(read))
     .map((read) => summariseBusSlice(read.result.data));
 
+  const place = question ? extractPlaceQuery(question) : null;
+  let placeCheck: NonNullable<LearningSnapshot["bus"]>["placeCheck"] = null;
+  if (place && liveRoutes.length) {
+    const servedSlice = liveRoutes.find((slice) =>
+      slice.stops.some((stop) => stop.includes(place)),
+    );
+    placeCheck = {
+      place,
+      served: Boolean(servedSlice),
+      direction: servedSlice ? servedSlice.direction : null,
+    };
+  }
+
+  const network = lrtNetwork?.result.data ?? null;
+  let action: LearningAssistantAction | undefined;
+  if (matchedRoutes.length && liveRoutes.length) {
+    const mentionedStopDirection =
+      liveRoutes.find((slice) =>
+        slice.stops.some((stop) => {
+          const name = stop.trim();
+          if (name.length < 3) return false;
+          return (
+            question.includes(name) ||
+            question.toLowerCase().includes(name.toLowerCase())
+          );
+        }),
+      )?.direction ?? null;
+    action = {
+      kind: "bus",
+      routeCode: matchedRoutes[0].routeCode,
+      direction: placeCheck?.direction ?? mentionedStopDirection ?? 0,
+    };
+  } else if (network) {
+    const line = matchLrtLine(question, network);
+    const station = matchLrtStation(question, network);
+    if (line) action = { kind: "lrt", lineRef: line.ref };
+    else if (station) action = { kind: "lrt", lineRef: station.lines[0] };
+  }
+
   const snapshot: LearningSnapshot = {
     generatedAt: new Date().toISOString(),
     weather: summariseWeather(weather?.result.data ?? null),
@@ -454,13 +634,15 @@ export async function buildLearningSnapshot(
               (slice) => slice.routeName === route.routeName,
             ),
           })),
+          placeCheck,
           liveRoutes,
           note: BUS_POSITION_NOTE,
         }
       : null,
+    lrt: summariseLrt(network, locale),
   };
 
-  return { snapshot, refreshes };
+  return { snapshot, refreshes, action };
 }
 
 const localeName: Record<Locale, string> = {
@@ -485,7 +667,10 @@ export function buildAssistantMessages(
     "When the snapshot cannot explain why something happens, say which extra data or field observation would be needed instead of guessing a cause.",
     "The snapshot may include roads.mentionedSegments (each with a segment count, status breakdown, and total length), roads.congestedSegments, roads.slowSegments, and bus.liveRoutes. Use them for questions about a specific road, bus route, bus position, or route traffic.",
     "For bus answers, name the stop each bus is approaching and always state that positions are estimated from the official arrival feed, not GPS. When one route is named, bus.liveRoutes carries both directions: call direction 0 the outbound trip and direction 1 the return trip, and never invent destination or terminal names that are not written in the snapshot.",
+    "bus.liveRoutes[].stops lists every stop of that route in order. When asked whether a route serves a place, decide yes or no from the stop list and answer that in the first sentence; only then name the relevant stops. If the place is not in the list, say it is not served and do not imply otherwise.",
+    "If bus.placeCheck is present, its served value is the authoritative answer to whether that route serves the place. The system adds an opening line with that value, so confirm it and never contradict it. Keep the reply to at most three short sentences: the served value, up to three nearby stops from the stop list, and a next step.",
     "If a named route is not in bus.liveRoutes, or a named road is not in roads.mentionedSegments, say that the live detail was not loaded instead of guessing.",
+    "lrt lists the official LRT network: lines, stations, and interchanges. lrt.lines[].stations lists the station names of each line; if asked how many stations a line has, count that list. The LRT has no official live train-position feed, so never claim a train position or a countdown; use the LRT service notices for service status.",
     "Never mention JSON field names such as liveVehicleCount or segmentTraffic in the answer; describe the same facts in plain words.",
     "Keep units as published (minutes, °C, km/h, number of spaces). Structure comparisons as short lists or sentences, not tables.",
     "Live readings change quickly; describe what the data shows now and never promise that a condition will persist.",
@@ -635,6 +820,15 @@ function contextSummary(snapshot: LearningSnapshot, locale: Locale): string[] {
       ),
     );
   }
+  if (snapshot.lrt) {
+    items.push(
+      join(
+        `輕軌網絡：${snapshot.lrt.lines.length} 條線、${snapshot.lrt.stations.length} 個站；官方無實時列車位置`,
+        `轻轨网络：${snapshot.lrt.lines.length} 条线、${snapshot.lrt.stations.length} 个站；官方无实时列车位置`,
+        `LRT network: ${snapshot.lrt.lines.length} lines, ${snapshot.lrt.stations.length} stations; no official live train positions`,
+      ),
+    );
+  }
   if (snapshot.bus && snapshot.bus.liveRoutes.length) {
     const routes = snapshot.bus.liveRoutes
       .map(
@@ -674,18 +868,59 @@ function contextSummary(snapshot: LearningSnapshot, locale: Locale): string[] {
   return items;
 }
 
+function placeCheckSentence(
+  check: NonNullable<NonNullable<LearningSnapshot["bus"]>["placeCheck"]>,
+  route: string,
+  locale: Locale,
+): string {
+  const direction =
+    check.direction === null
+      ? null
+      : locale === "en"
+        ? check.direction === 0
+          ? "outbound"
+          : "return"
+        : check.direction === 0
+          ? "去程"
+          : "回程";
+  if (locale === "en") {
+    return check.served
+      ? `Checked against the official stop list: route ${route} does serve ${check.place}${direction ? ` (${direction} trip)` : ""}.`
+      : `Checked against the official stop list: route ${route} does not serve ${check.place}.`;
+  }
+  const isSimplified = locale === "zh-Hans";
+  const label = isSimplified ? "核对官方站表" : "核對官方站表";
+  const verb = isSimplified
+    ? check.served
+      ? "会经过"
+      : "不经过"
+    : check.served
+      ? "會經過"
+      : "不經過";
+  const word = isSimplified ? "路线" : "路線";
+  const suffix = direction ? `（${direction}）` : "";
+  return `${label}：${route} ${word}${verb}「${check.place}」${suffix}。`;
+}
+
 export async function askLearningAssistant(params: {
   question: string;
   locale: Locale;
   focus?: AssistantFocus;
 }): Promise<AssistantAnswerResult> {
-  const { snapshot, refreshes } = await buildLearningSnapshot(
+  const { snapshot, refreshes, action } = await buildLearningSnapshot(
     params.locale,
     { focus: params.focus, question: params.question },
   );
-  const answerText = await callAssistantProvider(
+  const modelAnswer = await callAssistantProvider(
     buildAssistantMessages(params.question, params.locale, snapshot),
   );
+  const placeCheck = snapshot.bus?.placeCheck;
+  const checkedRoute = snapshot.bus?.matchedRoutes[0]?.route;
+  const factLine =
+    placeCheck && checkedRoute
+      ? placeCheckSentence(placeCheck, checkedRoute, params.locale)
+      : null;
+  const answerText = factLine ? `${factLine}\n\n${modelAnswer}` : modelAnswer;
 
   return {
     answer: {
@@ -694,6 +929,7 @@ export async function askLearningAssistant(params: {
       locale: params.locale,
       snapshotAt: snapshot.generatedAt,
       contextSummary: contextSummary(snapshot, params.locale),
+      ...(action ? { action } : {}),
     },
     refreshes,
   };

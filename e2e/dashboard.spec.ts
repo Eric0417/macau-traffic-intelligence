@@ -510,6 +510,7 @@ test("AI tutor returns a grounded answer", async ({ page, isMobile }) => {
           locale: "zh-Hant",
           snapshotAt: "2026-10-09T07:00:00.000Z",
           contextSummary: ["跨海大橋行車時間（2 項）", "天氣：27°C、濕度 80%"],
+          action: { kind: "bus", routeCode: "00003", direction: 0 },
         },
         meta: meta({
           id: "assistant",
@@ -529,4 +530,12 @@ test("AI tutor returns a grounded answer", async ({ page, isMobile }) => {
   await expect(panel.locator(".assistant-context")).toContainText("跨海大橋行車時間");
   expect(requestBody?.locale).toBe("zh-Hant");
   expect(requestBody?.question.length).toBeGreaterThan(0);
+
+  await expect(panel.locator(".assistant-action")).toContainText("開啟巴士分頁");
+  await panel.locator(".assistant-action").click();
+  await expect(panel.getByRole("tab", { name: "巴士" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await expect(panel.locator(".route-detail-head strong")).toHaveText("3");
 });

@@ -162,7 +162,7 @@ function diagramCard() {
   `;
 }
 
-function verificationCard(project) {
+function resultsCard(project) {
   const verification = project.verification;
   const stat = (value, label) => `
     <div style="flex:1;padding:30px 24px;background:#f2f7f3;border:2px solid #cfe0d5;border-radius:12px;text-align:center">
@@ -173,14 +173,14 @@ function verificationCard(project) {
   return `
     <div class="demo-card" style="position:absolute;inset:0;background:rgba(6,20,15,0.66);display:flex;align-items:center;justify-content:center">
       <div style="width:1560px;background:#fff;border-radius:16px;padding:62px 70px;color:#13201a">
-        <div style="font-size:22px;letter-spacing:3px;color:#08785a;font-weight:800">VERIFICATION</div>
-        <h2 style="font-size:50px;margin:14px 0 40px;font-weight:800">Tested where it can be checked</h2>
+        <div style="font-size:22px;letter-spacing:3px;color:#08785a;font-weight:800">LIVE RESULTS</div>
+        <h2 style="font-size:50px;margin:14px 0 40px;font-weight:800">Answered from live official data</h2>
         <div style="display:flex;gap:26px">
-          ${stat(escapeHtml(verification.unitTests), `fixture-based tests across ${escapeHtml(verification.unitTestFiles)} files, all passing`)}
-          ${stat(escapeHtml(verification.browserScenarios), "browser scenarios on desktop and mobile, all passing")}
-          ${stat(`${escapeHtml(verification.liveSources)} / ${escapeHtml(verification.liveSources)}`, "official sources returned valid data in the live check")}
+          ${stat("8 + 7", "bus 3 vehicles, outbound and returning, in one answer")}
+          ${stat("59", "monitored segments read for one avenue")}
+          ${stat("2-3 s", "measured answer time on the live deployment")}
         </div>
-        <p style="font-size:26px;color:#37463e;margin:44px 0 0;line-height:1.5">A community pilot with the prepared test kit is the next step. No user-testing data is claimed yet.</p>
+        <p style="font-size:26px;color:#37463e;margin:44px 0 0;line-height:1.5">All ${escapeHtml(verification.liveSources)} official sources returned valid data on ${escapeHtml(verification.date)}. A community pilot with the prepared test kit is the next step; no user-study data is claimed yet.</p>
       </div>
     </div>
   `;
@@ -313,6 +313,13 @@ const actions = {
       .waitFor({ timeout: 120_000 });
     await snap(page, "desktop-assistant-en.png");
   },
+  async openAssistantBusTab(page) {
+    const button = page.locator(".desktop-panel .assistant-action").first();
+    await moveCursor(page, button);
+    await button.click({ timeout: 8000 });
+    await page.waitForTimeout(1_500);
+    await snap(page, "desktop-bus-follow.png");
+  },
 };
 
 async function main() {
@@ -357,7 +364,7 @@ async function main() {
       "title-card": titleCard(project),
       "problem-card": problemCard(),
       "diagram-card": diagramCard(),
-      "verification-card": verificationCard(project),
+      "results-card": resultsCard(project),
       "impact-card": impactCard(project),
     };
     const html = overlayByKind[scene.kind];

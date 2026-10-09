@@ -97,6 +97,8 @@ const messages = {
     assistantQ1: "現在哪條跨海大橋最慢？可能和什麼有關？",
     assistantQ2: "今日天氣對交通有什麼影響？",
     assistantQ3: "3 號巴士而家喺邊？",
+    assistantOpenBus: "開啟巴士分頁",
+    assistantOpenLrt: "開啟輕軌分頁",
   },
   "zh-Hans": {
     tagline: "澳门即时交通总览",
@@ -188,6 +190,8 @@ const messages = {
     assistantQ1: "现在哪条跨海大桥最慢？可能和什么有关？",
     assistantQ2: "今日天气对交通有什么影响？",
     assistantQ3: "3 号巴士现在在哪里？",
+    assistantOpenBus: "打开巴士分页",
+    assistantOpenLrt: "打开轻轨分页",
   },
   en: {
     tagline: "Live Macau transport overview",
@@ -279,6 +283,8 @@ const messages = {
     assistantQ1: "Which bridge is slowest right now, and what might explain it?",
     assistantQ2: "How might today's weather affect traffic?",
     assistantQ3: "Where is bus 3 right now?",
+    assistantOpenBus: "Open the Bus tab",
+    assistantOpenLrt: "Open the LRT tab",
   },
 } as const;
 

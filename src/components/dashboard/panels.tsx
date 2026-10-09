@@ -29,6 +29,7 @@ import type {
   LrtNetwork,
   LrtNotice,
   LearningAssistantAnswer,
+  LearningAssistantAction,
   ParkingFacility,
   RoadCollection,
   TrafficNotice,
@@ -631,9 +632,13 @@ export function LrtPanel({
 export function AssistantPanel({
   route,
   direction,
+  onAction,
+  onOpenTab,
 }: {
   route: BusRoute | null;
   direction: 0 | 1;
+  onAction?: (action: LearningAssistantAction | null) => void;
+  onOpenTab?: (action: LearningAssistantAction) => void;
 }) {
   const { t, locale } = useLanguage();
   const [draft, setDraft] = useState("");
@@ -678,6 +683,7 @@ export function AssistantPanel({
           entry.id === id ? { ...entry, answer: body.data } : entry,
         ),
       );
+      onAction?.(body.data.action ?? null);
     } catch {
       setEntries((current) =>
         current.map((entry) => (entry.id === id ? { ...entry, failed: true } : entry)),
@@ -722,6 +728,20 @@ export function AssistantPanel({
                         <li key={item}>{item}</li>
                       ))}
                     </ul>
+                    {entry.answer.action && onOpenTab ? (
+                      <button
+                        type="button"
+                        className="assistant-action"
+                        onClick={() => {
+                          const action = entry.answer?.action;
+                          if (action) onOpenTab(action);
+                        }}
+                      >
+                        {entry.answer.action.kind === "bus"
+                          ? t("assistantOpenBus")
+                          : t("assistantOpenLrt")}
+                      </button>
+                    ) : null}
                   </>
                 ) : entry.failed ? (
                   <p className="error-copy">{t("assistantUnavailable")}</p>

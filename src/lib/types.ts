@@ -216,10 +216,18 @@ export interface LearningAssistantRequest {
   };
 }
 
+export interface LearningAssistantAction {
+  kind: "bus" | "lrt";
+  routeCode?: string;
+  direction?: 0 | 1;
+  lineRef?: string;
+}
+
 export interface LearningAssistantAnswer {
   answer: string;
   model: string;
   locale: Locale;
   snapshotAt: string;
   contextSummary: string[];
+  action?: LearningAssistantAction;
 }

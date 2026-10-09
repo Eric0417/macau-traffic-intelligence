@@ -192,6 +192,14 @@ export const learningAssistantAnswerSchema = z.object({
   locale: z.enum(["zh-Hant", "zh-Hans", "en"]),
   snapshotAt: z.string(),
   contextSummary: z.array(z.string()),
+  action: z
+    .object({
+      kind: z.enum(["bus", "lrt"]),
+      routeCode: z.string().optional(),
+      direction: z.union([z.literal(0), z.literal(1)]).optional(),
+      lineRef: z.string().optional(),
+    })
+    .optional(),
 });
 
 export const contractBySource = {

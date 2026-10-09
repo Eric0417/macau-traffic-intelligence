@@ -24,6 +24,7 @@ import type {
   Camera,
   LrtNetwork,
   LrtNotice,
+  LearningAssistantAction,
   ParkingFacility,
   RoadCollection,
   TrafficNotice,
@@ -70,6 +71,8 @@ export function TrafficDashboard() {
   const [selectedRoute, setSelectedRoute] = useState<BusRoute | null>(null);
   const [busDirection, setBusDirection] = useState<0 | 1>(0);
   const [selectedLrtLine, setSelectedLrtLine] = useState<string | null>(null);
+  const [assistantFocus, setAssistantFocus] =
+    useState<LearningAssistantAction | null>(null);
   const [view3d, setView3d] = useState(true);
   const [layerOpen, setLayerOpen] = useState(false);
   const [sheetExpanded, setSheetExpanded] = useState(false);
@@ -102,6 +105,29 @@ export function TrafficDashboard() {
   const borders = useLiveJson<BorderStatus[]>("/api/v1/borders", 60_000);
   const lrt = useLiveJson<LrtNetwork>("/api/v1/lrt/network", 21_600_000);
   const lrtNotices = useLiveJson<LrtNotice[]>("/api/v1/lrt/notices", 300_000);
+
+  const applyAssistantAction = (action: LearningAssistantAction | null) => {
+    if (!action) {
+      setAssistantFocus(null);
+      return;
+    }
+    if (action.kind === "bus" && action.routeCode) {
+      const route = busRoutes.data?.find(
+        (item) => item.routeCode.toUpperCase() === action.routeCode?.toUpperCase(),
+      );
+      if (route) setSelectedRoute(route);
+      setBusDirection(action.direction ?? 0);
+    } else if (action.kind === "lrt" && action.lineRef) {
+      setSelectedLrtLine(action.lineRef);
+    }
+    setAssistantFocus(action);
+  };
+
+  const openAssistantActionTab = (action: LearningAssistantAction) => {
+    setTab(action.kind === "bus" ? "bus" : "lrt");
+    setAssistantFocus(null);
+    setSheetExpanded(true);
+  };
 
   const activeMeta =
     tab === "overview" || tab === "assistant"
@@ -186,6 +212,7 @@ export function TrafficDashboard() {
             className={tab === id ? "is-active" : ""}
             onClick={() => {
               setTab(id);
+              setAssistantFocus(null);
               setSheetExpanded(true);
             }}
             key={id}
@@ -210,7 +237,12 @@ export function TrafficDashboard() {
           />
         ) : null}
         {tab === "assistant" ? (
-          <AssistantPanel route={selectedRoute} direction={busDirection} />
+          <AssistantPanel
+            route={selectedRoute}
+            direction={busDirection}
+            onAction={applyAssistantAction}
+            onOpenTab={openAssistantActionTab}
+          />
         ) : null}
         {tab === "bus" ? (
           <BusPanel
@@ -283,9 +315,17 @@ export function TrafficDashboard() {
           roads={roads.data}
           cameras={cameras.data}
           lrt={lrt.data}
-          selectedLrtLine={tab === "lrt" ? selectedLrtLine : null}
-          busRoute={tab === "bus" ? busEta.data : null}
-          busColor={tab === "bus" ? (selectedRoute?.company.color ?? null) : null}
+          selectedLrtLine={
+            tab === "lrt" || assistantFocus?.kind === "lrt" ? selectedLrtLine : null
+          }
+          busRoute={
+            tab === "bus" || assistantFocus?.kind === "bus" ? busEta.data : null
+          }
+          busColor={
+            tab === "bus" || assistantFocus?.kind === "bus"
+              ? (selectedRoute?.company.color ?? null)
+              : null
+          }
           view3d={view3d}
           visibleLayers={layers}
           onCameraSelect={setSelectedCamera}

@@ -521,6 +521,23 @@ input:focus-visible {
   content: "· ";
 }
 
+.assistant-action {
+  min-height: 34px;
+  padding: 7px 12px;
+  margin-top: 8px;
+  color: var(--green);
+  background: var(--green-soft);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.assistant-action:hover {
+  border-color: var(--green);
+}
+
 .assistant-suggestions {
   display: grid;
   gap: 6px;

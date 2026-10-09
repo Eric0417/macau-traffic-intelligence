@@ -3,12 +3,15 @@ import { POST } from "@/app/api/v1/assistant/route";
 import {
   buildAssistantMessages,
   callAssistantProvider,
+  extractPlaceQuery,
   findMentionedSegments,
   looksBusRelated,
+  matchLrtLine,
+  matchLrtStation,
   matchNamedRoutes,
   type LearningSnapshot,
 } from "@/server/sources/assistant";
-import type { BusRoute, RoadCollection } from "@/lib/types";
+import type { BusRoute, LrtNetwork, RoadCollection } from "@/lib/types";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -45,6 +48,7 @@ const snapshot: LearningSnapshot = {
   notices: [],
   lrtNotices: [],
   bus: null,
+  lrt: null,
 };
 
 const routes: BusRoute[] = [
@@ -102,6 +106,56 @@ const roads: RoadCollection = {
   ],
 };
 
+const lrtNetwork: LrtNetwork = {
+  lines: {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        properties: {
+          id: "1",
+          ref: "Taipa",
+          name: {
+            "zh-Hant": "氹仔線（氹仔碼頭=>媽閣）",
+            "zh-Hans": "氹仔线（氹仔码头=>妈阁）",
+            en: "Taipa Line (Taipa Ferry Terminal → Barra)",
+          },
+          color: "#96C93C",
+        },
+        geometry: {
+          type: "LineString",
+          coordinates: [
+            [113.574, 22.163],
+            [113.545, 22.187],
+          ],
+        },
+      },
+    ],
+  },
+  stations: [
+    {
+      id: "TFT",
+      name: {
+        "zh-Hant": "氹仔碼頭站",
+        "zh-Hans": "氹仔码头站",
+        en: "Taipa Ferry Terminal",
+      },
+      coordinates: [113.574, 22.163],
+      lines: ["Taipa"],
+      interchange: false,
+    },
+    {
+      id: "BARRA",
+      name: { "zh-Hant": "媽閣站", "zh-Hans": "妈阁站", en: "Barra" },
+      coordinates: [113.545, 22.187],
+      lines: ["Taipa"],
+      interchange: true,
+    },
+  ],
+  timetableEdition: "2026-09",
+  sourceUpdatedAt: "2026-10-03T00:00:00.000Z",
+};
+
 describe("assistant prompt", () => {
   it("grounds the model in the live snapshot and the requested locale", () => {
     const messages = buildAssistantMessages("哪條橋最慢？", "zh-Hant", snapshot);
@@ -128,6 +182,12 @@ describe("assistant question routing", () => {
     expect(looksBusRelated("今日天氣點？")).toBe(false);
   });
 
+  it("extracts the place in route-serves questions", () => {
+    expect(extractPlaceQuery("9號巴士去唔去氹仔？")).toBe("氹仔");
+    expect(extractPlaceQuery("Does bus 9 serve Taipa?")).toBe("Taipa");
+    expect(extractPlaceQuery("今日天氣點？")).toBeNull();
+  });
+
   it("finds roads named in the question", () => {
     const matches = findMentionedSegments(
       "友誼大馬路而家塞唔塞？",
@@ -141,6 +201,13 @@ describe("assistant question routing", () => {
       statuses: { normal: 0, slow: 0, congested: 1, unknown: 0 },
     });
     expect(findMentionedSegments("今日天氣點？", roads, "zh-Hant")).toHaveLength(0);
+  });
+
+  it("matches LRT lines and stations", () => {
+    expect(matchLrtLine("氹仔線尾班車幾點？", lrtNetwork)?.ref).toBe("Taipa");
+    expect(matchLrtStation("媽閣站有冇輕軌？", lrtNetwork)?.id).toBe("BARRA");
+    expect(matchLrtLine("今日天氣點？", lrtNetwork)).toBeNull();
+    expect(matchLrtStation("今日天氣點？", lrtNetwork)).toBeNull();
   });
 });
 
