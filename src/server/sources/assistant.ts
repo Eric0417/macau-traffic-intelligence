@@ -486,6 +486,7 @@ export function buildAssistantMessages(
     "The snapshot may include roads.mentionedSegments (each with a segment count, status breakdown, and total length), roads.congestedSegments, roads.slowSegments, and bus.liveRoutes. Use them for questions about a specific road, bus route, bus position, or route traffic.",
     "For bus answers, name the stop each bus is approaching and always state that positions are estimated from the official arrival feed, not GPS. When one route is named, bus.liveRoutes carries both directions: call direction 0 the outbound trip and direction 1 the return trip, and never invent destination or terminal names that are not written in the snapshot.",
     "If a named route is not in bus.liveRoutes, or a named road is not in roads.mentionedSegments, say that the live detail was not loaded instead of guessing.",
+    "Never mention JSON field names such as liveVehicleCount or segmentTraffic in the answer; describe the same facts in plain words.",
     "Keep units as published (minutes, °C, km/h, number of spaces). Structure comparisons as short lists or sentences, not tables.",
     "Live readings change quickly; describe what the data shows now and never promise that a condition will persist.",
     "Do not give turn-by-turn driving directions. For travel decisions, remind the user that official apps and on-site signs are authoritative.",
