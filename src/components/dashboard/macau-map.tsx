@@ -308,7 +308,7 @@ export function MacauMap({
           type: "fill-extrusion",
           source: "lrt-train-3d",
           filter: ["==", ["geometry-type"], "Polygon"],
-          minzoom: 13,
+          minzoom: 12,
           layout: { visibility: "visible" },
           paint: {
             "fill-extrusion-color": ["get", "color"],
