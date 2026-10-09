@@ -66,11 +66,60 @@ describe("bus motion", () => {
     expect(later.coordinates[0]).toBeGreaterThan(113.555);
   });
 
-  it("caps the bus at the approaching stop", () => {
+  it("caps a bus near the stop just before the stop", () => {
+    const motion = createBusMotion(
+      { ...vehicle, coordinates: [113.5595, 22.19] },
+      segment,
+      "tcm",
+      null,
+      0,
+    );
+    expect(motion).not.toBeNull();
+    const later = advanceBusMotion(motion!, 10 * 60_000);
+    expect(later.coordinates[0]).toBeCloseTo(113.5598, 3);
+    expect(later.coordinates[0]).toBeLessThan(113.56);
+  });
+
+  it("keeps a bus far from the stop inside one poll window", () => {
     const motion = createBusMotion(vehicle, segment, "tcm", null, 0);
     expect(motion).not.toBeNull();
     const later = advanceBusMotion(motion!, 10 * 60_000);
-    expect(later.coordinates[0]).toBeCloseTo(113.56, 3);
+    expect(later.coordinates[0]).toBeLessThan(113.557);
+    expect(later.coordinates[0]).toBeGreaterThan(113.556);
+  });
+
+  it("eases down instead of overshooting the stop", () => {
+    const motion = createBusMotion(
+      { ...vehicle, coordinates: [113.5595, 22.19] },
+      segment,
+      "tcm",
+      null,
+      0,
+    );
+    expect(motion).not.toBeNull();
+    const positions = Array.from({ length: 12 }, (_, index) =>
+      advanceBusMotion(motion!, (index + 1) * 1000).coordinates[0],
+    );
+    const steps = positions
+      .slice(1)
+      .map((value, index) => value - positions[index]);
+    expect(steps[steps.length - 1]).toBeLessThan(steps[0]);
+    expect(Math.max(...positions)).toBeLessThanOrEqual(113.56);
+  });
+
+  it("blends from the last rendered position on a new poll", () => {
+    const base = createBusMotion(vehicle, segment, "tcm", null, 0);
+    const handed = createBusMotion(vehicle, segment, "tcm", null, 0, {
+      coordinates: [113.5555, 22.19],
+      at: -100,
+    });
+    expect(base).not.toBeNull();
+    expect(handed).not.toBeNull();
+    expect(advanceBusMotion(handed!, 0).coordinates[0]).toBeGreaterThan(
+      advanceBusMotion(base!, 0).coordinates[0],
+    );
+    const settled = advanceBusMotion(handed!, 4_000).coordinates[0];
+    expect(settled).toBeLessThanOrEqual(113.56);
   });
 
   it("returns null when the vehicle has no usable segment", () => {

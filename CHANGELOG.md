@@ -2,8 +2,15 @@
 
 All notable user-visible and architectural changes are recorded here.
 
+## Competition video male voiceover - 2026-10-09
+
+- Replaced the demo video narration with the male `edge-tts` voice `en-US-AndrewMultilingualNeural` at a +12% rate. Each cue is time-fitted to its existing narration slot, so the picture and the SRT keep their original timing. 7 of 31 cues needed up to 10% extra pace.
+- The video stream is copied without re-encoding. The rebuilt file is 269.2 seconds and 25.1 MB. Integrated loudness is -16.5 LUFS, the same as the previous mix.
+- Added `competition/video/scripts/revoice.mjs` to swap narration in an already-cut video. `tts.mjs` now generates narration with `edge-tts` instead of Apple `say`. The research report's AI disclosure and both checklists name `edge-tts`.
+
 ## Live-detail assistant and flat map with 3D buildings - 2026-10-09
 
+- Fixed bus jitter near stops: the animation now eases down over the last 70 m, never draws a bus past the stop, and holds its drawn position for up to four seconds when a new poll places the bus slightly behind, instead of stepping back. Corrections between polls are blended over 1.6 s.
 - Buses now animate between polls: each vehicle advances along its official segment using the feed's speed, falling back to the approaching stop's ETA when the speed is missing or near zero, and resets to the official estimate on every poll. The panel already states that positions are estimates.
 - The selected LRT line shows one train that moves along the official line geometry as an explicitly labelled schematic animation (ADR 0008). No live position, countdown, or timetable inference is presented.
 - The assistant now carries the official LRT network (lines, stations, interchanges) and answers LRT questions while stating that no official live train positions exist.

@@ -160,6 +160,9 @@ export function MacauMap({
   const fittedLrtRef = useRef<string | null>(null);
   const bus3dLayerRef = useRef<Bus3DLayerType | null>(null);
   const bus3dVehiclesRef = useRef<Bus3DVehicle[]>([]);
+  const busRenderRef = useRef<
+    Map<string, { coordinates: [number, number]; at: number }>
+  >(new Map());
   const busRouteRef = useRef(busRoute);
 
   useEffect(() => {
@@ -738,11 +741,19 @@ export function MacauMap({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !mapReady || !busRoute) return;
+    if (!map || !mapReady) return;
+    if (!busRoute) {
+      busRenderRef.current.clear();
+      return;
+    }
 
     const vehicleSource = map.getSource("bus-vehicles") as GeoJSONSource | undefined;
     const livery: BusLivery = busColor === "orange" ? "tcm" : "transmac";
     const now = Date.now();
+    const currentIds = new Set(busRoute.vehicles.map((vehicle) => vehicle.id));
+    for (const id of busRenderRef.current.keys()) {
+      if (!currentIds.has(id)) busRenderRef.current.delete(id);
+    }
     const motions = busRoute.vehicles.flatMap((vehicle) => {
       const segment =
         busRoute.routeSegments.find(
@@ -763,6 +774,7 @@ export function MacauMap({
         livery,
         stop?.etaMinutes ?? null,
         now,
+        busRenderRef.current.get(vehicle.id) ?? null,
       );
       return motion ? [motion] : [];
     });
@@ -782,6 +794,12 @@ export function MacauMap({
       }
       const timestamp = Date.now();
       const states = motions.map((motion) => advanceBusMotion(motion, timestamp));
+      for (const state of states) {
+        busRenderRef.current.set(state.id, {
+          coordinates: state.coordinates,
+          at: timestamp,
+        });
+      }
       bus3dLayerRef.current?.setVehicles(
         states.map((state) => ({
           id: state.id,

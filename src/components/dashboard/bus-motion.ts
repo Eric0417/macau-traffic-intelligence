@@ -5,6 +5,11 @@ export type LngLat = [number, number];
 
 const METERS_PER_DEGREE_LAT = 111_320;
 const MAX_SPEED_METERS_PER_SECOND = 22; // about 80 km/h
+const EASE_RADIUS_METERS = 70;
+const POLL_WINDOW_SECONDS = 12;
+const STOP_MARGIN_METERS = 2;
+const HANDOFF_WINDOW_MS = 30_000;
+const HANDOFF_BLEND_MS = 1_600;
 
 export function metersBetween(a: LngLat, b: LngLat): number {
   const latRadians = ((a[1] + b[1]) / 2) * (Math.PI / 180);
@@ -117,8 +122,15 @@ export interface BusMotion {
   path: LngLat[];
   lengths: number[];
   distance: number;
+  maxDistance: number;
   speedMetersPerSecond: number;
   startedAt: number;
+  handoff: { distance: number; startedAt: number } | null;
+}
+
+export interface BusMotionHandoff {
+  coordinates: LngLat;
+  at: number;
 }
 
 export interface BusMotionState {
@@ -137,6 +149,7 @@ export function createBusMotion(
   livery: BusLivery,
   etaMinutes: number | null,
   now: number,
+  handoff?: BusMotionHandoff | null,
 ): BusMotion | null {
   if (!vehicle.coordinates) return null;
   const path = segment?.coordinates ?? null;
@@ -154,6 +167,15 @@ export function createBusMotion(
   }
   speed = Math.min(Math.max(speed, 0), MAX_SPEED_METERS_PER_SECOND);
 
+  const maxDistance = Math.max(
+    distance,
+    Math.min(total - STOP_MARGIN_METERS, distance + speed * POLL_WINDOW_SECONDS),
+  );
+  const handoffDistance =
+    handoff && now - handoff.at < HANDOFF_WINDOW_MS
+      ? projectOnPath(path, lengths, handoff.coordinates)
+      : null;
+
   return {
     id: vehicle.id,
     livery,
@@ -163,15 +185,66 @@ export function createBusMotion(
     path,
     lengths,
     distance,
+    maxDistance,
     speedMetersPerSecond: speed,
     startedAt: now,
+    handoff:
+      handoffDistance === null
+        ? null
+        : { distance: handoffDistance, startedAt: now },
   };
+}
+
+function distanceWithEase(
+  start: number,
+  speed: number,
+  cap: number,
+  elapsed: number,
+): number {
+  if (speed <= 0) return start;
+  const easeStart = Math.max(start, cap - EASE_RADIUS_METERS);
+  const straight = start + speed * elapsed;
+  if (straight <= easeStart) return Math.min(straight, cap);
+
+  const remaining = cap - easeStart;
+  if (remaining <= 0.01) return cap;
+  const overshoot = straight - easeStart;
+  return cap - remaining * Math.exp(-overshoot / remaining);
 }
 
 export function advanceBusMotion(motion: BusMotion, now: number): BusMotionState {
   const elapsed = Math.max(0, now - motion.startedAt) / 1000;
-  const total = motion.lengths[motion.lengths.length - 1] ?? 0;
-  const distance = Math.min(motion.distance + motion.speedMetersPerSecond * elapsed, total);
+  const target = distanceWithEase(
+    motion.distance,
+    motion.speedMetersPerSecond,
+    motion.maxDistance,
+    elapsed,
+  );
+  let distance = target;
+  if (motion.handoff) {
+    const sinceHandoff = now - motion.handoff.startedAt;
+    if (motion.handoff.distance > target + 0.5) {
+      // The new poll placed the bus slightly behind where it was drawn. Hold
+      // the drawn position briefly instead of stepping back, then ease onto
+      // the new estimate. This stops the marker jittering around the stop.
+      const holdMs = 4_000;
+      if (sinceHandoff < holdMs) {
+        distance = motion.handoff.distance;
+      } else {
+        const blend = Math.min(1, (sinceHandoff - holdMs) / HANDOFF_BLEND_MS);
+        const smooth = blend * blend * (3 - 2 * blend);
+        distance =
+          motion.handoff.distance + (target - motion.handoff.distance) * smooth;
+      }
+    } else {
+      const blend = Math.min(1, Math.max(0, sinceHandoff / HANDOFF_BLEND_MS));
+      if (blend < 1) {
+        const smooth = blend * blend * (3 - 2 * blend);
+        distance =
+          motion.handoff.distance + (target - motion.handoff.distance) * smooth;
+      }
+    }
+  }
   const point = pointAtDistance(motion.path, motion.lengths, distance);
   return {
     id: motion.id,
