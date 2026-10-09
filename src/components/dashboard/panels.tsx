@@ -9,7 +9,9 @@ import {
   ChevronRight,
   CircleParking,
   Clock3,
+  GraduationCap,
   MapPin,
+  Send,
   Video,
   Waves,
   Wind,
@@ -26,6 +28,7 @@ import type {
   Camera,
   LrtNetwork,
   LrtNotice,
+  LearningAssistantAnswer,
   ParkingFacility,
   RoadCollection,
   TrafficNotice,
@@ -620,6 +623,155 @@ export function LrtPanel({
           ))}
           {!notices.length ? <p className="quiet-copy">{t("noNotices")}</p> : null}
         </div>
+      </section>
+    </div>
+  );
+}
+
+export function AssistantPanel({
+  route,
+  direction,
+}: {
+  route: BusRoute | null;
+  direction: 0 | 1;
+}) {
+  const { t, locale } = useLanguage();
+  const [draft, setDraft] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [entries, setEntries] = useState<
+    Array<{
+      id: number;
+      question: string;
+      answer?: LearningAssistantAnswer;
+      failed?: boolean;
+    }>
+  >([]);
+  const nextId = useRef(0);
+
+  const ask = async (value: string) => {
+    const question = value.trim();
+    if (!question || busy) return;
+
+    const id = (nextId.current += 1);
+    setBusy(true);
+    setDraft("");
+    setEntries((current) => [...current, { id, question }]);
+
+    try {
+      const response = await fetch("/api/v1/assistant", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          question,
+          locale,
+          ...(route ? { focus: { routeCode: route.routeCode, direction } } : {}),
+        }),
+      });
+      const body = (await response.json()) as
+        | ApiEnvelope<LearningAssistantAnswer>
+        | { message?: string };
+      if (!response.ok || !("data" in body)) {
+        throw new Error("message" in body ? body.message : `HTTP ${response.status}`);
+      }
+      setEntries((current) =>
+        current.map((entry) =>
+          entry.id === id ? { ...entry, answer: body.data } : entry,
+        ),
+      );
+    } catch {
+      setEntries((current) =>
+        current.map((entry) => (entry.id === id ? { ...entry, failed: true } : entry)),
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="panel-stack">
+      <section className="panel-section">
+        <div className="section-heading">
+          <h2>{t("assistant")}</h2>
+          <GraduationCap size={16} aria-hidden="true" />
+        </div>
+        <p className="quiet-copy">{t("assistantIntro")}</p>
+        {route ? (
+          <p className="assistant-focus">
+            {t("bus")} {route.routeName} ·{" "}
+            {direction === 0 ? t("outbound") : t("return")}
+          </p>
+        ) : null}
+
+        {entries.length ? (
+          <div className="assistant-thread">
+            {entries.map((entry) => (
+              <article className="assistant-entry" key={entry.id}>
+                <p className="assistant-question">{entry.question}</p>
+                {entry.answer ? (
+                  <>
+                    <p className="assistant-answer">{entry.answer.answer}</p>
+                    <p className="assistant-note">
+                      {t("assistantBasedOn")}{" "}
+                      {new Date(entry.answer.snapshotAt).toLocaleTimeString(
+                        locale === "en" ? "en-GB" : "zh-MO",
+                        { hour: "2-digit", minute: "2-digit" },
+                      )}
+                    </p>
+                    <ul className="assistant-context">
+                      {entry.answer.contextSummary.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  </>
+                ) : entry.failed ? (
+                  <p className="error-copy">{t("assistantUnavailable")}</p>
+                ) : (
+                  <p className="quiet-copy">{t("assistantThinking")}</p>
+                )}
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="assistant-suggestions">
+            <p className="quiet-copy">{t("assistantSuggested")}</p>
+            {[t("assistantQ1"), t("assistantQ2"), t("assistantQ3")].map(
+              (suggestion) => (
+                <button
+                  type="button"
+                  key={suggestion}
+                  disabled={busy}
+                  onClick={() => void ask(suggestion)}
+                >
+                  {suggestion}
+                </button>
+              ),
+            )}
+          </div>
+        )}
+
+        <form
+          className="assistant-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void ask(draft);
+          }}
+        >
+          <label>
+            <span className="sr-only">{t("assistantPlaceholder")}</span>
+            <textarea
+              value={draft}
+              rows={2}
+              maxLength={500}
+              placeholder={t("assistantPlaceholder")}
+              onChange={(event) => setDraft(event.target.value)}
+            />
+          </label>
+          <button type="submit" disabled={busy || !draft.trim()}>
+            <Send size={15} aria-hidden="true" />
+            <span>{t("assistantSend")}</span>
+          </button>
+        </form>
+        <p className="assistant-privacy">{t("assistantPrivacy")}</p>
       </section>
     </div>
   );

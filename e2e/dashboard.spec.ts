@@ -492,3 +492,41 @@ test("mobile bottom sheet drags between collapsed and expanded", async ({ page, 
   await drag(90);
   await expect(sheet).toHaveAttribute("data-expanded", "false", { timeout: 10_000 });
 });
+
+test("AI tutor returns a grounded answer", async ({ page, isMobile }) => {
+  test.skip(isMobile, "desktop project only");
+  await mockDashboard(page);
+  let requestBody: { question: string; locale: string } | undefined;
+  await page.route("**/api/v1/assistant", async (route) => {
+    requestBody = route.request().postDataJSON() as {
+      question: string;
+      locale: string;
+    };
+    await route.fulfill({
+      json: {
+        data: {
+          answer: "友誼大橋現在需要約 4 分鐘。先比較兩個方向的行車時間，再想想天氣是否相關。",
+          model: "test-model",
+          locale: "zh-Hant",
+          snapshotAt: "2026-10-09T07:00:00.000Z",
+          contextSummary: ["跨海大橋行車時間（2 項）", "天氣：27°C、濕度 80%"],
+        },
+        meta: meta({
+          id: "assistant",
+          name: "Test model",
+          url: "https://example.com/",
+        }),
+      },
+    });
+  });
+  await page.goto("/");
+  const panel = page.locator(".desktop-panel");
+
+  await panel.getByRole("tab", { name: "AI 助手" }).click();
+  await panel.locator(".assistant-suggestions button").first().click();
+
+  await expect(panel.locator(".assistant-answer")).toContainText("友誼大橋");
+  await expect(panel.locator(".assistant-context")).toContainText("跨海大橋行車時間");
+  expect(requestBody?.locale).toBe("zh-Hant");
+  expect(requestBody?.question.length).toBeGreaterThan(0);
+});

@@ -24,6 +24,9 @@
 # local reference material (official route PDFs and derived scratch data)
 /bus_route/
 
+# competition video build scratch (final MP4 stays in competition/video/out)
+/competition/video/work/
+
 # production
 /build
 

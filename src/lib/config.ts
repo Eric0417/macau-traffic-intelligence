@@ -15,6 +15,11 @@ export const DEFAULT_LOCALE = "zh-Hant" as const;
 
 export const CACHE_PREFIX = "macau-traffic:v1";
 
+// The assistant speaks to any OpenAI-compatible chat completions endpoint.
+export const ASSISTANT_DEFAULT_BASE_URL = "https://api.deepseek.com/v1";
+export const ASSISTANT_DEFAULT_MODEL = "deepseek-chat";
+export const ASSISTANT_DEFAULT_RATE_LIMIT = 12;
+
 export function sourceEnabled(envKey: string): boolean {
   const value = process.env[envKey];
   return value === undefined || value.toLowerCase() !== "false";

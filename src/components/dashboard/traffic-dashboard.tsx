@@ -7,6 +7,7 @@ import {
   ChevronDown,
   CircleParking,
   Gauge,
+  GraduationCap,
   Layers3,
   TramFront,
   Video,
@@ -31,6 +32,7 @@ import type {
 import { CameraViewer } from "@/components/dashboard/camera-viewer";
 import { MacauMap, type MapLayer } from "@/components/dashboard/macau-map";
 import {
+  AssistantPanel,
   BusPanel,
   CameraPanel,
   LrtPanel,
@@ -39,13 +41,21 @@ import {
   ParkingPanel,
 } from "@/components/dashboard/panels";
 
-type PanelTab = "overview" | "bus" | "lrt" | "parking" | "notices" | "cameras";
+type PanelTab =
+  | "overview"
+  | "assistant"
+  | "bus"
+  | "lrt"
+  | "parking"
+  | "notices"
+  | "cameras";
 
 const tabs: Array<{
   id: PanelTab;
   icon: typeof Gauge;
 }> = [
   { id: "overview", icon: Gauge },
+  { id: "assistant", icon: GraduationCap },
   { id: "bus", icon: BusFront },
   { id: "lrt", icon: TramFront },
   { id: "parking", icon: CircleParking },
@@ -94,7 +104,7 @@ export function TrafficDashboard() {
   const lrtNotices = useLiveJson<LrtNotice[]>("/api/v1/lrt/notices", 300_000);
 
   const activeMeta =
-    tab === "overview"
+    tab === "overview" || tab === "assistant"
       ? roads.meta
       : tab === "bus"
         ? busRoutes.meta
@@ -198,6 +208,9 @@ export function TrafficDashboard() {
             weatherMeta={weather.meta}
             bordersMeta={borders.meta}
           />
+        ) : null}
+        {tab === "assistant" ? (
+          <AssistantPanel route={selectedRoute} direction={busDirection} />
         ) : null}
         {tab === "bus" ? (
           <BusPanel

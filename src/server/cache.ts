@@ -284,15 +284,19 @@ export async function readSource<T>(source: SourceDefinition<T>): Promise<Source
   }
 }
 
-export async function consumeRateLimit(identifier: string): Promise<{
+export async function consumeRateLimit(
+  identifier: string,
+  limitOverride?: number,
+): Promise<{
   allowed: boolean;
   remaining: number;
 }> {
+  const limit = limitOverride ?? Number(process.env.RATE_LIMIT_PER_MINUTE ?? 120);
+
   if (process.env.RATE_LIMIT_DISABLED === "true") {
-    return { allowed: true, remaining: 120 };
+    return { allowed: true, remaining: limit };
   }
 
-  const limit = Number(process.env.RATE_LIMIT_PER_MINUTE ?? 120);
   const count = await getCacheBackend().increment(
     `${CACHE_PREFIX}:rate:${identifier}:${Math.floor(Date.now() / 60_000)}`,
     70,

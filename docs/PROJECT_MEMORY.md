@@ -6,10 +6,13 @@ Version `0.1.0` is implemented as a standalone Next.js 16 application. The first
 
 It is deployed on Render as project `Macau Traffic Intelligence`, environment `production`, at https://macau-traffic-intelligence.onrender.com. The service runs two instances in Singapore with a private Render Key Value instance for cache, locks, circuit state, and rate limiting; autoscaling remains declarative until the workspace is on a Pro plan.
 
+The `competition/` folder holds the 2026 competition submission package: English documents and poster sources, the scripted video pipeline, the user-testing kit, and the submission checklist. See `competition/README.md`.
+
 ## Architecture
 
 - `src/server/sources/` owns all external payload parsing and normalization.
 - `src/server/cache.ts` owns shared TTL cache, stale fallback, source locks, circuit state, and rate limiting.
+- `src/server/sources/assistant.ts` owns the AI assistant: it builds a compact snapshot from the cached normalized sources and calls an OpenAI-compatible chat completions endpoint. See ADR 0007.
 - `src/app/api/v1/` exposes the public read-only API.
 - `src/components/` owns the map-first presentation and client polling.
 - `data/lrt-network.json` is generated from OpenStreetMap route relations and official LRT station names.
@@ -38,6 +41,8 @@ External data never enters a client component directly. Public contracts are def
 - The route `routeChange` flag is not used for badges because it covers most routes; diversions come from the suspended-stop message feed.
 - LRT has the same selection flow as buses: pick a line, see its stations highlighted on the map and listed with interchange badges. It shows only the official fixed network and service notices, with no simulated live positions.
 - The UI does not use a hero page or feature marketing copy.
+- The AI assistant answers in the selected locale and is grounded in a JSON snapshot of the normalized live data. The prompt requires the snapshot time, an explanation with a next check or a small follow-up task, and no personal data. The panel shows the snapshot time and the list of data that grounded the answer.
+- Assistant replies are not cached and questions are not stored. The provider key stays server-side; without `ASSISTANT_API_KEY` the assistant endpoint returns 503 and the rest of the app is unaffected.
 
 ## Known Risks
 
@@ -50,6 +55,7 @@ External data never enters a client component directly. Public contracts are def
 - DSAT `busType` values are exposed in the public payload but are not mapped to specific vehicle brands or models because no documented mapping exists.
 - Only the 1,268 segments DSAT publishes carry congestion status. Grey roads mean no official live data, not clear traffic.
 - Render Key Value is private to the workspace. Local development falls back to a process-memory cache.
+- The AI assistant depends on an external LLM provider and a funded API key. The grounding context limits but cannot eliminate model errors, and the same question can produce different wording between calls.
 
 ## Next Work
 

@@ -16,6 +16,7 @@ This registry is part of the implementation contract. Any source, field, TTL, fa
 | `lrt-network` | MLM / OpenStreetMap | `https://overpass-api.de/api/interpreter` route relations and stop nodes, with official names from the checked-in network | 6 h | 6 h / 30 days | Last valid network; checked-in `data/lrt-network.json` |
 | `lrt-notices` | MLM | `https://www.mlm.com.mo/rss/tc/notice.rss` | 5 min | 5 min / 1 day | Last official notice list |
 | `borders` | Public Security Police Force | `https://www.fsm.gov.mo/psp/pspmonitor/webservice.asmx/getStatus` | 60 s | 60 s / 30 min | Last valid values or official page link |
+| `assistant` | LLM provider, OpenAI-compatible (default DeepSeek) | `POST {ASSISTANT_BASE_URL}/chat/completions` | Per question, no reuse | No cache | Route answers 503; every other source keeps serving |
 
 ## Licensing And Attribution
 
@@ -23,6 +24,7 @@ This registry is part of the implementation contract. Any source, field, TTL, fa
 - DSAT, SMG, MLM, FSM, and OpenStreetMap data remain subject to their publishers' terms.
 - OpenStreetMap-derived LRT geometry requires ODbL attribution.
 - Camera streams are played directly from the publisher and are never recorded or re-hosted.
+- Assistant answers are generated text from the configured provider. The app attributes the model in the response meta and stores neither questions nor answers.
 - The public API exposes normalized live views only, not bulk history or original datasets.
 
 ## Adapter Notes
@@ -38,6 +40,7 @@ This registry is part of the implementation contract. Any source, field, TTL, fa
 - `bus-eta-{code}-{direction}`: The upstream `busType` value is exposed on each vehicle. It is descriptive only; the model does not claim a brand or vehicle type.
 - Map terrain uses the public AWS Open Data terrain tiles (`elevation-tiles-prod`, terrarium encoding) for the optional 3D view.
 - Bus models are generic two-axle Blender 5.2 models. The source is `docs/models/bus-models.blend`; runtime exports are `public/models/bus-tcm.glb` and `public/models/bus-transmac.glb`. MapLibre renders them in a custom WebGL layer from z17. They use true meter scale through z19, then keep a fixed on-screen size so they stay readable without covering the map. Lower zooms use a marker and plate label. The UI states that the bus model is generic, not brand-specific.
+- `assistant`: the server assembles a compact JSON snapshot from the cached normalized contracts (roads, bridges, weather, parking, borders, notices, LRT notices, and the focused bus route's arrivals) and sends it with the user's question. Raw upstream payloads are never forwarded. The prompt fixes the explanation format, the locale, the snapshot citation, and the no-personal-data rule; `assistantConfigured()` disables the route when `SOURCE_ASSISTANT_ENABLED=false` or `ASSISTANT_API_KEY` is missing. Provider configuration is `ASSISTANT_API_KEY`, `ASSISTANT_BASE_URL`, `ASSISTANT_MODEL`, `ASSISTANT_TIMEOUT_MS`, and `ASSISTANT_RATE_LIMIT_PER_MINUTE`; the key stays server-side. The default provider is DeepSeek; a local OpenAI-compatible server such as Ollama can be used for offline demonstrations.
 
 ## Reference Material Not Used
 

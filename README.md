@@ -67,9 +67,10 @@ GET /api/v1/borders
 GET /api/v1/lrt/network
 GET /api/v1/lrt/notices
 GET /api/v1/health
+POST /api/v1/assistant
 ```
 
-The API is read-only and rate limited. It does not provide bulk historical exports.
+The government-data API is read-only and rate limited. `POST /api/v1/assistant` accepts a question plus the UI locale, answers from a snapshot of the normalized live data, and stores nothing. No bulk historical exports.
 The bus ETA payload also carries stop coordinates and the live vehicles the official station feed reports for that route.
 
 ## Deploy To Render
@@ -80,7 +81,7 @@ The repository contains `Dockerfile` and `render.yaml`. The blueprint creates:
 - A private Render Key Value instance used only as shared cache
 - `/api/v1/health` as the health check
 
-Set the required source flags from `.env.example` only when a source must be disabled. No source credentials are required.
+Set the required source flags from `.env.example` only when a source must be disabled. No government-source credentials are required. The optional AI learning assistant needs `ASSISTANT_API_KEY`; it also accepts `ASSISTANT_BASE_URL` and `ASSISTANT_MODEL` for any OpenAI-compatible endpoint. Without a key the assistant endpoint returns 503 and the rest of the app works unchanged. See `docs/ADR/0007-ai-learning-assistant.md`.
 
 ## Data Notes
 
@@ -98,6 +99,7 @@ Set the required source flags from `.env.example` only when a source must be dis
 - The LRT tab selects a line, highlights its stations on the map, and lists them with interchange badges; no live train positions are shown because DSAT/MLM publish none.
 - The 3D view uses extruded OpenFreeMap buildings and AWS Open Data terrain tiles; it can be switched off in the layer menu.
 - Camera streams are not recorded or proxied.
+- The AI learning assistant answers from a compact snapshot of the cached normalized data and never receives raw upstream payloads, credentials, or personal data. Answers are attributed to the configured model and are not stored.
 
 The application code is MIT licensed. Data remains subject to the terms and attribution requirements of its publishing organisation.
 

@@ -2,6 +2,13 @@
 
 All notable user-visible and architectural changes are recorded here.
 
+## AI learning assistant - 2026-10-09
+
+- Added an AI learning assistant behind a server-only adapter (`src/server/sources/assistant.ts`). It answers student questions in Traditional Chinese, Simplified Chinese, or English, using a compact snapshot of the cached normalized data: road status, bridge times, weather, parking, borders, notices, LRT notices, and the focused bus route's arrivals.
+- Added `POST /api/v1/assistant` with Zod validation, the shared per-identity rate limit plus a stricter assistant limit, and response meta that names the model. Questions and answers are not stored. `ASSISTANT_TIMEOUT_MS` raises the provider timeout for slower local models.
+- Added the AI tutor tab to the desktop rail and mobile sheet: suggested questions, the grounded answer, the snapshot time, and the list of data used.
+- The assistant needs `ASSISTANT_API_KEY`. Without it the route returns 503 and every other module keeps working. `ASSISTANT_BASE_URL` (default `https://api.deepseek.com/v1`) and `ASSISTANT_MODEL` (default `deepseek-chat`) accept any OpenAI-compatible endpoint; `ASSISTANT_RATE_LIMIT_PER_MINUTE` defaults to 12; `SOURCE_ASSISTANT_ENABLED=false` disables the route.
+
 ## Runtime refresh and local dev fixes - 2026-10-07
 
 - The LRT network now rebuilds from OpenStreetMap route relations at runtime every 6 hours, so new stations and lines appear without a redeploy. The checked-in `data/lrt-network.json` stays as the fallback and keeps the official names for known stations.

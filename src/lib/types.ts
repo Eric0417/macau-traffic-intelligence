@@ -206,3 +206,20 @@ export interface TrafficNotice {
   category: "incident" | "roadworks" | "bus-change" | "general";
   url: string;
 }
+
+export interface LearningAssistantRequest {
+  question: string;
+  locale: Locale;
+  focus?: {
+    routeCode: string;
+    direction: 0 | 1;
+  };
+}
+
+export interface LearningAssistantAnswer {
+  answer: string;
+  model: string;
+  locale: Locale;
+  snapshotAt: string;
+  contextSummary: string[];
+}

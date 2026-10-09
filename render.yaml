@@ -20,6 +20,16 @@ services:
         value: "120"
       - key: SOURCE_BORDERS_ENABLED
         value: "true"
+      - key: SOURCE_ASSISTANT_ENABLED
+        value: "true"
+      - key: ASSISTANT_BASE_URL
+        value: "https://api.deepseek.com/v1"
+      - key: ASSISTANT_MODEL
+        value: "deepseek-chat"
+      - key: ASSISTANT_RATE_LIMIT_PER_MINUTE
+        value: "12"
+      - key: ASSISTANT_API_KEY
+        sync: false
 
   - type: keyvalue
     name: macau-traffic-cache

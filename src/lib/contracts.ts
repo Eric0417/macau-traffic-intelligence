@@ -175,6 +175,25 @@ export const lrtNoticeSchema = z.object({
   active: z.boolean(),
 });
 
+export const learningAssistantRequestSchema = z.object({
+  question: z.string().trim().min(2).max(500),
+  locale: z.enum(["zh-Hant", "zh-Hans", "en"]),
+  focus: z
+    .object({
+      routeCode: z.string().trim().min(1).max(12),
+      direction: z.union([z.literal(0), z.literal(1)]),
+    })
+    .optional(),
+});
+
+export const learningAssistantAnswerSchema = z.object({
+  answer: z.string().min(1),
+  model: z.string().min(1),
+  locale: z.enum(["zh-Hant", "zh-Hans", "en"]),
+  snapshotAt: z.string(),
+  contextSummary: z.array(z.string()),
+});
+
 export const contractBySource = {
   roads: roadCollectionSchema,
   bridges: z.array(bridgeTimeSchema),

@@ -6,7 +6,7 @@ import { consumeRateLimit, readSource } from "@/server/cache";
 import { sources, type SourceName } from "@/server/sources";
 import type { SourceDefinition } from "@/server/source";
 
-function requestIdentity(request: Request): string {
+export function requestIdentity(request: Request): string {
   const forwarded = request.headers.get("x-forwarded-for");
   return (
     forwarded?.split(",")[0]?.trim() ||
