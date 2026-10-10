@@ -9,6 +9,7 @@ const OVERPASS_URLS = [
   "https://overpass-api.de/api/interpreter",
   "https://overpass.private.coffee/api/interpreter",
 ];
+const MACAU_GIS_AREAS = ["P", "T", "S"] as const;
 const BBOX = "22.09,113.50,22.23,113.62";
 
 // Names the DSAT list uses that do not share a token with the OSM name.
@@ -24,6 +25,16 @@ interface OverpassElement {
   lon?: number;
   center?: { lat: number; lon: number };
   tags?: Record<string, string>;
+}
+
+interface GisCarparkFeature {
+  attributes?: {
+    CNAME?: string;
+    SNAME?: string;
+    PNAME?: string;
+    ENAME?: string;
+  };
+  geometry?: { x?: number; y?: number };
 }
 
 function normalizeName(name: string): string {
@@ -85,6 +96,75 @@ function coordinatesOf(element: OverpassElement): [number, number] | null {
   return typeof lat === "number" && typeof lon === "number" ? [lon, lat] : null;
 }
 
+function matchByName(
+  name: string,
+  lots: Array<{ name: string; coordinates: [number, number] }>,
+) {
+  const normalized = normalizeName(name);
+  let match = lots.find((lot) => normalizeName(lot.name) === normalized);
+  if (!match && normalized.length >= 3) {
+    match = lots.find((lot) => {
+      const candidate = normalizeName(lot.name);
+      return candidate.includes(normalized) || normalized.includes(candidate);
+    });
+  }
+  return match;
+}
+
+function matchWithHints(
+  name: string,
+  lots: Array<{ name: string; coordinates: [number, number] }>,
+) {
+  const match = matchByName(name, lots);
+  if (match) return match;
+  for (const [key, hint] of Object.entries(NAME_HINTS)) {
+    if (!name.includes(key)) continue;
+    const hinted = lots.find((lot) => lot.name.includes(hint));
+    if (hinted) return hinted;
+  }
+  return undefined;
+}
+
+async function fetchGisCarparkArea(
+  area: string,
+): Promise<Array<{ name: string; coordinates: [number, number] }>> {
+  const url =
+    `https://webmap.gis.gov.mo/arcgis/rest/services/WebMap/MacauMap_${area}_POI/MapServer/8/query` +
+    "?where=1%3D1&outFields=CNAME,SNAME,PNAME,ENAME&returnGeometry=true&outSR=4326&f=json&resultRecordCount=2000";
+  const response = await fetch(url, {
+    headers: { "User-Agent": "MacauTrafficIntelligence/0.1 (parking locations build)" },
+    signal: AbortSignal.timeout(30_000),
+  });
+  if (!response.ok) {
+    throw new Error(`Macau GIS carpark layer returned ${response.status} for ${area}`);
+  }
+  const body = (await response.json()) as { features?: GisCarparkFeature[] };
+  return (body.features ?? [])
+    .map((feature) => {
+      const name =
+        feature.attributes?.CNAME ??
+        feature.attributes?.SNAME ??
+        feature.attributes?.PNAME ??
+        feature.attributes?.ENAME;
+      const x = feature.geometry?.x;
+      const y = feature.geometry?.y;
+      return name && typeof x === "number" && typeof y === "number"
+        ? { name, coordinates: [x, y] as [number, number] }
+        : null;
+    })
+    .filter((lot): lot is { name: string; coordinates: [number, number] } => lot !== null);
+}
+
+async function fetchGisCarparks() {
+  const areas = await Promise.all(MACAU_GIS_AREAS.map(fetchGisCarparkArea));
+  const merged = new Map<string, { name: string; coordinates: [number, number] }>();
+  for (const lot of areas.flat()) {
+    const key = normalizeName(lot.name);
+    if (!merged.has(key)) merged.set(key, lot);
+  }
+  return [...merged.values()];
+}
+
 async function main() {
   const parkingResponse = await fetch(PARKING_URL, {
     headers: { "User-Agent": "MacauTrafficIntelligence/0.1 (parking locations build)" },
@@ -96,6 +176,7 @@ async function main() {
 
   const dsatRows = fetchParkingRows(await parkingResponse.text());
   const elements = await fetchOverpassElements();
+  const gisLots = await fetchGisCarparks();
   const osmLots = elements
     .map((element) => {
       const name = element.tags?.["name:zh"] ?? element.tags?.name;
@@ -106,24 +187,15 @@ async function main() {
 
   const locations: Record<string, { name: string; coordinates: [number, number] }> = {};
   const unmatched: string[] = [];
+  let osmMatched = 0;
+  let gisMatched = 0;
 
   for (const row of dsatRows) {
-    const normalized = normalizeName(row.name);
-    let match = osmLots.find((lot) => normalizeName(lot.name) === normalized);
-    if (!match && normalized.length >= 3) {
-      match = osmLots.find((lot) => {
-        const candidate = normalizeName(lot.name);
-        return candidate.includes(normalized) || normalized.includes(candidate);
-      });
-    }
-    if (!match) {
-      for (const [key, hint] of Object.entries(NAME_HINTS)) {
-        if (!row.name.includes(key)) continue;
-        match = osmLots.find((lot) => lot.name.includes(hint));
-        if (match) break;
-      }
-    }
+    const osmMatch = matchWithHints(row.name, osmLots);
+    const match = osmMatch ?? matchByName(row.name, gisLots);
     if (match) {
+      if (osmMatch) osmMatched += 1;
+      else gisMatched += 1;
       locations[row.id] = { name: row.name, coordinates: match.coordinates };
     } else {
       unmatched.push(`${row.id} ${row.name}`);
@@ -137,8 +209,9 @@ async function main() {
     `${JSON.stringify(
       {
         generatedAt: new Date().toISOString(),
-        source: "OpenStreetMap amenity=parking, matched to the DSAT car park list by name",
-        license: "ODbL",
+        source:
+          "OpenStreetMap amenity=parking matched by name, with Macau GIS Carpark POIs (DSSCU) for unmatched facilities",
+        license: "ODbL for OpenStreetMap; Macau GIS data subject to Macau SAR Government terms",
         locations,
       },
       null,
@@ -148,7 +221,8 @@ async function main() {
   );
 
   console.log(
-    `matched ${Object.keys(locations).length} of ${dsatRows.length} car parks -> ${target}`,
+    `matched ${Object.keys(locations).length} of ${dsatRows.length} car parks ` +
+      `(${osmMatched} OpenStreetMap, ${gisMatched} Macau GIS) -> ${target}`,
   );
   if (unmatched.length) console.log(`unmatched:\n${unmatched.join("\n")}`);
 }

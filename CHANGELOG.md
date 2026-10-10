@@ -2,6 +2,11 @@
 
 All notable user-visible and architectural changes are recorded here.
 
+## Full parking coordinate coverage - 2026-10-10
+
+- All 92 DSAT public car parks now have map coordinates. The 14 that had no OpenStreetMap name match use the Macau SAR Government WebMap Carpark POI layer at build time; the runtime keeps reading the checked-in `data/parking-locations.json`.
+- `npm run build:parking` keeps OpenStreetMap as the primary match and falls back to the government GIS layer. 未定位 remains for any car park that neither source can match.
+
 ## Stop-arrival correction for bus markers - 2026-10-10
 
 - When DSAT advances a bus to the next approaching stop, the map now re-anchors that bus to the stop it just reached, then continues toward the new estimate. Estimate error no longer accumulates across stops.
