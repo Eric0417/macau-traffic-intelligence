@@ -198,9 +198,7 @@ async function mockDashboard(page: Page) {
                 sequence: 0,
                 stationCode: "M1/9",
                 stationName: "關閘總站",
-                etaMinutes: 3,
-                averageMinutes: 5,
-                messageCode: "0",
+                stopsAway: 0,
                 coordinates: [113.54918, 22.215502],
                 trafficStatus: "normal",
                 trafficLevel: 1,
@@ -354,6 +352,8 @@ test("bus and parking panels use normalized API data", async ({ page, isMobile }
   await panel.getByRole("tab", { name: "巴士" }).click();
   await panel.locator(".route-grid button").first().click();
   await expect(panel.locator(".eta-list")).toContainText("關閘總站");
+  await expect(panel.locator(".eta-list")).toContainText("即將進站");
+  await expect(panel.locator(".eta-list .eta-bus")).toContainText("AD2767");
   await expect(panel.locator(".route-detail-head strong")).toHaveText("3");
   await expect(panel.locator(".vehicle-row strong")).toHaveText("AD2767");
   await expect(panel.locator(".vehicle-row")).toContainText("低地台");

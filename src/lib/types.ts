@@ -82,9 +82,11 @@ export interface BusEtaStop {
   sequence: number;
   stationCode: string;
   stationName: string;
-  etaMinutes: number | null;
-  averageMinutes: number | null;
-  messageCode: string;
+  /**
+   * Stops remaining before the next bus reaches this stop. 0 means a bus is
+   * heading to this stop. Null when no bus is en route from behind.
+   */
+  stopsAway: number | null;
   coordinates: [number, number] | null;
   trafficStatus: TrafficStatus;
   trafficLevel: number;
@@ -101,7 +103,7 @@ export interface BusVehicle {
   stationCode: string;
   stationName: string;
   stationSequence: number;
-  /** Index into routeSegments for the segment the estimate is drawn on. */
+  /** Index into routeSegments for the segment the official estimate is drawn on. */
   segmentIndex: number | null;
   coordinates: [number, number] | null;
   bearing: number | null;

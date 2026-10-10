@@ -15,7 +15,6 @@ import type { SourceDefinition } from "@/server/source";
 
 const BUS_API = "https://bis.dsat.gov.mo:37812/macauweb";
 const DDBUS_API = "https://bis.dsat.gov.mo:37812/ddbus";
-const PASSENGER_API = "https://bis.dsat.gov.mo:37812/ddbus/app/passenger/route";
 const ROUTE_PAGE = "https://www.dsat.gov.mo/dsat/bus_route.aspx";
 const HUID = "cc57da25-d5d8-4286-8712-d98df57c8af6";
 
@@ -40,21 +39,6 @@ const routeResponseSchema = z.object({
   }),
 });
 
-const etaResponseSchema = z.object({
-  header: z.object({ status: z.string() }),
-  data: z.object({
-    data: z.array(
-      z.object({
-        msg: z.string(),
-        average: z.union([z.string(), z.number()]).nullable().optional(),
-        current: z.union([z.string(), z.number()]).nullable().optional(),
-        stationCode: z.string(),
-        stationName: z.string(),
-      }),
-    ),
-  }),
-});
-
 const stationLocationSchema = z.object({
   header: z.string(),
   data: z.object({
@@ -66,6 +50,18 @@ const stationLocationSchema = z.object({
           stationCode: z.string(),
           stationName: z.string(),
           laneName: z.string().nullish().transform((value) => value ?? ""),
+        }),
+      )
+      .nullish()
+      .transform((value) => value ?? []),
+    busInfoList: z
+      .array(
+        z.object({
+          latitude: z.string(),
+          longitude: z.string(),
+          busPlate: z.string(),
+          busType: z.string().nullish().transform((value) => value ?? ""),
+          speed: z.union([z.string(), z.number()]).nullish(),
         }),
       )
       .nullish()
@@ -135,17 +131,9 @@ function normalizeStationCode(value: string): string {
   return value.trim().toUpperCase();
 }
 
-function etaValue(value: string | number | null | undefined): number | null {
-  if (value === null || value === undefined) return null;
-  if (typeof value === "number") return Number.isFinite(value) ? value : null;
-  if (value.trim().toLowerCase() === "x") return 0;
-  if (!/^\d+$/.test(value.trim())) return null;
-  return Number(value);
-}
-
 function numberOrNull(value: string): number | null {
   const parsed = Number(value);
-  return value.trim() !== "" && Number.isFinite(parsed) ? parsed : null;
+  return value.trim() !== "" && Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
 
 // DSAT uses 1 normal, 2 slow, 3 congested, 4 very congested, -1 unknown.
@@ -307,43 +295,21 @@ function busDiversionSource(routeName: string): SourceDefinition<string[]> {
   };
 }
 
-interface EtaStop {
-  msg: string;
-  average?: string | number | null;
-  current?: string | number | null;
-  stationCode: string;
-  stationName: string;
-}
-
 interface StationLocation {
   stationCode: string;
   stationName: string;
   coordinates: [number, number];
 }
 
+interface OfficialBusPosition {
+  coordinates: [number, number];
+  speedKph: number | null;
+  busType: string;
+}
+
 interface RouteTrafficSegment {
   coordinates: Array<[number, number]> | null;
   trafficLevel: number;
-}
-
-async function loadEtaStops(code: string, direction: 0 | 1): Promise<EtaStop[]> {
-  const query = new URLSearchParams({
-    routeCode: code,
-    direction: String(direction),
-    lang: "zh_tw",
-    device: "web",
-    HUID,
-  });
-
-  const response = etaResponseSchema.parse(
-    await fetchJson(`${PASSENGER_API}?${query}`, { timeoutMs: 8_000 }),
-  );
-
-  if (response.header.status !== "000") {
-    throw new Error(`DSAT ETA endpoint returned ${response.header.status}`);
-  }
-
-  return response.data.data;
 }
 
 async function loadStationCoordinates(code: string, direction: 0 | 1) {
@@ -357,11 +323,27 @@ async function loadStationCoordinates(code: string, direction: 0 | 1) {
     throw new Error(`DSAT station endpoint returned ${response.header}`);
   }
 
-  return response.data.stationInfoList.map((station) => ({
+  const stations: StationLocation[] = response.data.stationInfoList.map((station) => ({
     stationCode: normalizeStationCode(station.stationCode),
     stationName: station.stationName,
     coordinates: [Number(station.longitude), Number(station.latitude)] as [number, number],
   }));
+  // This response also carries the official estimated position per bus, which is
+  // what the official map page draws. It is not a GPS fix.
+  const positions = new Map<string, OfficialBusPosition>();
+  for (const bus of response.data.busInfoList) {
+    const longitude = Number(bus.longitude);
+    const latitude = Number(bus.latitude);
+    const plate = bus.busPlate.trim();
+    if (!plate || !Number.isFinite(longitude) || !Number.isFinite(latitude)) continue;
+    positions.set(plate, {
+      coordinates: [longitude, latitude],
+      speedKph: numberOrNull(String(bus.speed ?? "")),
+      busType: bus.busType,
+    });
+  }
+
+  return { stations, positions };
 }
 
 async function loadRouteBuses(
@@ -420,52 +402,44 @@ async function loadRouteSegments(code: string, direction: 0 | 1): Promise<RouteT
   });
 }
 
-// DSAT only says which stop a bus is approaching, so the vehicle is estimated
-// along the official polyline of that stop-to-stop segment.
-function pointAlongSegment(
+// The official estimate is a bare coordinate, so the model heading comes from
+// the nearest stretch of the segment polyline.
+function bearingAtPoint(
   coordinates: Array<[number, number]>,
-  fraction: number,
-): { point: [number, number]; bearing: number } | null {
+  point: [number, number],
+): number | null {
   if (coordinates.length < 2) return null;
 
-  const distances = [0];
-  let total = 0;
+  let best: { bearing: number; distance: number } | null = null;
   for (let index = 1; index < coordinates.length; index += 1) {
     const [x1, y1] = coordinates[index - 1];
     const [x2, y2] = coordinates[index];
-    const dx = (x2 - x1) * Math.cos((((y1 + y2) / 2) * Math.PI) / 180);
-    const dy = y2 - y1;
-    total += Math.hypot(dx, dy);
-    distances.push(total);
-  }
-  if (total === 0) return null;
-
-  const target = total * Math.min(Math.max(fraction, 0), 1);
-  for (let index = 1; index < coordinates.length; index += 1) {
-    if (distances[index] < target && index < coordinates.length - 1) continue;
-
-    const span = distances[index] - distances[index - 1] || 1;
-    const ratio = (target - distances[index - 1]) / span;
-    const [x1, y1] = coordinates[index - 1];
-    const [x2, y2] = coordinates[index];
-    const bearing = ((Math.atan2(x2 - x1, y2 - y1) * 180) / Math.PI + 360) % 360;
-
-    return {
-      point: [x1 + (x2 - x1) * ratio, y1 + (y2 - y1) * ratio],
-      bearing,
+    const latRadians = ((y1 + y2) / 2) * (Math.PI / 180);
+    const segmentX = (x2 - x1) * Math.cos(latRadians);
+    const segmentY = y2 - y1;
+    const pointX = (point[0] - x1) * Math.cos(latRadians);
+    const pointY = point[1] - y1;
+    const lengthSquared = segmentX * segmentX + segmentY * segmentY;
+    const ratio =
+      lengthSquared === 0
+        ? 0
+        : Math.min(1, Math.max(0, (pointX * segmentX + pointY * segmentY) / lengthSquared));
+    const distance = Math.hypot(pointX - segmentX * ratio, pointY - segmentY * ratio);
+    if (best && best.distance <= distance) continue;
+    best = {
+      bearing: ((Math.atan2(x2 - x1, y2 - y1) * 180) / Math.PI + 360) % 360,
+      distance,
     };
   }
 
-  return null;
+  return best?.bearing ?? null;
 }
 
 function mergeStationCodes(
-  etaStops: EtaStop[] | null,
   stations: StationLocation[],
   routeBuses: Array<{ staCode: string }>,
 ): string[] {
   const feeds = [
-    (etaStops ?? []).map((stop) => normalizeStationCode(stop.stationCode)),
     stations.map((station) => station.stationCode),
     routeBuses.map((entry) => normalizeStationCode(entry.staCode)),
   ].filter((feed) => feed.length > 0);
@@ -505,16 +479,6 @@ function stopCodeAtCoordinate(
   return best?.stationCode ?? null;
 }
 
-function clampFraction(value: number): number {
-  return Math.min(0.95, Math.max(0.05, value));
-}
-
-function vehicleFraction(stop: BusEtaStop | undefined, etaMinutes: number | null): number {
-  if (!stop || stop.sequence === 0) return 0;
-  if (etaMinutes === null) return 0.5;
-  return clampFraction(0.9 - Math.min(Math.max(etaMinutes, 0), 20) / 25);
-}
-
 export async function loadBusEta(routeCodeValue: string, direction: 0 | 1) {
   const code = routeCodeValue.toUpperCase().padStart(5, "0");
   const routesRead = await readSource(busRoutesSource);
@@ -524,16 +488,18 @@ export async function loadBusEta(routeCodeValue: string, direction: 0 | 1) {
     throw new Error(`Unknown bus route code ${code}`);
   }
 
-  const [etaStops, stations, routeBuses, routeTrafficSegments, diversion] = await Promise.all([
-    loadEtaStops(code, direction).catch(() => null),
-    loadStationCoordinates(code, direction).catch(() => []),
+  const [stationData, routeBuses, routeTrafficSegments, diversion] = await Promise.all([
+    loadStationCoordinates(code, direction).catch(() => ({
+      stations: [],
+      positions: new Map<string, OfficialBusPosition>(),
+    })),
     loadRouteBuses(route.routeName, direction, route.routeType).catch(() => []),
     loadRouteSegments(code, direction).catch(() => []),
     readSource(busDiversionSource(route.routeName)),
   ]);
+  const { stations, positions: officialPositions } = stationData;
 
   if (
-    !etaStops &&
     stations.length === 0 &&
     routeBuses.length === 0 &&
     routeTrafficSegments.length === 0
@@ -542,26 +508,20 @@ export async function loadBusEta(routeCodeValue: string, direction: 0 | 1) {
   }
 
   const suspendedCodes = new Set(diversion?.result.data ?? []);
-  const etaByCode = new Map(
-    (etaStops ?? []).map((stop) => [normalizeStationCode(stop.stationCode), stop]),
-  );
   const stationByCode = new Map(stations.map((station) => [station.stationCode, station]));
-  const orderedCodes = mergeStationCodes(etaStops, stations, routeBuses);
+  const orderedCodes = mergeStationCodes(stations, routeBuses);
 
   const stopsWithoutTraffic: BusEtaStop[] = orderedCodes.map((stationCode, index) => {
-    const eta = etaByCode.get(stationCode);
     const station = stationByCode.get(stationCode);
     return {
       sequence: index,
       stationCode,
-      stationName: eta?.stationName ?? station?.stationName ?? stationCode,
-      etaMinutes: eta ? etaValue(eta.current) : null,
-      averageMinutes: eta ? etaValue(eta.average) : null,
-      messageCode: eta?.msg ?? "",
+      stationName: station?.stationName ?? stationCode,
       coordinates: station?.coordinates ?? null,
       trafficStatus: "unknown",
       trafficLevel: -1,
       suspended: suspendedCodes.has(stationCode),
+      stopsAway: null,
     };
   });
   const stopByCode = new Map(stopsWithoutTraffic.map((stop) => [stop.stationCode, stop]));
@@ -640,44 +600,66 @@ export async function loadBusEta(routeCodeValue: string, direction: 0 | 1) {
       (a.bus.busCode || a.bus.busPlate).localeCompare(b.bus.busCode || b.bus.busPlate),
     );
 
-    group.forEach((pending, index) => {
+    group.forEach((pending) => {
       const { bus, stationCode, stop } = pending;
       const id = bus.busCode || bus.busPlate;
       if (!id || seen.has(id)) return;
       seen.add(id);
 
-      const baseFraction = vehicleFraction(stop, stop?.etaMinutes ?? null);
-      const spread = (index - (group.length - 1) / 2) * 0.16;
-      const fraction = clampFraction(baseFraction + spread);
+      const official = officialPositions.get(bus.busPlate.trim());
       const mappedIndex = stopSegmentIndex.get(stationCode);
       const segment = mappedIndex === undefined ? undefined : routeSegments[mappedIndex];
-      const fallback = routeTrafficSegments[stop ? Math.max(0, stop.sequence - 1) : 0];
-      const coordinates = segment?.coordinates ?? fallback?.coordinates ?? null;
-      const estimate = coordinates ? pointAlongSegment(coordinates, fraction) : null;
+      // Prefer the position the official feed publishes for this plate; fall back
+      // to the coordinates of the stop it is approaching when that entry is missing.
+      const coordinates = official?.coordinates ?? stop?.coordinates ?? null;
 
       vehicles.push({
         id,
         plate: bus.busPlate,
-        busType: bus.busType,
+        busType: bus.busType || official?.busType || "",
         lowFloor: bus.isFacilities === "1",
-        speedKph: numberOrNull(bus.speed),
+        speedKph: numberOrNull(bus.speed) ?? official?.speedKph ?? null,
         status: bus.status,
         stationCode,
         stationName: stop?.stationName ?? stationCode,
         stationSequence: stop?.sequence ?? 0,
         segmentIndex: segment && mappedIndex !== undefined ? mappedIndex : null,
-        coordinates: estimate?.point ?? null,
-        bearing: estimate?.bearing ?? null,
+        coordinates,
+        bearing:
+          segment && coordinates ? bearingAtPoint(segment.coordinates, coordinates) : null,
         estimated: true,
       });
     });
   }
 
+  // The official stop page counts the stops remaining before the next bus
+  // reaches a stop (0 means a bus is heading to that stop). DSAT publishes no
+  // per-stop arrival minutes, so this is the countdown the app shows.
+  const approachedSequences = vehicles
+    .filter((vehicle) => stopByCode.has(vehicle.stationCode))
+    .map((vehicle) => vehicle.stationSequence);
+  const stopsWithAway: BusEtaStop[] = stops.map((stop) => {
+    if (stops.length === 0 || approachedSequences.length === 0) return stop;
+
+    let best: number | null = null;
+    for (const approached of approachedSequences) {
+      const gap =
+        route.routeType === 2
+          ? (stop.sequence - approached + stops.length) % stops.length
+          : stop.sequence >= approached
+            ? stop.sequence - approached
+            : null;
+      if (gap === null || (best !== null && best <= gap)) continue;
+      best = gap;
+    }
+    return best === null ? stop : { ...stop, stopsAway: best };
+  });
+
   return busEtaSchema.parse({
     routeName: route.routeName,
     routeCode: route.routeCode,
     direction,
-    stops,
+    stops: stopsWithAway,
     vehicles,
     routeSegments,
     diversion: { suspendedStops },

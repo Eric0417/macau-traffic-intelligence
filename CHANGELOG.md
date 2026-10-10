@@ -2,6 +2,13 @@
 
 All notable user-visible and architectural changes are recorded here.
 
+## Honest bus report: official positions and stops-away counts - 2026-10-11
+
+- The bus panel no longer invents arrival minutes. The `/ddbus/app/passenger/route` endpoint the adapter read as a countdown is the half-hourly passenger waiting-time/flow statistics feed behind the official 乘客候車時間 page: it returns `currentSeg`/`historyRange` segments and per-stop counts that stay frozen while buses move. It is no longer read (ADR 0010).
+- Live bus markers now use the position estimate the official bus report publishes per plate in the stop-location feed, the same coordinates the official map page draws, falling back to the coordinates of the stop each bus is approaching. Markers still glide along the official route polyline, and they no longer rewind to the stop just reached when the feed advances.
+- The stop list shows the official metric instead: the stop a bus is heading to shows 即將進站 with a bus icon and plate, later stops show 還有 N 站 (wrapping on circular routes), and stops behind every bus show a dash. A quiet note states that DSAT publishes no per-stop arrival minutes.
+- The bus payload drops `etaMinutes`, `averageMinutes`, and `messageCode` and adds `stopsAway`. The AI assistant receives stops-away counts and is instructed not to convert them into minutes. `docs/DATA_SOURCES.md`, the README, and ADR 0010 record the change.
+
 ## Full parking coordinate coverage - 2026-10-10
 
 - All 92 DSAT public car parks now have map coordinates. The 14 that had no OpenStreetMap name match use the Macau SAR Government WebMap Carpark POI layer at build time; the runtime keeps reading the checked-in `data/parking-locations.json`.

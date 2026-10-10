@@ -375,40 +375,51 @@ export function BusPanel({
           ) : null}
           {eta.data ? <p className="quiet-copy">{t("routeTrafficNote")}</p> : null}
           <ol className="eta-list">
-            {eta.data?.stops.map((stop) => (
-              <li
-                key={`${stop.stationCode}-${stop.sequence}`}
-                className={stop.suspended ? "is-suspended" : ""}
-              >
-                <span className={`eta-sequence tone-${stop.trafficStatus}`}>
-                  {stop.sequence + 1}
-                </span>
-                <span className="eta-station">
-                  {stop.stationName}
-                  {stop.suspended ? (
-                    <em className="eta-suspended">{t("suspended")}</em>
-                  ) : null}
-                  {vehicleByStation.has(stop.stationCode) ? (
-                    <em className="eta-bus">
-                      {vehicleByStation.get(stop.stationCode)?.plate}
-                    </em>
-                  ) : null}
-                </span>
-                <strong>
-                  {stop.etaMinutes === null ? (
-                    "–"
-                  ) : stop.etaMinutes === 0 ? (
-                    <em className="eta-arriving">{t("arriving")}</em>
+            {eta.data?.stops.map((stop) => {
+              const vehicle = vehicleByStation.get(stop.stationCode);
+              const due = Boolean(vehicle) || stop.stopsAway === 0;
+              return (
+                <li
+                  key={`${stop.stationCode}-${stop.sequence}`}
+                  className={[
+                    stop.suspended ? "is-suspended" : "",
+                    due ? "is-due" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                >
+                  <span className={`eta-sequence tone-${stop.trafficStatus}`}>
+                    {stop.sequence + 1}
+                  </span>
+                  <span className="eta-station">
+                    {stop.stationName}
+                    {stop.suspended ? (
+                      <em className="eta-suspended">{t("suspended")}</em>
+                    ) : null}
+                    {vehicle ? (
+                      <em className="eta-bus">
+                        <BusFront size={10} aria-hidden="true" />
+                        {vehicle.plate}
+                      </em>
+                    ) : null}
+                  </span>
+                  {due ? (
+                    <em className="eta-due">{t("dueAtStop")}</em>
+                  ) : stop.stopsAway === null ? (
+                    <span className="eta-none">–</span>
                   ) : (
-                    <>
-                      {stop.etaMinutes}
-                      <small>{t("minutes")}</small>
-                    </>
+                    <span className="eta-count">
+                      {stop.stopsAway}
+                      <small>
+                        {stop.stopsAway === 1 ? t("stopShort") : t("stopsShort")}
+                      </small>
+                    </span>
                   )}
-                </strong>
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ol>
+          {eta.data ? <p className="quiet-copy">{t("stopsAwayNote")}</p> : null}
         </section>
       ) : (
         <p className="quiet-copy panel-empty">{t("chooseRoute")}</p>

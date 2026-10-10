@@ -99,7 +99,7 @@ export interface LearningSnapshot {
       }>;
       nextStops: Array<{
         stationName: string;
-        etaMinutes: number | null;
+        stopsAway: number | null;
         trafficStatus: string;
       }>;
       stops: string[];
@@ -438,7 +438,7 @@ function summariseLrtNotices(
 }
 
 export const BUS_POSITION_NOTE =
-  "Live bus positions are estimated along the official route from the stop each bus is approaching; they are not GPS readings. Direction 0 is the outbound trip and direction 1 is the return trip.";
+  "Live bus positions are the official report's own estimated coordinates for each plate; they are not GPS readings. nextStops lists how many stops remain before the next bus reaches each stop, where 0 means a bus is heading to that stop; DSAT publishes no per-stop arrival minutes. Direction 0 is the outbound trip and direction 1 is the return trip.";
 
 function summariseBusSlice(
   eta: BusEta,
@@ -460,7 +460,7 @@ function summariseBusSlice(
     })),
     nextStops: eta.stops.slice(0, 8).map((stop) => ({
       stationName: stop.stationName,
-      etaMinutes: stop.etaMinutes,
+      stopsAway: stop.stopsAway,
       trafficStatus: stop.trafficStatus,
     })),
     stops: eta.stops.map((stop) => stop.stationName),
@@ -473,9 +473,9 @@ function busEtaSourceDefinition(slice: AssistantFocus): SourceDefinition<BusEta>
   const normalizedCode = slice.routeCode.toUpperCase();
   return {
     id: `bus-eta-${normalizedCode}-${slice.direction}`,
-    name: `Bus ${normalizedCode} arrivals`,
+    name: `Bus ${normalizedCode} live positions`,
     url: "https://bis.dsat.gov.mo:37812/macauweb/",
-    attribution: "DSAT public bus arrival data",
+    attribution: "DSAT public bus report data",
     envKey: "SOURCE_BUS_ENABLED",
     ttlSeconds: 10,
     staleTtlSeconds: 60,
@@ -666,13 +666,14 @@ export function buildAssistantMessages(
     "Before stating which item is highest or lowest, list the values you are comparing so the comparison can be checked.",
     "When the snapshot cannot explain why something happens, say which extra data or field observation would be needed instead of guessing a cause.",
     "The snapshot may include roads.mentionedSegments (each with a segment count, status breakdown, and total length), roads.congestedSegments, roads.slowSegments, and bus.liveRoutes. Use them for questions about a specific road, bus route, bus position, or route traffic.",
-    "For bus answers, name the stop each bus is approaching and always state that positions are estimated from the official arrival feed, not GPS. When one route is named, bus.liveRoutes carries both directions: call direction 0 the outbound trip and direction 1 the return trip, and never invent destination or terminal names that are not written in the snapshot.",
+    "For bus answers, name the stop each bus is approaching and always state that positions are the official bus report's own estimates, not GPS. When one route is named, bus.liveRoutes carries both directions: call direction 0 the outbound trip and direction 1 the return trip, and never invent destination or terminal names that are not written in the snapshot.",
+    "bus.liveRoutes[].nextStops[].stopsAway is the number of stops remaining before the next bus reaches that stop, where 0 means a bus is heading to it. It is a stop count, not minutes; never convert it to a time.",
     "bus.liveRoutes[].stops lists every stop of that route in order. When asked whether a route serves a place, decide yes or no from the stop list and answer that in the first sentence; only then name the relevant stops. If the place is not in the list, say it is not served and do not imply otherwise.",
     "If bus.placeCheck is present, its served value is the authoritative answer to whether that route serves the place. The system adds an opening line with that value, so confirm it and never contradict it. Keep the reply to at most three short sentences: the served value, up to three nearby stops from the stop list, and a next step.",
     "If a named route is not in bus.liveRoutes, or a named road is not in roads.mentionedSegments, say that the live detail was not loaded instead of guessing.",
     "lrt lists the official LRT network: lines, stations, and interchanges. lrt.lines[].stations lists the station names of each line; if asked how many stations a line has, count that list. The LRT has no official live train-position feed, so never claim a train position or a countdown; use the LRT service notices for service status.",
     "Never mention JSON field names such as liveVehicleCount or segmentTraffic in the answer; describe the same facts in plain words.",
-    "Keep units as published (minutes, °C, km/h, number of spaces). Structure comparisons as short lists or sentences, not tables.",
+    "Keep units as published (stop counts, minutes, °C, km/h, number of spaces). Structure comparisons as short lists or sentences, not tables.",
     "Live readings change quickly; describe what the data shows now and never promise that a condition will persist.",
     "Do not give turn-by-turn driving directions. For travel decisions, remind the user that official apps and on-site signs are authoritative.",
     "Never ask for or repeat personal data. The snapshot contains public government data only.",
@@ -850,9 +851,9 @@ function contextSummary(snapshot: LearningSnapshot, locale: Locale): string[] {
       .join(", ");
     items.push(
       join(
-        `巴士實時：${routes} 的車輛位置、到站與沿線路況`,
-        `巴士实时：${routesHans} 的车辆位置、到站与沿线路况`,
-        `Live bus data: vehicles, arrivals, and route traffic for ${routesEn}`,
+        `巴士實時：${routes} 的車輛位置、剩餘站數與沿線路況`,
+        `巴士实时：${routesHans} 的车辆位置、剩余站数与沿线路况`,
+        `Live bus data: vehicles, stops-away counts, and route traffic for ${routesEn}`,
       ),
     );
   } else if (snapshot.bus) {

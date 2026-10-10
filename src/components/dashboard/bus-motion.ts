@@ -240,8 +240,6 @@ export interface BusMotion {
   lowFloor: boolean;
   routeKey: string;
   route: RoutePath;
-  /** Index into route.segments for the stop the feed is approaching. */
-  segmentIndex: number;
   /** Current displayed route distance, unwrapped across loop laps. */
   distance: number;
   /** Official estimate the marker moves toward, unwrapped across loop laps. */
@@ -345,20 +343,6 @@ export function createBusMotion(
     speed = state.speed;
   }
 
-  // DSAT moves a vehicle to the next approaching stop only after it reaches
-  // the previous one. Treat that forward change as a confirmed arrival and
-  // reset the drawing to the stop just reached.
-  if (previous && sameRoute) {
-    const wrappedLap =
-      route.closed &&
-      segmentIndex === 0 &&
-      previous.segmentIndex === route.segments.length - 1;
-    if (segmentIndex > previous.segmentIndex || wrappedLap) {
-      distance = wrappedLap ? route.total : route.segments[segmentIndex].start;
-      speed = 0;
-    }
-  }
-
   let target = anchor;
   if (previous && sameRoute && route.closed) {
     // The vehicle started another lap at the same terminal. Keep advancing
@@ -376,7 +360,6 @@ export function createBusMotion(
     lowFloor: vehicle.lowFloor,
     routeKey,
     route,
-    segmentIndex,
     distance,
     target,
     speed,

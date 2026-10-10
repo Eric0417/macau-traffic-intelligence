@@ -28,9 +28,9 @@ export async function GET(
   const direction = parsed.data.direction as 0 | 1;
   const source: SourceDefinition<Awaited<ReturnType<typeof loadBusEta>>> = {
     id: `bus-eta-${normalizedCode}-${direction}`,
-    name: `巴士 ${normalizedCode} 到站`,
+    name: `巴士 ${normalizedCode} 實時位置`,
     url: "https://bis.dsat.gov.mo:37812/macauweb/",
-    attribution: "交通事務局巴士報站公開到站資料",
+    attribution: "交通事務局巴士報站公開實時資料",
     envKey: "SOURCE_BUS_ENABLED",
     ttlSeconds: 5,
     staleTtlSeconds: 60,

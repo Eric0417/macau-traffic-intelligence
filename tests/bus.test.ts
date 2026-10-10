@@ -33,35 +33,6 @@ const routePage = `
   </a>
 `;
 
-const etaResponse = {
-  header: { status: "000" },
-  data: {
-    data: [
-      {
-        msg: "0",
-        average: 28,
-        current: 30,
-        stationCode: "M1/9",
-        stationName: "關閘總站",
-      },
-      {
-        msg: "0",
-        average: 11,
-        current: "x",
-        stationCode: "M7/1",
-        stationName: "關閘馬路",
-      },
-      {
-        msg: "0",
-        average: 4,
-        current: 9,
-        stationCode: "M16/1",
-        stationName: "提督馬路/雅廉訪",
-      },
-    ],
-  },
-};
-
 const stationResponse = {
   header: "000",
   data: {
@@ -86,6 +57,23 @@ const stationResponse = {
         stationCode: "M16/1",
         stationName: "提督馬路/雅廉訪",
         laneName: "",
+      },
+    ],
+    // The official report publishes its own estimated position per plate.
+    busInfoList: [
+      {
+        latitude: "22.2096",
+        longitude: "113.5471",
+        busPlate: "AD2767",
+        busType: "1",
+        speed: 22,
+      },
+      {
+        latitude: "22.2115",
+        longitude: "113.548",
+        busPlate: "AD2768",
+        busType: "1",
+        speed: 11,
       },
     ],
   },
@@ -137,6 +125,7 @@ const diversionResponse = {
 function stubBusFetch(
   overrides: {
     routeBusResponse?: typeof routeBusResponse;
+    stationResponse?: typeof stationResponse;
   } = {},
 ) {
   vi.stubGlobal(
@@ -146,8 +135,9 @@ function stubBusFetch(
 
       if (url.includes("getRouteAndCompanyList.html")) return Response.json(routeResponse);
       if (url.includes("bus_route.aspx")) return new Response(routePage, { status: 200 });
-      if (url.includes("/ddbus/app/passenger/route")) return Response.json(etaResponse);
-      if (url.includes("routestation/location")) return Response.json(stationResponse);
+      if (url.includes("routestation/location")) {
+        return Response.json(overrides.stationResponse ?? stationResponse);
+      }
       if (url.includes("routestation/bus")) {
         return Response.json(overrides.routeBusResponse ?? routeBusResponse);
       }
@@ -205,7 +195,7 @@ describe("bus sources", () => {
     expect(routes.map((route) => route.routeName)).toEqual(["1A", "3"]);
   });
 
-  it("normalizes ETA values and adds station coordinates", async () => {
+  it("adds station coordinates and the stops-away count", async () => {
     stubBusFetch();
 
     const eta = await loadBusEta("00003", 0);
@@ -214,14 +204,14 @@ describe("bus sources", () => {
     expect(eta.stops).toEqual([
       expect.objectContaining({
         stationCode: "M1/9",
-        etaMinutes: 30,
+        stopsAway: null,
         coordinates: [113.54918, 22.215502],
         trafficStatus: "normal",
         trafficLevel: 1,
       }),
       expect.objectContaining({
         stationCode: "M7/1",
-        etaMinutes: 0,
+        stopsAway: null,
         coordinates: [113.54862, 22.212759],
         trafficStatus: "normal",
         trafficLevel: 1,
@@ -229,7 +219,7 @@ describe("bus sources", () => {
       }),
       expect.objectContaining({
         stationCode: "M16/1",
-        etaMinutes: 9,
+        stopsAway: 0,
         coordinates: [113.54549, 22.206627],
         trafficStatus: "congested",
         trafficLevel: 3,
@@ -270,7 +260,7 @@ describe("bus sources", () => {
     ]);
   });
 
-  it("reports live buses on the segment before their next stop", async () => {
+  it("uses the official position published for each plate", async () => {
     stubBusFetch();
 
     const eta = await loadBusEta("00003", 0);
@@ -287,10 +277,7 @@ describe("bus sources", () => {
         stationName: "提督馬路/雅廉訪",
         stationSequence: 2,
         segmentIndex: 1,
-        coordinates: [
-          expect.closeTo(113.5469298, 7),
-          expect.closeTo(22.20944772, 7),
-        ],
+        coordinates: [113.5471, 22.2096],
         bearing: expect.closeTo(
           207.0414504734597,
           5,
@@ -300,7 +287,7 @@ describe("bus sources", () => {
     ]);
   });
 
-  it("aligns feeds by stationCode when an ETA stop is missing", async () => {
+  it("keeps the stop feed order when the live bus feed omits a stop", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: RequestInfo | URL) => {
@@ -308,29 +295,6 @@ describe("bus sources", () => {
 
         if (url.includes("getRouteAndCompanyList.html")) return Response.json(routeResponse);
         if (url.includes("bus_route.aspx")) return new Response(routePage, { status: 200 });
-        if (url.includes("/ddbus/app/passenger/route")) {
-          return Response.json({
-            header: { status: "000" },
-            data: {
-              data: [
-                {
-                  msg: "0",
-                  average: 28,
-                  current: 30,
-                  stationCode: "M1/9",
-                  stationName: "關閘總站",
-                },
-                {
-                  msg: "0",
-                  average: 4,
-                  current: 9,
-                  stationCode: "M16/1",
-                  stationName: "提督馬路/雅廉訪",
-                },
-              ],
-            },
-          });
-        }
         if (url.includes("routestation/location")) return Response.json(stationResponse);
         if (url.includes("routestation/bus")) {
           return Response.json({
@@ -414,7 +378,7 @@ describe("bus sources", () => {
     });
   });
 
-  it("separates buses approaching the same stop", async () => {
+  it("keeps both official positions when two buses approach the same stop", async () => {
     stubBusFetch({
       routeBusResponse: {
         header: "000",
@@ -449,6 +413,121 @@ describe("bus sources", () => {
     const eta = await loadBusEta("00003", 0);
 
     expect(eta.vehicles).toHaveLength(2);
-    expect(eta.vehicles[0].coordinates).not.toEqual(eta.vehicles[1].coordinates);
+    expect(eta.vehicles.map((vehicle) => vehicle.coordinates)).toEqual([
+      [113.5471, 22.2096],
+      [113.548, 22.2115],
+    ]);
+  });
+
+  it("falls back to the approached stop when the official position is missing", async () => {
+    stubBusFetch({
+      stationResponse: {
+        ...stationResponse,
+        data: { ...stationResponse.data, busInfoList: [] },
+      },
+    });
+
+    const eta = await loadBusEta("00003", 0);
+
+    expect(eta.vehicles).toHaveLength(1);
+    expect(eta.vehicles[0]).toMatchObject({
+      plate: "AD2767",
+      coordinates: [113.54549, 22.206627],
+      speedKph: 18,
+    });
+  });
+
+  it("wraps the stops-away count on a circular route", async () => {
+    const stationCodes = ["S1", "S2", "S3", "S4"];
+    const coordinates = [
+      [113.55, 22.19],
+      [113.56, 22.19],
+      [113.57, 22.19],
+      [113.58, 22.19],
+    ];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+
+        if (url.includes("getRouteAndCompanyList.html")) {
+          return Response.json({
+            header: "000",
+            data: {
+              companyList: [{ color: "Blue", name: "新福利" }],
+              routeList: [
+                { color: "Blue", routeChange: "0", direction: "2", routeName: "25" },
+              ],
+            },
+          });
+        }
+        if (url.includes("bus_route.aspx")) return new Response("<html></html>", { status: 200 });
+        if (url.includes("routestation/location")) {
+          return Response.json({
+            header: "000",
+            data: {
+              stationInfoList: stationCodes.map((stationCode, index) => ({
+                latitude: String(coordinates[index][1]),
+                longitude: String(coordinates[index][0]),
+                stationCode,
+                stationName: `站${index + 1}`,
+                laneName: "",
+              })),
+              busInfoList: [
+                {
+                  latitude: "22.19",
+                  longitude: "113.555",
+                  busPlate: "AB1111",
+                  busType: "1",
+                  speed: 20,
+                },
+              ],
+            },
+          });
+        }
+        if (url.includes("routestation/bus")) {
+          return Response.json({
+            header: "000",
+            data: {
+              routeInfo: [
+                {
+                  staCode: "S2",
+                  busInfo: [
+                    {
+                      busCode: "E1",
+                      busPlate: "AB1111",
+                      busType: "1",
+                      status: "1",
+                      isFacilities: "0",
+                      speed: "20",
+                    },
+                  ],
+                },
+              ],
+            },
+          });
+        }
+        if (url.includes("supermap/route/traffic")) {
+          return Response.json({
+            data: coordinates.slice(0, -1).map((from, index) => ({
+              routeCoordinates: `${from[0]},${from[1]};${coordinates[index + 1][0]},${coordinates[index + 1][1]}`,
+              newRouteTraffic: "1",
+            })),
+          });
+        }
+        if (url.includes("getRouteChangeMessage.html")) {
+          return Response.json({
+            header: "000",
+            data: { routeChange: false, suspendBusStop: [] },
+          });
+        }
+
+        throw new Error(`Unexpected request ${url}`);
+      }),
+    );
+
+    const eta = await loadBusEta("00025", 0);
+
+    expect(eta.stops.map((stop) => stop.stopsAway)).toEqual([3, 0, 1, 2]);
   });
 });

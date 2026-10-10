@@ -132,7 +132,7 @@ describe("bus motion", () => {
     expect(metersBetween(before.coordinates, after.coordinates)).toBeLessThan(0.01);
   });
 
-  it("re-anchors the marker to the stop the feed reports as just reached", () => {
+  it("continues from the drawn position when the estimate moves to the next segment", () => {
     const route = buildRoutePath([segmentA, segmentB]);
     const approachingB = createBusMotion(
       vehicle({ coordinates: [113.557, 22.19] }),
@@ -141,6 +141,7 @@ describe("bus motion", () => {
       "tcm",
       0,
     )!;
+    const before = advanceBusMotion(approachingB, 10_000);
     const approachingC = createBusMotion(
       vehicle({
         stationCode: "C",
@@ -155,38 +156,13 @@ describe("bus motion", () => {
       approachingB,
     )!;
 
-    expect(approachingC.segmentIndex).toBe(1);
-    expect(approachingC.distance).toBeCloseTo(route.segments[1].start, 5);
+    // The feed advanced to the next segment; the marker keeps moving forward
+    // from where it was instead of snapping back to the stop it just reached.
+    const after = advanceBusMotion(approachingC, 10_000);
+    expect(metersBetween(before.coordinates, after.coordinates)).toBeLessThan(0.01);
 
-    const corrected = advanceBusMotion(approachingC, 10_000);
-    expect(metersBetween(corrected.coordinates, [113.56, 22.19])).toBeLessThan(1);
-  });
-
-  it("does not treat a backward segment revision as an arrival", () => {
-    const route = buildRoutePath([segmentA, segmentB]);
-    const approachingC = createBusMotion(
-      vehicle({
-        stationCode: "C",
-        stationSequence: 2,
-        segmentIndex: 1,
-        coordinates: [113.5615, 22.19],
-      }),
-      route,
-      "00003-0",
-      "tcm",
-      0,
-    )!;
-    const revised = createBusMotion(
-      vehicle({ coordinates: [113.555, 22.19] }),
-      route,
-      "00003-0",
-      "tcm",
-      10_000,
-      approachingC,
-    )!;
-
-    expect(revised.segmentIndex).toBe(0);
-    expect(revised.distance).toBeGreaterThan(route.segments[1].start - 1);
+    const settled = advanceBusMotion(approachingC, 10_000 + 300_000);
+    expect(metersBetween(settled.coordinates, [113.5615, 22.19])).toBeLessThan(2);
   });
 
   it("glides toward a coarse estimate step instead of teleporting", () => {
@@ -276,6 +252,7 @@ describe("bus motion", () => {
       0,
       null,
     )!;
+    const before = advanceBusMotion(finishing, 10_000);
     const nextLap = createBusMotion(
       vehicle({
         stationCode: "B",
@@ -292,7 +269,9 @@ describe("bus motion", () => {
 
     expect(nextLap.target).toBeGreaterThan(route.total);
     expect(nextLap.target - nextLap.distance).toBeLessThan(route.total / 2);
-    expect(nextLap.distance).toBeCloseTo(route.total, 5);
+    // The new lap continues from the drawn position instead of snapping.
+    const after = advanceBusMotion(nextLap, 10_000);
+    expect(metersBetween(before.coordinates, after.coordinates)).toBeLessThan(0.01);
   });
 
   it("returns null when the vehicle has no usable segment", () => {

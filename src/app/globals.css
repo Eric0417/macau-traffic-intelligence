@@ -1275,35 +1275,48 @@ textarea:focus-visible {
 }
 
 .eta-bus {
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
   margin-left: 5px;
-  padding: 0 5px;
+  padding: 1px 6px;
   color: var(--tint-ink);
   background: var(--tint-soft);
-  border-radius: 5px;
+  border-radius: 999px;
   font-size: 9px;
   font-style: normal;
-  font-weight: 600;
-}
-
-.eta-list strong {
-  color: var(--ink);
-  font-size: 18px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
-.eta-list strong small {
+.eta-count {
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.eta-count small {
   margin-left: 2px;
   color: var(--muted);
   font-size: 9px;
   font-weight: 500;
 }
 
-.eta-arriving {
+.eta-due {
+  padding: 2px 7px;
   color: var(--green-ink);
-  font-size: 11px;
+  background: var(--green-soft);
+  border-radius: 999px;
+  font-size: 10px;
   font-style: normal;
-  letter-spacing: 0.02em;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.eta-none {
+  color: var(--faint);
+  font-size: 12px;
 }
 
 .eta-list li.is-suspended .eta-station {
