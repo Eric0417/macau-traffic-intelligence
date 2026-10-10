@@ -132,6 +132,63 @@ describe("bus motion", () => {
     expect(metersBetween(before.coordinates, after.coordinates)).toBeLessThan(0.01);
   });
 
+  it("re-anchors the marker to the stop the feed reports as just reached", () => {
+    const route = buildRoutePath([segmentA, segmentB]);
+    const approachingB = createBusMotion(
+      vehicle({ coordinates: [113.557, 22.19] }),
+      route,
+      "00003-0",
+      "tcm",
+      0,
+    )!;
+    const approachingC = createBusMotion(
+      vehicle({
+        stationCode: "C",
+        stationSequence: 2,
+        segmentIndex: 1,
+        coordinates: [113.5615, 22.19],
+      }),
+      route,
+      "00003-0",
+      "tcm",
+      10_000,
+      approachingB,
+    )!;
+
+    expect(approachingC.segmentIndex).toBe(1);
+    expect(approachingC.distance).toBeCloseTo(route.segments[1].start, 5);
+
+    const corrected = advanceBusMotion(approachingC, 10_000);
+    expect(metersBetween(corrected.coordinates, [113.56, 22.19])).toBeLessThan(1);
+  });
+
+  it("does not treat a backward segment revision as an arrival", () => {
+    const route = buildRoutePath([segmentA, segmentB]);
+    const approachingC = createBusMotion(
+      vehicle({
+        stationCode: "C",
+        stationSequence: 2,
+        segmentIndex: 1,
+        coordinates: [113.5615, 22.19],
+      }),
+      route,
+      "00003-0",
+      "tcm",
+      0,
+    )!;
+    const revised = createBusMotion(
+      vehicle({ coordinates: [113.555, 22.19] }),
+      route,
+      "00003-0",
+      "tcm",
+      10_000,
+      approachingC,
+    )!;
+
+    expect(revised.segmentIndex).toBe(0);
+    expect(revised.distance).toBeGreaterThan(route.segments[1].start - 1);
+  });
+
   it("glides toward a coarse estimate step instead of teleporting", () => {
     const route = buildRoutePath([segmentA, segmentB]);
     const first = createBusMotion(vehicle(), route, "00003-0", "tcm", 0)!;
@@ -235,6 +292,7 @@ describe("bus motion", () => {
 
     expect(nextLap.target).toBeGreaterThan(route.total);
     expect(nextLap.target - nextLap.distance).toBeLessThan(route.total / 2);
+    expect(nextLap.distance).toBeCloseTo(route.total, 5);
   });
 
   it("returns null when the vehicle has no usable segment", () => {

@@ -2,6 +2,11 @@
 
 All notable user-visible and architectural changes are recorded here.
 
+## Stop-arrival correction for bus markers - 2026-10-10
+
+- When DSAT advances a bus to the next approaching stop, the map now re-anchors that bus to the stop it just reached, then continues toward the new estimate. Estimate error no longer accumulates across stops.
+- Backward segment revisions are not treated as arrivals. They keep the existing eased correction, so a feed jump cannot teleport a marker backward.
+
 ## Per-tab map focus, parking markers, and incident-first alerts - 2026-10-10
 
 - Each tab now narrows the map to its own subject: parking shows only mapped car parks, cameras show only camera markers, and Alerts shows only the monitored road segments named in the selected incident. The bus and LRT tabs keep their focused views, and Overview keeps the general map.
