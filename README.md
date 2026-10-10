@@ -49,7 +49,7 @@ Next 16 allows one dev server per project and blocks dev assets from hostnames i
 
 ## Data Refresh
 
-The server fetches live data at runtime, so a redeploy is not needed when a source changes. Bus routes and the LRT network refresh every 6 hours, live bus positions every 5 seconds, roads every 60 seconds, parking every 30 seconds, and notices every 5 minutes. The LRT network is rebuilt from OpenStreetMap route relations with the checked-in `data/lrt-network.json` as fallback.
+The server fetches live data at runtime, so a redeploy is not needed when a source changes. Bus routes and the LRT network refresh every 6 hours, live bus positions every 2 seconds, roads every 60 seconds, parking every 30 seconds, and notices every 5 minutes. The LRT network is rebuilt from OpenStreetMap route relations with the checked-in `data/lrt-network.json` as fallback.
 
 After a deploy, run `WARMUP_BASE_URL=https://macau-traffic-intelligence.onrender.com npm run warmup` so the first real visitor does not wait for the cold LRT rebuild. The health endpoint also reports per-source failure counts.
 

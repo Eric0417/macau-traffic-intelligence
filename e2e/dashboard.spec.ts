@@ -363,6 +363,30 @@ test("bus and parking panels use normalized API data", async ({ page, isMobile }
   await expect(panel.getByText("13")).toBeVisible();
 });
 
+test("a focused bus route polls every two seconds", async ({ page, isMobile }) => {
+  test.skip(isMobile, "desktop project only");
+  const requestedAt: number[] = [];
+  await mockDashboard(page);
+  // Count before the shared dashboard mock answers; fallback keeps its fixture.
+  await page.route(/\/api\/v1\/bus\/routes\/[^/]+\/eta\?/, async (route) => {
+    requestedAt.push(Date.now());
+    await route.fallback();
+  });
+  await page.goto("/");
+
+  const panel = page.locator(".desktop-panel");
+  await panel.getByRole("tab", { name: "巴士" }).click();
+  await panel.locator(".route-grid button").first().click();
+  await expect(panel.locator(".eta-list")).toContainText("即將進站");
+
+  requestedAt.length = 0;
+  await page.waitForTimeout(9_000);
+
+  // A 2 s cadence makes four or five requests in nine seconds; the old 5 s
+  // cadence made two.
+  expect(requestedAt.length).toBeGreaterThanOrEqual(3);
+});
+
 test("selecting a route from a long catalog scrolls its detail into view", async ({
   page,
   isMobile,

@@ -2,6 +2,11 @@
 
 All notable user-visible and architectural changes are recorded here.
 
+## Two-second bus refresh - 2026-10-11
+
+- A focused bus route now polls the client and the server cache every 2 seconds, down from 5 seconds. The stale fallback stays at 60 seconds, and the client keeps its jitter and failure backoff.
+- The upstream cost per focused route-direction rises from about 12 to about 30 refreshes a minute; the cache lock still collapses concurrent requests.
+
 ## Honest bus report: official positions and stops-away counts - 2026-10-11
 
 - The bus panel no longer invents arrival minutes. The `/ddbus/app/passenger/route` endpoint the adapter read as a countdown is the half-hourly passenger waiting-time/flow statistics feed behind the official 乘客候車時間 page: it returns `currentSeg`/`historyRange` segments and per-stop counts that stay frozen while buses move. It is no longer read (ADR 0010).
