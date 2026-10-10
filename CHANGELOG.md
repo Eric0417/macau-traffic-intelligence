@@ -6,6 +6,7 @@ All notable user-visible and architectural changes are recorded here.
 
 - A focused bus route now polls the client and the server cache every 2 seconds, down from 5 seconds. The stale fallback stays at 60 seconds, and the client keeps its jitter and failure backoff.
 - The upstream cost per focused route-direction rises from about 12 to about 30 refreshes a minute; the cache lock still collapses concurrent requests.
+- The 更新延遲 indicator no longer flickers when a payload is served one refresh cycle past its TTL. It now appears only when the payload is older than its TTL plus an 8-second grace window, which means a refresh actually failed; the bus panel measured 28 of 40 samples flagged before this fix and none after.
 
 ## Honest bus report: official positions and stops-away counts - 2026-10-11
 

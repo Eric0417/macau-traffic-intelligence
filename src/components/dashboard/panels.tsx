@@ -19,6 +19,7 @@ import {
 import type { LiveJsonResult } from "@/components/use-live-json";
 import { useLanguage } from "@/components/language-provider";
 import { localized } from "@/lib/i18n";
+import { metaIsDelayed } from "@/lib/live-status";
 import type {
   ApiEnvelope,
   BorderStatus,
@@ -43,14 +44,15 @@ export interface PanelMetaProps {
 function SourceNote({ meta }: PanelMetaProps) {
   const { t, locale } = useLanguage();
   if (!meta) return null;
+  const delayed = metaIsDelayed(meta);
   const time = new Date(meta.updatedAt).toLocaleTimeString(
     locale === "en" ? "en-GB" : "zh-MO",
     { hour: "2-digit", minute: "2-digit" },
   );
 
   return (
-    <p className={`source-note ${meta.stale ? "is-stale" : ""}`}>
-      {meta.stale ? <AlertTriangle size={13} aria-hidden="true" /> : null}
+    <p className={`source-note ${delayed ? "is-stale" : ""}`}>
+      {delayed ? <AlertTriangle size={13} aria-hidden="true" /> : null}
       <span>
         {t("updated")} {time}
       </span>

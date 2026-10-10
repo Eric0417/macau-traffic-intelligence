@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { APP_NAME, APP_NAME_EN } from "@/lib/config";
 import { localeOptions } from "@/lib/i18n";
+import { metaIsDelayed } from "@/lib/live-status";
 import { useLanguage } from "@/components/language-provider";
 import { useLiveJson } from "@/components/use-live-json";
 import type {
@@ -155,6 +156,7 @@ export function TrafficDashboard() {
           : tab === "notices"
             ? notices.meta
             : cameras.meta;
+  const delayed = metaIsDelayed(activeMeta);
 
   const onSheetPointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
     suppressGripClick.current = false;
@@ -318,8 +320,8 @@ export function TrafficDashboard() {
           </div>
         </div>
         <div className="header-status">
-          <span className={`live-dot ${activeMeta?.stale ? "is-stale" : ""}`} />
-          <span>{activeMeta?.stale ? t("stale") : t("live")}</span>
+          <span className={`live-dot ${delayed ? "is-stale" : ""}`} />
+          <span>{delayed ? t("stale") : t("live")}</span>
           {weather.data?.temperatureCelsius != null ? (
             <strong>{weather.data.temperatureCelsius}°C</strong>
           ) : null}
