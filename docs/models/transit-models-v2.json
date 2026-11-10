@@ -1,0 +1,52 @@
+{
+  "bus-tcm": {
+    "triangles": 10552,
+    "materials": 9,
+    "dimensionsMeters": [
+      11.877500534057617,
+      3.490000009536743,
+      3.388000011444092
+    ],
+    "glbBytes": 274528
+  },
+  "bus-transmac": {
+    "triangles": 11608,
+    "materials": 9,
+    "dimensionsMeters": [
+      11.539999008178711,
+      3.490000009536743,
+      3.388000011444092
+    ],
+    "glbBytes": 314668
+  },
+  "bus-stop": {
+    "triangles": 3380,
+    "materials": 4,
+    "dimensionsMeters": [
+      0.7599999904632568,
+      1.159999966621399,
+      3.7850000858306885
+    ],
+    "glbBytes": 101292
+  },
+  "lrt-platform": {
+    "triangles": 4732,
+    "materials": 6,
+    "dimensionsMeters": [
+      24.600000381469727,
+      9.34000015258789,
+      6.170000076293945
+    ],
+    "glbBytes": 110008
+  },
+  "lrt-car": {
+    "triangles": 7192,
+    "materials": 8,
+    "dimensionsMeters": [
+      10.325000762939453,
+      2.953000068664551,
+      3.368000030517578
+    ],
+    "glbBytes": 162116
+  }
+}
