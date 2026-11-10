@@ -17,12 +17,12 @@ describe("normalizeBorderStatuses", () => {
 
     expect(portas).toMatchObject({
       status: "busy",
-      estimatedWaitMinutes: 45,
+      estimatedWaitMinutes: null,
       updatedAt: "2026-10-02T16:22:00.000Z",
     });
     expect(qingmao).toMatchObject({
       status: "busy",
-      estimatedWaitMinutes: 30,
+      estimatedWaitMinutes: null,
     });
     expect(statuses).toHaveLength(8);
   });

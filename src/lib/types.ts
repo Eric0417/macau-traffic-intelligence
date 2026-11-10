@@ -143,7 +143,7 @@ export interface ParkingAvailability {
 export interface ParkingFacility {
   id: string;
   name: string;
-  updatedAt: string;
+  updatedAt: string | null;
   areaStatus: "green" | "yellow" | "orange" | "unknown";
   coordinates: [number, number] | null;
   availability: ParkingAvailability;

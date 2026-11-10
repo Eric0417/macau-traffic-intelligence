@@ -44,10 +44,11 @@ function parseCount(value: string): number | null {
   return match ? Number(match[0]) : null;
 }
 
-function macauIso(value: string): string {
+function macauIso(value: string): string | null {
   const match = value.match(/(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2})/);
-  if (!match) return new Date().toISOString();
-  return new Date(`${match[1]}T${match[2]}+08:00`).toISOString();
+  if (!match) return null;
+  const date = new Date(`${match[1]}T${match[2]}+08:00`);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
 function availabilityForRow(row: cheerio.Cheerio<AnyNode>): ParkingAvailability {

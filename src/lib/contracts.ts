@@ -119,7 +119,7 @@ export const busEtaSchema = z.object({
 export const parkingFacilitySchema = z.object({
   id: z.string(),
   name: z.string(),
-  updatedAt: z.string(),
+  updatedAt: z.string().nullable(),
   areaStatus: z.enum(["green", "yellow", "orange", "unknown"]),
   coordinates: z.tuple([z.number(), z.number()]).nullable(),
   availability: z.object({

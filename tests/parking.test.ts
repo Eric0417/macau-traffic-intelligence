@@ -27,6 +27,10 @@ const parkingHtml = `
 `;
 
 describe("loadParking", () => {
+  it("keeps an unparseable publisher timestamp unknown", () => {
+    const rows = parseParkingHtml(parkingHtml.replaceAll(/2026-10-02 \d{2}:\d{2}:\d{2}/g, "未提供"));
+    expect(rows.every((row) => row.updatedAt === null)).toBe(true);
+  });
   it("reads each vehicle icon independently", () => {
     const facilities = parseParkingHtml(parkingHtml);
 

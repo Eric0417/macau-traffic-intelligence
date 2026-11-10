@@ -2,6 +2,11 @@
 
 All notable user-visible and architectural changes are recorded here.
 
+## Resident data accuracy corrections - 2026-11-10
+
+- Removed application-generated border waiting minutes. Official qualitative status remains; minutes stay unknown until an official numeric field is verified.
+- Parking publisher timestamps stay unknown when absent or invalid, and previously fresh snapshots age into delayed status if the client loses contact.
+
 ## Two-second bus refresh - 2026-10-11
 
 - A focused bus route now polls the client and the server cache every 2 seconds, down from 5 seconds. The stale fallback stays at 60 seconds, and the client keeps its jitter and failure backoff.

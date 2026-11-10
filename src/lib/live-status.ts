@@ -7,12 +7,12 @@ import type { ResponseMeta } from "@/lib/types";
 // cycle did not complete.
 const DELAY_GRACE_SECONDS = 8;
 
-export function metaIsDelayed(meta: ResponseMeta | null): boolean {
-  if (!meta?.stale) return false;
+export function metaIsDelayed(meta: ResponseMeta | null, now = Date.now()): boolean {
+  if (!meta) return false;
 
   const generatedAt = Date.parse(meta.generatedAt);
   const updatedAt = Date.parse(meta.updatedAt);
   if (!Number.isFinite(generatedAt) || !Number.isFinite(updatedAt)) return true;
 
-  return generatedAt - updatedAt > (meta.ttlSeconds + DELAY_GRACE_SECONDS) * 1_000;
+  return Math.max(now, generatedAt) - updatedAt > (meta.ttlSeconds + DELAY_GRACE_SECONDS) * 1_000;
 }
