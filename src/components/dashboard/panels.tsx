@@ -1,37 +1,33 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   ArrowDown,
   ArrowUp,
-  BusFront,
   ChevronRight,
-  CircleParking,
   Clock3,
-  GraduationCap,
+  Sparkles,
   MapPin,
   Send,
   Video,
   Waves,
   Wind,
 } from "lucide-react";
-import type { LiveJsonResult } from "@/components/use-live-json";
 import { useLanguage } from "@/components/language-provider";
 import { localized } from "@/lib/i18n";
 import { metaIsDelayed } from "@/lib/live-status";
+import { residentCopy } from "@/lib/resident-copy";
 import type {
   ApiEnvelope,
   BorderStatus,
   BridgeTime,
-  BusEta,
   BusRoute,
   Camera,
   LrtNetwork,
   LrtNotice,
   LearningAssistantAnswer,
   LearningAssistantAction,
-  ParkingFacility,
   RoadCollection,
   TrafficNotice,
   WeatherSnapshot,
@@ -41,20 +37,20 @@ export interface PanelMetaProps {
   meta: ApiEnvelope<unknown>["meta"] | null;
 }
 
-function SourceNote({ meta }: PanelMetaProps) {
+export function SourceNote({ meta }: PanelMetaProps) {
   const { t, locale } = useLanguage();
   if (!meta) return null;
   const delayed = metaIsDelayed(meta);
   const time = new Date(meta.updatedAt).toLocaleTimeString(
     locale === "en" ? "en-GB" : "zh-MO",
-    { hour: "2-digit", minute: "2-digit" },
+    { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Macau" },
   );
 
   return (
     <p className={`source-note ${delayed ? "is-stale" : ""}`}>
       {delayed ? <AlertTriangle size={13} aria-hidden="true" /> : null}
       <span>
-        {t("updated")} {time}
+        {residentCopy[locale].retrieved} {time}{delayed ? ` · ${t("stale")}` : ""}
       </span>
       <a href={meta.source.url} target="_blank" rel="noreferrer">
         {meta.source.name}
@@ -135,9 +131,11 @@ export function OverviewPanel({
               </div>
             ))
         ) : (
-          <p className="quiet-copy">{t("noWarnings")}</p>
+          <p className="quiet-copy">{weather ? t("noWarnings") : residentCopy[locale].weatherEmpty}</p>
         )}
       </section>
+
+      {weather?.forecast ? <section className="panel-section"><h2>{residentCopy[locale].forecast}</h2><p className="forecast-copy">{weather.forecast}</p></section> : null}
 
       <section className="panel-section">
         <div className="section-heading">
@@ -156,7 +154,7 @@ export function OverviewPanel({
                     ) : (
                       <ArrowDown size={13} aria-hidden="true" />
                     )}
-                    {Math.max(1, Math.round(bridge.runtimeSeconds / 60))} {t("minutes")}
+                    {Math.round(bridge.runtimeSeconds / 60)} {t("minutes")}
                   </span>
                 ))}
               </div>
@@ -174,7 +172,7 @@ export function OverviewPanel({
           {(["normal", "slow", "congested", "unknown"] as const).map((status) => (
             <div className={`traffic-stat status-${status}`} key={status}>
               <span>{statusLabel(status, t)}</span>
-              <strong>{counts[status]}</strong>
+              <strong>{roads ? counts[status] : "–"}</strong>
             </div>
           ))}
         </div>
@@ -198,7 +196,7 @@ export function OverviewPanel({
               <strong>
                 {border.estimatedWaitMinutes !== null
                   ? `${border.estimatedWaitMinutes} ${t("minutes")}`
-                  : t(border.status === "unknown" ? "unknown" : border.status === "clear" ? "normal" : "slow")}
+                  : (border.status === "unknown" ? t("unknown") : border.status === "clear" ? t("normal") : border.status === "closed" ? residentCopy[locale].closed : border.status === "very_busy" ? residentCopy[locale].veryBusy : residentCopy[locale].busy)}
               </strong>
             </a>
           ))}
@@ -225,388 +223,7 @@ export function OverviewPanel({
               <ChevronRight size={15} aria-hidden="true" />
             </a>
           ))}
-          {!notices?.length ? <p className="quiet-copy">{t("noNotices")}</p> : null}
-        </div>
-      </section>
-    </div>
-  );
-}
-
-export function BusPanel({
-  routes,
-  selected,
-  direction,
-  eta,
-  onSelect,
-  onDirectionChange,
-}: {
-  routes: BusRoute[] | null;
-  selected: BusRoute | null;
-  direction: 0 | 1;
-  eta: LiveJsonResult<BusEta>;
-  onSelect: (route: BusRoute) => void;
-  onDirectionChange: (direction: 0 | 1) => void;
-}) {
-  const { t } = useLanguage();
-  const [query, setQuery] = useState("");
-  const detailRef = useRef<HTMLElement | null>(null);
-  const scrolledRouteRef = useRef<string | null>(null);
-  const filtered = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    return (routes ?? []).filter(
-      (route) => !needle || route.routeName.toLowerCase().includes(needle),
-    );
-  }, [query, routes]);
-
-  const vehicles = eta.data?.vehicles ?? [];
-  const vehicleByStation = new Map(vehicles.map((vehicle) => [vehicle.stationCode, vehicle]));
-
-  useEffect(() => {
-    if (!selected) {
-      scrolledRouteRef.current = null;
-      return;
-    }
-    if (scrolledRouteRef.current === selected.routeCode) return;
-    if (selected.live && !eta.data && !eta.error) return;
-    scrolledRouteRef.current = selected.routeCode;
-    detailRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, [selected, eta.data, eta.error]);
-
-  return (
-    <div className="panel-stack">
-      <section className="panel-section">
-        <div className="section-heading">
-          <h2>{t("bus")}</h2>
-          <BusFront size={16} aria-hidden="true" />
-        </div>
-        <label className="search-field">
-          <span className="sr-only">{t("searchRoute")}</span>
-          <input
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder={t("searchRoute")}
-          />
-        </label>
-        <div className="route-grid">
-          {filtered.map((route) => (
-            <button
-              type="button"
-              key={route.routeCode}
-              onClick={() => {
-                onSelect(route);
-              }}
-              className={selected?.routeCode === route.routeCode ? "is-active" : ""}
-              aria-pressed={selected?.routeCode === route.routeCode}
-            >
-              {route.routeName}
-              {route.live ? null : <span className="route-flag">{t("seasonal")}</span>}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {selected ? (
-        <section className="panel-section" ref={detailRef}>
-          <div className="route-detail-head">
-            <div>
-              <span>{t("route")}</span>
-              <strong>{selected.routeName}</strong>
-            </div>
-            <div className="segmented" aria-label={t("direction")}>
-              <button
-                type="button"
-                className={direction === 0 ? "is-active" : ""}
-                onClick={() => onDirectionChange(0)}
-              >
-                {t("outbound")}
-              </button>
-              <button
-                type="button"
-                className={direction === 1 ? "is-active" : ""}
-                onClick={() => onDirectionChange(1)}
-              >
-                {t("return")}
-              </button>
-            </div>
-          </div>
-          <SourceNote meta={eta.meta} />
-          {eta.data && eta.data.diversion.suspendedStops.length > 0 ? (
-            <p className="diversion-note">
-              <AlertTriangle size={13} aria-hidden="true" />
-              <span>
-                {t("diversion")} · {t("suspendedStops")}：
-                {eta.data.diversion.suspendedStops
-                  .map((stop) => stop.stationName)
-                  .join("、")}
-              </span>
-            </p>
-          ) : null}
-          {selected.live ? null : <p className="quiet-copy">{t("noLiveData")}</p>}
-          {eta.loading ? <p className="quiet-copy">{t("loading")}</p> : null}
-          {eta.error ? <p className="error-copy">{t("unavailable")}</p> : null}
-          {vehicles.length > 0 ? (
-            <div className="vehicle-list">
-              <div className="section-heading">
-                <h3>
-                  {t("liveBuses")} <small>{vehicles.length}</small>
-                </h3>
-                <BusFront size={15} aria-hidden="true" />
-              </div>
-              {vehicles.map((vehicle) => (
-                <article className="vehicle-row" key={vehicle.id}>
-                  <strong>{vehicle.plate}</strong>
-                  <span>
-                    {t("approaching")} {vehicle.stationName}
-                  </span>
-                  <div>
-                    {vehicle.lowFloor ? (
-                      <em className="vehicle-tag">{t("lowFloor")}</em>
-                    ) : null}
-                    {vehicle.speedKph === null ? null : (
-                      <em>
-                        {t("speed")} {vehicle.speedKph} km/h
-                      </em>
-                    )}
-                  </div>
-                </article>
-              ))}
-              <p className="quiet-copy">{t("positionNote")}</p>
-              <p className="quiet-copy">{t("modelNote")}</p>
-            </div>
-          ) : null}
-          {eta.data ? <p className="quiet-copy">{t("routeTrafficNote")}</p> : null}
-          <ol className="eta-list">
-            {eta.data?.stops.map((stop) => {
-              const vehicle = vehicleByStation.get(stop.stationCode);
-              const due = Boolean(vehicle) || stop.stopsAway === 0;
-              return (
-                <li
-                  key={`${stop.stationCode}-${stop.sequence}`}
-                  className={[
-                    stop.suspended ? "is-suspended" : "",
-                    due ? "is-due" : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                >
-                  <span className={`eta-sequence tone-${stop.trafficStatus}`}>
-                    {stop.sequence + 1}
-                  </span>
-                  <span className="eta-station">
-                    {stop.stationName}
-                    {stop.suspended ? (
-                      <em className="eta-suspended">{t("suspended")}</em>
-                    ) : null}
-                    {vehicle ? (
-                      <em className="eta-bus">
-                        <BusFront size={10} aria-hidden="true" />
-                        {vehicle.plate}
-                      </em>
-                    ) : null}
-                  </span>
-                  {due ? (
-                    <em className="eta-due">{t("dueAtStop")}</em>
-                  ) : stop.stopsAway === null ? (
-                    <span className="eta-none">–</span>
-                  ) : (
-                    <span className="eta-count">
-                      {stop.stopsAway}
-                      <small>
-                        {stop.stopsAway === 1 ? t("stopShort") : t("stopsShort")}
-                      </small>
-                    </span>
-                  )}
-                </li>
-              );
-            })}
-          </ol>
-          {eta.data ? <p className="quiet-copy">{t("stopsAwayNote")}</p> : null}
-        </section>
-      ) : (
-        <p className="quiet-copy panel-empty">{t("chooseRoute")}</p>
-      )}
-    </div>
-  );
-}
-
-export function ParkingPanel({
-  facilities,
-  selectedId,
-  onSelect,
-}: {
-  facilities: ParkingFacility[] | null;
-  selectedId: string | null;
-  onSelect: (id: string) => void;
-}) {
-  const { t } = useLanguage();
-  const [query, setQuery] = useState("");
-  const filtered = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    return (facilities ?? [])
-      .filter((facility) => !needle || facility.name.toLowerCase().includes(needle))
-      .sort(
-        (a, b) =>
-          (b.availability.lightVehicle ?? -1) - (a.availability.lightVehicle ?? -1),
-      )
-      .slice(0, 80);
-  }, [facilities, query]);
-
-  return (
-    <div className="panel-stack">
-      <section className="panel-section">
-        <div className="section-heading">
-          <h2>{t("parking")}</h2>
-          <CircleParking size={16} aria-hidden="true" />
-        </div>
-        <label className="search-field">
-          <span className="sr-only">{t("parkingSearch")}</span>
-          <input
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder={t("parkingSearch")}
-          />
-        </label>
-        <div className="parking-list">
-          {filtered.map((facility) => {
-            const availability = facility.availability.lightVehicle;
-            const tone =
-              availability === null
-                ? "unknown"
-                : availability <= 5
-                  ? "low"
-                  : availability <= 20
-                    ? "medium"
-                    : "good";
-            return (
-              <button
-                type="button"
-                className={`parking-row ${selectedId === facility.id ? "is-active" : ""} ${
-                  facility.coordinates ? "" : "is-unmapped"
-                }`}
-                key={facility.id}
-                onClick={() => onSelect(facility.id)}
-                disabled={!facility.coordinates}
-                aria-pressed={selectedId === facility.id}
-              >
-                <div>
-                  <strong>{facility.name}</strong>
-                  <span>
-                    {facility.availability.motorcycle ?? "–"} {t("motorcycle")} ·{" "}
-                    {facility.availability.electricVehicle ?? "–"} {t("electricVehicle")}
-                    {facility.coordinates ? null : ` · ${t("noLocation")}`}
-                  </span>
-                </div>
-                <div className={`parking-count tone-${tone}`}>
-                  <strong>{availability ?? "–"}</strong>
-                  <span>{t("lightVehicle")}</span>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </section>
-    </div>
-  );
-}
-
-export function NoticesPanel({
-  notices,
-  lrtNotices,
-  selectedId,
-  onSelect,
-}: {
-  notices: TrafficNotice[];
-  lrtNotices: LrtNotice[];
-  selectedId: string | null;
-  onSelect: (id: string) => void;
-}) {
-  const { t, locale } = useLanguage();
-  const incidents = notices.filter((notice) => notice.category === "incident");
-  const others = notices.filter((notice) => notice.category !== "incident");
-
-  const renderNotice = (notice: TrafficNotice) => (
-    <article
-      className={`notice-item ${selectedId === notice.id ? "is-active" : ""}`}
-      key={notice.id}
-    >
-      <button
-        type="button"
-        className="notice-select"
-        onClick={() => onSelect(notice.id)}
-        aria-pressed={selectedId === notice.id}
-      >
-        <span className={`notice-type type-${notice.category}`}>
-          {notice.category === "incident"
-            ? t("incident")
-            : notice.category === "roadworks"
-              ? t("roads")
-              : notice.category === "bus-change"
-                ? t("bus")
-                : t("notices")}
-        </span>
-        <strong>{notice.title}</strong>
-        {notice.content === notice.title ? null : <p>{notice.content}</p>}
-        {notice.publishedAt ? (
-          <time>
-            {new Date(notice.publishedAt).toLocaleString(
-              locale === "en" ? "en-GB" : "zh-MO",
-            )}
-          </time>
-        ) : null}
-      </button>
-      <a
-        className="notice-link"
-        href={notice.url}
-        target="_blank"
-        rel="noreferrer"
-        aria-label={t("openSource")}
-      >
-        <ChevronRight size={15} aria-hidden="true" />
-      </a>
-    </article>
-  );
-
-  return (
-    <div className="panel-stack">
-      <section className="panel-section">
-        <div className="section-heading">
-          <h2>{t("incidents")}</h2>
-          <AlertTriangle size={16} aria-hidden="true" />
-        </div>
-        <div className="notice-list">
-          {incidents.map(renderNotice)}
-          {!incidents.length ? <p className="quiet-copy">{t("noIncidents")}</p> : null}
-        </div>
-        {others.length ? (
-          <details className="notice-more">
-            <summary>
-              {t("otherNotices")} ({others.length})
-            </summary>
-            <div className="notice-list">{others.map(renderNotice)}</div>
-          </details>
-        ) : null}
-      </section>
-
-      <section className="panel-section">
-        <div className="section-heading">
-          <h2>{t("lrtNotice")}</h2>
-          <Waves size={16} aria-hidden="true" />
-        </div>
-        <p className="quiet-copy">{t("lrtNoLive")}</p>
-        <p className="quiet-copy">{t("modelNote")}</p>
-        <div className="notice-list">
-          {lrtNotices.map((notice) => (
-            <article key={notice.id}>
-              <span className="notice-type type-lrt">{t("lrt")}</span>
-              <strong>{notice.title}</strong>
-              {notice.content === notice.title ? null : <p>{notice.content}</p>}
-              <time>
-                {new Date(notice.publishedAt).toLocaleString(locale === "en" ? "en-GB" : "zh-MO")}
-              </time>
-            </article>
-          ))}
+          {!notices?.length ? <p className="quiet-copy">{notices ? residentCopy[locale].noPublished : t("loading")}</p> : null}
         </div>
       </section>
     </div>
@@ -618,14 +235,20 @@ export function LrtPanel({
   notices,
   selectedLine,
   onSelectLine,
+  selectedStation,
+  onSelectStation,
 }: {
   network: LrtNetwork | null;
   notices: LrtNotice[];
   selectedLine: string | null;
   onSelectLine: (lineRef: string | null) => void;
+  selectedStation: string | null;
+  onSelectStation: (id: string) => void;
 }) {
   const { t, locale } = useLanguage();
   const lines = network?.lines.features ?? [];
+  const publishedNotices = notices.filter((notice) => notice.active);
+  const historicalNotices = notices.filter((notice) => !notice.active);
   const stations = (network?.stations ?? []).filter((station) =>
     selectedLine ? station.lines.includes(selectedLine) : false,
   );
@@ -666,17 +289,18 @@ export function LrtPanel({
           {!network ? <p className="quiet-copy">{t("loading")}</p> : null}
         </div>
         <p className="quiet-copy">{t("lrtNoLive")}</p>
+        <p className="quiet-copy">{residentCopy[locale].lrtGeometry}</p>
 
         {selectedLine ? (
           <ol className="lrt-stations">
-            {stations.map((station, index) => (
-              <li key={station.id}>
-                <span className="eta-sequence">{index + 1}</span>
+            {stations.map((station) => (
+              <li key={station.id}><button type="button" className="lrt-station-button" aria-pressed={selectedStation === station.id} onClick={() => onSelectStation(station.id)}>
+                <span className="eta-sequence"><MapPin size={14} aria-hidden="true" /></span>
                 <span className="eta-station">{localized(station.name, locale)}</span>
                 {station.interchange ? (
                   <em className="lrt-interchange">{t("interchange")}</em>
                 ) : null}
-              </li>
+              </button></li>
             ))}
           </ol>
         ) : null}
@@ -688,17 +312,19 @@ export function LrtPanel({
           <AlertTriangle size={16} aria-hidden="true" />
         </div>
         <div className="notice-list">
-          {notices.slice(0, 5).map((notice) => (
+          {publishedNotices.slice(0, 5).map((notice) => (
             <article key={notice.id}>
               <span className="notice-type type-lrt">{t("lrt")}</span>
               <strong>{notice.title}</strong>
               {notice.content === notice.title ? null : <p>{notice.content}</p>}
               <time>
-                {new Date(notice.publishedAt).toLocaleString(locale === "en" ? "en-GB" : "zh-MO")}
+                {new Date(notice.publishedAt).toLocaleString(locale === "en" ? "en-GB" : "zh-MO", { timeZone: "Asia/Macau" })}
               </time>
             </article>
           ))}
-          {!notices.length ? <p className="quiet-copy">{t("noNotices")}</p> : null}
+          {!publishedNotices.length ? <p className="quiet-copy">{residentCopy[locale].noPublished}</p> : null}
+          <p className="quiet-copy">{residentCopy[locale].lrtPublicationNote}</p>
+          {historicalNotices.length ? <details className="historical-notices"><summary>{residentCopy[locale].historicalNotices} ({historicalNotices.length})</summary>{historicalNotices.map((notice) => <article key={notice.id}><time>{new Date(notice.publishedAt).toLocaleString(locale === "en" ? "en-GB" : "zh-MO", { timeZone: "Asia/Macau" })}</time><strong>{notice.title}</strong><p>{notice.content}</p></article>)}</details> : null}
         </div>
       </section>
     </div>
@@ -710,11 +336,13 @@ export function AssistantPanel({
   direction,
   onAction,
   onOpenTab,
+  request,
 }: {
   route: BusRoute | null;
   direction: 0 | 1;
   onAction?: (action: LearningAssistantAction | null) => void;
   onOpenTab?: (action: LearningAssistantAction) => void;
+  request?: { id: number; question: string } | null;
 }) {
   const { t, locale } = useLanguage();
   const [draft, setDraft] = useState("");
@@ -725,11 +353,13 @@ export function AssistantPanel({
       question: string;
       answer?: LearningAssistantAnswer;
       failed?: boolean;
+      unconfigured?: boolean;
     }>
   >([]);
   const nextId = useRef(0);
+  const requestedId = useRef<number | null>(null);
 
-  const ask = async (value: string) => {
+  const ask = useCallback(async (value: string) => {
     const question = value.trim();
     if (!question || busy) return;
 
@@ -750,9 +380,9 @@ export function AssistantPanel({
       });
       const body = (await response.json()) as
         | ApiEnvelope<LearningAssistantAnswer>
-        | { message?: string };
+        | { message?: string; error?: string };
       if (!response.ok || !("data" in body)) {
-        throw new Error("message" in body ? body.message : `HTTP ${response.status}`);
+        throw new Error("error" in body ? body.error : `HTTP ${response.status}`);
       }
       setEntries((current) =>
         current.map((entry) =>
@@ -760,21 +390,27 @@ export function AssistantPanel({
         ),
       );
       onAction?.(body.data.action ?? null);
-    } catch {
+    } catch (error) {
       setEntries((current) =>
-        current.map((entry) => (entry.id === id ? { ...entry, failed: true } : entry)),
+        current.map((entry) => (entry.id === id ? { ...entry, failed: true, unconfigured: error instanceof Error && error.message === "assistant_unconfigured" } : entry)),
       );
     } finally {
       setBusy(false);
     }
-  };
+  }, [busy, locale, route, direction, onAction]);
+
+  useEffect(() => {
+    if (!request || busy || requestedId.current === request.id) return;
+    requestedId.current = request.id;
+    void ask(request.question);
+  }, [request, busy, ask]);
 
   return (
     <div className="panel-stack">
       <section className="panel-section">
         <div className="section-heading">
           <h2>{t("assistant")}</h2>
-          <GraduationCap size={16} aria-hidden="true" />
+          <Sparkles size={18} aria-hidden="true" />
         </div>
         <p className="quiet-copy">{t("assistantIntro")}</p>
         {route ? (
@@ -796,7 +432,7 @@ export function AssistantPanel({
                       {t("assistantBasedOn")}{" "}
                       {new Date(entry.answer.snapshotAt).toLocaleTimeString(
                         locale === "en" ? "en-GB" : "zh-MO",
-                        { hour: "2-digit", minute: "2-digit" },
+                        { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Macau" },
                       )}
                     </p>
                     <ul className="assistant-context">
@@ -820,7 +456,7 @@ export function AssistantPanel({
                     ) : null}
                   </>
                 ) : entry.failed ? (
-                  <p className="error-copy">{t("assistantUnavailable")}</p>
+                  <p className="error-copy">{entry.unconfigured ? residentCopy[locale].aiNotEnabled : t("assistantUnavailable")}</p>
                 ) : (
                   <p className="quiet-copy">{t("assistantThinking")}</p>
                 )}

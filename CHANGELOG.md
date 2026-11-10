@@ -2,6 +2,21 @@
 
 All notable user-visible and architectural changes are recorded here.
 
+## Resident travel workspace - 2026-11-10
+
+- Enabled antialiasing when MapLibre creates the WebGL context shared with Three.js, while retaining native device resolution and fixed model proportions. Stationary bus markers stop their animation loop and resume when the official estimate changes.
+- Added connected card/detail transitions, directional return motion and a moving navigation indicator. Transitions stay inside the content panel so the map and navigation remain usable; reduced-motion preferences use direct updates.
+- Switched interface typography to self-hosted variable Noto Sans TC through Next.js font optimization. Home, waiting, parking, weather and source modules use separate cards with consistent spacing. Long stop/facility lists remain compact within cards.
+
+- Replaced duplicated desktop/mobile overlays with one responsive workspace: Travel, Buses, LRT, Parking and AI. Desktop keeps the list beside the map; phones switch views with fixed navigation and native content scrolling.
+- Added on-device favourites, explicit nearby-parking location, seven official parking categories, full facility results, source status/retry, SMG forecasts and coordinated day/night appearance. Location coordinates stay in browser memory.
+- Bus details lead with a selected waiting stop, route direction/destination and suspension status. Search distinguishes route numbers from in-route station names. The selected bus stops polling outside its visible context; AI answers survive section changes.
+- Applied the user correction to model size: all kinds now use one fixed 4x world-space display scale, with no zoom-dependent compensation. Rounded edges, smooth normals, denser circles, roof vents, wheel bolts, brighter paint and soft contact shadows replace the coarse model finish.
+- Rebuilt two operator-livery buses, cylindrical bus-stop signs from the user's reference, and LRT canopy/platform markers in Blender. All five GLBs total 962,612 bytes. Three.js/models load on demand; 2D is the default and failed models keep flat markers. Model identity, structure and bearing remain schematic.
+- Added prominent homepage AI questions and a primary AI tab. The existing DeepSeek pipeline carries source timestamps and partial-news availability into its snapshot; unavailable/unconfigured service returns an explicit failure.
+- LRT carriages now turn independently, use a rounded Blender mesh, and remain readable at route zoom. Track geometry joins shared endpoints at both ends, removes the artificial Taipa jump, trims terminal overrun and preserves per-line interchange locations. Hidden old MLM notices are historical, and CST dates use Macau time.
+- Enlarged station hit areas, disabled accidental touch rotation/pitch, corrected competing map camera movements, resized the map with its real viewport and paused animation on hidden mobile maps. Reduced-motion preferences disable continuous vehicle animation. Primary navigation supports keyboard arrows/Home/End.
+
 ## Resident data accuracy corrections - 2026-11-10
 
 - Removed application-generated border waiting minutes. Official qualitative status remains; minutes stay unknown until an official numeric field is verified.

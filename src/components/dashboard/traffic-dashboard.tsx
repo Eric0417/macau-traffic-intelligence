@@ -1,452 +1,864 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
-  Bell,
+  ArrowLeft,
   BusFront,
-  ChevronDown,
   CircleParking,
-  Gauge,
-  GraduationCap,
   Layers3,
+  List,
+  Map as MapIcon,
+  Moon,
+  MoreHorizontal,
+  Navigation,
+  Sun,
   TramFront,
   Video,
+  Bell,
+  Activity,
+  Sparkles,
 } from "lucide-react";
-import { APP_NAME, APP_NAME_EN } from "@/lib/config";
+import { APP_NAME } from "@/lib/config";
 import { localeOptions } from "@/lib/i18n";
 import { metaIsDelayed } from "@/lib/live-status";
+import { residentCopy } from "@/lib/resident-copy";
+import type { Coordinates, ParkingKind } from "@/lib/resident-tools";
 import { useLanguage } from "@/components/language-provider";
-import { useLiveJson } from "@/components/use-live-json";
+import { useLiveJson, type LiveJsonResult } from "@/components/use-live-json";
 import type {
   BorderStatus,
   BridgeTime,
   BusEta,
   BusRoute,
   Camera,
+  LearningAssistantAction,
   LrtNetwork,
   LrtNotice,
-  LearningAssistantAction,
+  OfficialNews,
   ParkingFacility,
   RoadCollection,
   TrafficNotice,
   WeatherSnapshot,
 } from "@/lib/types";
-import { CameraViewer } from "@/components/dashboard/camera-viewer";
-import { MacauMap, type MapLayer } from "@/components/dashboard/macau-map";
+import { CameraViewer } from "./camera-viewer";
+import { MacauMap, type MapLayer } from "./macau-map";
 import {
   AssistantPanel,
-  BusPanel,
   CameraPanel,
   LrtPanel,
-  NoticesPanel,
   OverviewPanel,
-  ParkingPanel,
-} from "@/components/dashboard/panels";
+  SourceNote,
+} from "./panels";
+import { BusPanel } from "./bus-panel";
+import { ParkingPanel } from "./parking-panel";
+import { NoticesPanel } from "./notices-panel";
+import { TravelHome } from "./travel-home";
+import { useWorkspaceMotion } from "./use-workspace-motion";
+import { WorkspaceNav } from "./workspace-nav";
+import {
+  useResidentPreferences,
+  type Favorite,
+} from "./use-resident-preferences";
 
-type PanelTab =
-  | "overview"
-  | "assistant"
+type Tab =
+  | "home"
   | "bus"
-  | "lrt"
   | "parking"
+  | "more"
+  | "overview"
+  | "lrt"
   | "notices"
-  | "cameras";
+  | "cameras"
+  | "assistant"
+  | "sources";
+type SourceState = Pick<
+  LiveJsonResult<unknown>,
+  "data" | "meta" | "error" | "loading" | "refresh"
+>;
 
-const tabs: Array<{
-  id: PanelTab;
-  icon: typeof Gauge;
-}> = [
-  { id: "overview", icon: Gauge },
-  { id: "assistant", icon: GraduationCap },
-  { id: "bus", icon: BusFront },
-  { id: "lrt", icon: TramFront },
-  { id: "parking", icon: CircleParking },
-  { id: "notices", icon: Bell },
-  { id: "cameras", icon: Video },
-];
+function SourceStateNote({ state }: { state: SourceState }) {
+  const { t, locale } = useLanguage();
+  const c = residentCopy[locale];
+  return (
+    <div
+      className={`workspace-source ${state.error || metaIsDelayed(state.meta) ? "has-error" : ""}`}
+      role="status"
+    >
+      {state.loading && !state.data ? (
+        <span>{t("loading")}</span>
+      ) : state.error ? (
+        <>
+          <span>{state.data ? c.delayed : t("unavailable")}</span>
+          <button type="button" onClick={state.refresh}>
+            {t("retry")}
+          </button>
+        </>
+      ) : null}
+      <SourceNote meta={state.meta} />
+    </div>
+  );
+}
 
 export function TrafficDashboard() {
   const { locale, setLocale, t } = useLanguage();
-  const [tab, setTab] = useState<PanelTab>("overview");
+  const c = residentCopy[locale];
+  const preferences = useResidentPreferences();
+  const [tab, setTab] = useState<Tab>("home");
+  const requestedTab = useRef<Tab>("home");
+  const [view, setView] = useState<"list" | "map">("list");
   const [selectedCamera, setSelectedCamera] = useState<Camera | null>(null);
-  const [selectedParkingId, setSelectedParkingId] = useState<string | null>(null);
+  const [selectedParkingId, setSelectedParkingId] = useState<string | null>(
+    null,
+  );
   const [selectedNoticeId, setSelectedNoticeId] = useState<string | null>(null);
   const [selectedRoute, setSelectedRoute] = useState<BusRoute | null>(null);
   const [busDirection, setBusDirection] = useState<0 | 1>(0);
+  const [selectedStopKey, setSelectedStopKey] = useState<string | null>(null);
   const [selectedLrtLine, setSelectedLrtLine] = useState<string | null>(null);
+  const [selectedLrtStation, setSelectedLrtStation] = useState<string | null>(
+    null,
+  );
+  const [assistantRequest, setAssistantRequest] = useState<{
+    id: number;
+    question: string;
+  } | null>(null);
   const [assistantFocus, setAssistantFocus] =
     useState<LearningAssistantAction | null>(null);
-  const [view3d, setView3d] = useState(true);
+  const [view3d, setView3d] = useState(false);
   const [layerOpen, setLayerOpen] = useState(false);
-  const [sheetExpanded, setSheetExpanded] = useState(false);
-  const sheetRef = useRef<HTMLElement | null>(null);
-  const sheetDrag = useRef<{
-    pointerId: number;
-    startY: number;
-    lastY: number;
-    startedAt: number;
-    moved: boolean;
-  } | null>(null);
-  const suppressGripClick = useRef(false);
   const [layers, setLayers] = useState<Record<MapLayer, boolean>>({
     roads: true,
-    cameras: true,
-    lrt: true,
+    cameras: false,
+    lrt: false,
   });
+  const [parkingKind, setParkingKind] = useState<ParkingKind>("lightVehicle");
+  const [location, setLocation] = useState<Coordinates | null>(null);
+  const [locating, setLocating] = useState(false);
+  const [locationError, setLocationError] = useState(false);
+  const [clock, setClock] = useState(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
+  const mapRef = useRef<HTMLDivElement>(null);
+  const routeCatalogScroll = useRef(0);
+  const move = useWorkspaceMotion(scrollRef);
+  const busVisible =
+    tab === "bus" || (tab === "assistant" && assistantFocus?.kind === "bus");
 
   const roads = useLiveJson<RoadCollection>("/api/v1/traffic/roads", 60_000);
   const bridges = useLiveJson<BridgeTime[]>("/api/v1/traffic/bridges", 60_000);
   const cameras = useLiveJson<Camera[]>("/api/v1/cameras", 21_600_000);
   const busRoutes = useLiveJson<BusRoute[]>("/api/v1/bus/routes", 21_600_000);
-  const busEtaPath = selectedRoute
-    ? `/api/v1/bus/routes/${encodeURIComponent(selectedRoute.routeCode)}/eta?direction=${busDirection}`
-    : "/api/v1/health";
-  // The official report refreshes its own map on a 10-15 s cycle; polling a
-  // focused route every 2 s keeps the marker and stop counts close to the feed.
-  const busEta = useLiveJson<BusEta>(busEtaPath, 2_000, Boolean(selectedRoute));
+  const busEta = useLiveJson<BusEta>(
+    selectedRoute
+      ? `/api/v1/bus/routes/${encodeURIComponent(selectedRoute.routeCode)}/eta?direction=${busDirection}`
+      : "/api/v1/health",
+    2_000,
+    Boolean(selectedRoute?.live) && busVisible,
+  );
   const parking = useLiveJson<ParkingFacility[]>("/api/v1/parking", 30_000);
   const weather = useLiveJson<WeatherSnapshot>("/api/v1/weather", 60_000);
-  const notices = useLiveJson<TrafficNotice[]>("/api/v1/traffic/notices", 300_000);
+  const notices = useLiveJson<TrafficNotice[]>(
+    "/api/v1/traffic/notices",
+    300_000,
+  );
+  const news = useLiveJson<OfficialNews>("/api/v1/traffic/news", 180_000);
   const borders = useLiveJson<BorderStatus[]>("/api/v1/borders", 60_000);
   const lrt = useLiveJson<LrtNetwork>("/api/v1/lrt/network", 21_600_000);
   const lrtNotices = useLiveJson<LrtNotice[]>("/api/v1/lrt/notices", 300_000);
-
-  const incidentNotices = (notices.data ?? []).filter(
-    (notice) => notice.category === "incident",
+  const mapNotices = useMemo(
+    () => [...(notices.data ?? []), ...(news.data?.items ?? [])],
+    [notices.data, news.data],
   );
-  // Keep an explicit choice, otherwise highlight the newest incident while the
-  // Alerts tab is open.
-  const activeNoticeId =
-    selectedNoticeId && notices.data?.some((notice) => notice.id === selectedNoticeId)
-      ? selectedNoticeId
-      : incidentNotices[0]?.id ?? null;
 
-  const applyAssistantAction = (action: LearningAssistantAction | null) => {
-    if (!action) {
-      setAssistantFocus(null);
+  useLayoutEffect(() => {
+    const media = window.matchMedia("(max-width: 767px)");
+    const syncInteraction = () => {
+      const panel = panelRef.current;
+      const map = mapRef.current;
+      if (!panel || !map) return;
+      const focused = document.activeElement;
+      const leaving = view === "map" ? panel : map;
+      const transferFocus = media.matches && leaving.contains(focused);
+      panel.inert = media.matches && view === "map";
+      map.inert = media.matches && view === "list";
+      if (!panel.inert) panel.ariaHidden = null;
+      if (!map.inert) map.ariaHidden = null;
+      if (transferFocus) {
+        const target =
+          view === "map"
+            ? map.querySelector<HTMLElement>(".map-return")
+            : panel.querySelector<HTMLElement>(
+                '.view-switch [aria-pressed="true"]',
+              );
+        target?.focus({ preventScroll: true });
+      }
+      panel.ariaHidden = panel.inert ? "true" : null;
+      map.ariaHidden = map.inert ? "true" : null;
+    };
+    syncInteraction();
+    media.addEventListener("change", syncInteraction);
+    return () => media.removeEventListener("change", syncInteraction);
+  }, [view]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setClock(Date.now()), 10_000);
+    return () => window.clearInterval(timer);
+  }, []);
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: 0, behavior: "instant" });
+  }, [tab, selectedRoute?.routeCode]);
+  useEffect(() => {
+    if (view !== "list") return;
+    const selector =
+      tab === "bus" && selectedStopKey
+        ? ".waiting-card"
+        : tab === "parking" && selectedParkingId
+          ? ".parking-detail"
+          : null;
+    if (tab === "bus" && selectedStopKey)
+      scrollRef.current?.scrollTo({ top: 0, behavior: "instant" });
+    else if (selector)
+      scrollRef.current
+        ?.querySelector(selector)
+        ?.scrollIntoView({ block: "start", behavior: "instant" });
+  }, [
+    selectedStopKey,
+    selectedParkingId,
+    tab,
+    view,
+    busEta.data?.routeCode,
+    parking.data?.length,
+  ]);
+
+  const navigate = (next: Tab) => {
+    if (next === requestedTab.current && next === tab) {
+      setView("list");
       return;
     }
-    if (action.kind === "bus" && action.routeCode) {
-      const route = busRoutes.data?.find(
-        (item) => item.routeCode.toUpperCase() === action.routeCode?.toUpperCase(),
-      );
-      if (route) setSelectedRoute(route);
-      setBusDirection(action.direction ?? 0);
-    } else if (action.kind === "lrt" && action.lineRef) {
-      setSelectedLrtLine(action.lineRef);
+    const previous = requestedTab.current;
+    requestedTab.current = next;
+    const order: Tab[] = [
+      "home",
+      "bus",
+      "lrt",
+      "parking",
+      "assistant",
+      "more",
+      "overview",
+      "notices",
+      "cameras",
+      "sources",
+    ];
+    move(
+      () => {
+        setTab(next);
+        setView("list");
+        setAssistantFocus(null);
+        setLayerOpen(false);
+      },
+      {
+        direction:
+          order.indexOf(next) < order.indexOf(previous) ? "back" : "forward",
+        scrollTop: 0,
+      },
+    );
+  };
+  const locate = () => {
+    setLocationError(false);
+    if (!navigator.geolocation) {
+      setLocationError(true);
+      return;
     }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLocation([position.coords.longitude, position.coords.latitude]);
+        setLocating(false);
+      },
+      () => {
+        setLocating(false);
+        setLocationError(true);
+      },
+      { enableHighAccuracy: false, timeout: 10_000, maximumAge: 60_000 },
+    );
+  };
+  const openFavorite = (favorite: Favorite) => {
+    if (favorite.kind === "parking") {
+      setSelectedParkingId(favorite.id);
+      navigate("parking");
+      return;
+    }
+    const route = busRoutes.data?.find(
+      (item) => item.routeCode === favorite.routeCode,
+    );
+    if (route) {
+      setSelectedRoute(route);
+      setBusDirection(favorite.direction);
+      setSelectedStopKey(favorite.stopKey ?? null);
+      navigate("bus");
+    }
+  };
+  const applyAssistantAction = (action: LearningAssistantAction | null) => {
+    if (action?.kind === "bus" && action.routeCode) {
+      const route = busRoutes.data?.find(
+        (item) =>
+          item.routeCode.toUpperCase() === action.routeCode?.toUpperCase(),
+      );
+      if (!route) {
+        setSelectedRoute(null);
+        setAssistantFocus(null);
+        busRoutes.refresh();
+        return;
+      }
+      setSelectedRoute(route);
+      setBusDirection(action.direction ?? 0);
+      setSelectedStopKey(null);
+    } else if (action?.kind === "lrt" && action.lineRef)
+      setSelectedLrtLine(action.lineRef);
     setAssistantFocus(action);
   };
-
-  const openAssistantActionTab = (action: LearningAssistantAction) => {
-    setTab(action.kind === "bus" ? "bus" : "lrt");
-    setAssistantFocus(null);
-    setSheetExpanded(true);
-  };
-
-  const activeMeta =
-    tab === "overview" || tab === "assistant"
-      ? roads.meta
-      : tab === "bus"
-        ? busRoutes.meta
+  const sources: Array<{ label: string; state: SourceState }> = [
+    { label: t("roads"), state: roads },
+    { label: t("bridges"), state: bridges },
+    { label: t("weather"), state: weather },
+    { label: t("parking"), state: parking },
+    { label: t("bus"), state: busRoutes },
+    ...(selectedRoute && busVisible
+      ? [{ label: `${t("bus")} ${selectedRoute.routeName}`, state: busEta }]
+      : []),
+    { label: c.arrangements, state: notices },
+    { label: c.governmentNews, state: news },
+    { label: t("lrt"), state: lrt },
+    { label: t("lrtNotice"), state: lrtNotices },
+    { label: t("cameras"), state: cameras },
+    { label: t("border"), state: borders },
+  ];
+  const currentSource =
+    tab === "bus"
+      ? selectedRoute
+        ? busEta
+        : busRoutes
+      : tab === "parking"
+        ? parking
         : tab === "lrt"
-          ? lrt.meta
-        : tab === "parking"
-          ? parking.meta
-          : tab === "notices"
-            ? notices.meta
-            : cameras.meta;
-  const delayed = metaIsDelayed(activeMeta);
-
-  const onSheetPointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
-    suppressGripClick.current = false;
-    sheetDrag.current = {
-      pointerId: event.pointerId,
-      startY: event.clientY,
-      lastY: event.clientY,
-      startedAt: performance.now(),
-      moved: false,
-    };
-    event.currentTarget.setPointerCapture(event.pointerId);
-  };
-
-  const onSheetPointerMove = (event: React.PointerEvent<HTMLButtonElement>) => {
-    const drag = sheetDrag.current;
-    if (!drag || drag.pointerId !== event.pointerId) return;
-    drag.lastY = event.clientY;
-    const delta = event.clientY - drag.startY;
-    if (Math.abs(delta) > 6) drag.moved = true;
-    const sheet = sheetRef.current;
-    if (sheet) {
-      sheet.style.transform = `translateY(${Math.max(-140, Math.min(140, delta))}px)`;
-    }
-  };
-
-  const finishSheetDrag = (
-    event: React.PointerEvent<HTMLButtonElement>,
-    cancelled: boolean,
-  ) => {
-    const drag = sheetDrag.current;
-    if (!drag || drag.pointerId !== event.pointerId) return;
-    const sheet = sheetRef.current;
-    const delta = drag.lastY - drag.startY;
-    const elapsed = Math.max(1, performance.now() - drag.startedAt);
-    const velocity = delta / elapsed;
-    const moved = drag.moved && !cancelled;
-    sheetDrag.current = null;
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    }
-
-    if (moved) {
-      suppressGripClick.current = true;
-      if (delta < -36 || velocity < -0.4) setSheetExpanded(true);
-      else if (delta > 36 || velocity > 0.4) setSheetExpanded(false);
-    } else {
-      suppressGripClick.current = false;
-    }
-
-    if (sheet) {
-      sheet.style.transition = "transform 180ms ease";
-      sheet.style.transform = "translateY(0)";
-      window.setTimeout(() => {
-        if (sheetDrag.current) return;
-        sheet.style.removeProperty("transform");
-        sheet.style.removeProperty("transition");
-      }, 200);
-    }
-  };
-
-  const panel = (
-    <>
-      <div className="panel-tabs" role="tablist" aria-label={t("tagline")}>
-        {tabs.map(({ id, icon: Icon }) => (
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === id}
-            className={tab === id ? "is-active" : ""}
-            onClick={() => {
-              setTab(id);
-              setAssistantFocus(null);
-              setSheetExpanded(true);
-            }}
-            key={id}
-          >
-            <Icon size={17} aria-hidden="true" />
-            <span>{t(id)}</span>
-          </button>
-        ))}
-      </div>
-      <div className="panel-scroll">
-        {tab === "overview" ? (
-          <OverviewPanel
-            roads={roads.data}
-            bridges={bridges.data}
-            weather={weather.data}
-            borders={borders.data}
-            notices={notices.data}
-            roadsMeta={roads.meta}
-            bridgesMeta={bridges.meta}
-            weatherMeta={weather.meta}
-            bordersMeta={borders.meta}
-          />
-        ) : null}
-        {tab === "assistant" ? (
-          <AssistantPanel
-            route={selectedRoute}
-            direction={busDirection}
-            onAction={applyAssistantAction}
-            onOpenTab={openAssistantActionTab}
-          />
-        ) : null}
-        {tab === "bus" ? (
-          <BusPanel
-            routes={busRoutes.data}
-            selected={selectedRoute}
-            direction={busDirection}
-            eta={busEta}
-            onSelect={(route) => {
-              setSelectedRoute(route);
-              setBusDirection(0);
-            }}
-            onDirectionChange={setBusDirection}
-          />
-        ) : null}
-        {tab === "parking" ? (
-          <ParkingPanel
-            facilities={parking.data}
-            selectedId={selectedParkingId}
-            onSelect={setSelectedParkingId}
-          />
-        ) : null}
-        {tab === "lrt" ? (
-          <LrtPanel
-            network={lrt.data}
-            notices={lrtNotices.data ?? []}
-            selectedLine={selectedLrtLine}
-            onSelectLine={setSelectedLrtLine}
-          />
-        ) : null}
-        {tab === "notices" ? (
-          <NoticesPanel
-            notices={notices.data ?? []}
-            lrtNotices={lrtNotices.data ?? []}
-            selectedId={activeNoticeId}
-            onSelect={setSelectedNoticeId}
-          />
-        ) : null}
-        {tab === "cameras" ? (
-          <CameraPanel
-            cameras={cameras.data}
-            selectedId={selectedCamera?.id ?? null}
-            onSelect={setSelectedCamera}
-          />
-        ) : null}
-      </div>
-    </>
+          ? lrt
+          : tab === "cameras"
+            ? cameras
+            : null;
+  const moreItems: Array<{ id: Tab; label: string; icon: typeof Activity }> = [
+    { id: "overview", label: t("trafficSummary"), icon: Activity },
+    { id: "lrt", label: t("lrt"), icon: TramFront },
+    { id: "notices", label: c.news, icon: Bell },
+    { id: "cameras", label: t("cameraTitle"), icon: Video },
+    { id: "assistant", label: t("assistant"), icon: Sparkles },
+    { id: "sources", label: c.sourceDetails, icon: Layers3 },
+  ];
+  const title =
+    tab === "home"
+      ? c.home
+      : tab === "more"
+        ? c.more
+        : (moreItems.find((item) => item.id === tab)?.label ??
+          t(tab as "bus" | "parking"));
+  const primary = ["home", "bus", "lrt", "parking", "assistant"].includes(tab)
+    ? tab
+    : "more";
+  const mapFocus = ["home", "more", "sources"].includes(tab)
+    ? "overview"
+    : (tab as
+        | "overview"
+        | "bus"
+        | "lrt"
+        | "parking"
+        | "notices"
+        | "cameras"
+        | "assistant");
+  const selectedStop = busEta.data?.stops.find(
+    (stop) => `${stop.sequence}:${stop.stationCode}` === selectedStopKey,
   );
 
   return (
-    <main className="traffic-app">
-      <header className="app-header">
-        <div className="brand-block">
-          <span className="brand-mark" aria-hidden="true">
-            <Gauge size={18} />
-          </span>
+    <main
+      className="resident-app"
+      data-theme={preferences.theme}
+      data-view={view}
+      data-clock={clock}
+    >
+      <header className="workspace-header">
+        <div className="workspace-brand">
+          <Navigation size={23} aria-hidden="true" />
           <div>
             <strong>{APP_NAME}</strong>
-            <span>{APP_NAME_EN}</span>
+            <span>MACAU TRANSIT</span>
           </div>
         </div>
-        <div className="header-status">
-          <span className={`live-dot ${delayed ? "is-stale" : ""}`} />
-          <span>{delayed ? t("stale") : t("live")}</span>
-          {weather.data?.temperatureCelsius != null ? (
-            <strong>{weather.data.temperatureCelsius}°C</strong>
-          ) : null}
-        </div>
-        <div className="language-switch" aria-label="Language">
-          {localeOptions.map((option) => (
+        <WorkspaceNav selected={primary} label={t("tagline")}>
+          {(
+            [
+              { id: "home", label: c.home, icon: Navigation },
+              { id: "bus", label: t("bus"), icon: BusFront },
+              { id: "lrt", label: t("lrt"), icon: TramFront },
+              { id: "parking", label: t("parking"), icon: CircleParking },
+              { id: "assistant", label: t("assistant"), icon: Sparkles },
+            ] as const
+          ).map(({ id, label, icon: Icon }, index, items) => (
             <button
               type="button"
-              key={option.value}
-              className={locale === option.value ? "is-active" : ""}
-              onClick={() => setLocale(option.value)}
-              title={option.label}
+              role="tab"
+              id={`nav-${id}`}
+              aria-controls="workspace-content"
+              aria-selected={primary === id}
+              tabIndex={primary === id ? 0 : -1}
+              key={id}
+              onClick={() => navigate(id)}
+              onKeyDown={(event) => {
+                const next =
+                  event.key === "ArrowRight"
+                    ? (index + 1) % items.length
+                    : event.key === "ArrowLeft"
+                      ? (index + items.length - 1) % items.length
+                      : event.key === "Home"
+                        ? 0
+                        : event.key === "End"
+                          ? items.length - 1
+                          : null;
+                if (next === null) return;
+                event.preventDefault();
+                navigate(items[next].id);
+                document.getElementById(`nav-${items[next].id}`)?.focus();
+              }}
             >
-              {option.short}
+              <Icon size={20} aria-hidden="true" />
+              <span>{label}</span>
             </button>
           ))}
+        </WorkspaceNav>
+        <div className="workspace-header-actions">
+          <button
+            type="button"
+            className="more-toggle"
+            id="nav-more"
+            aria-label={c.more}
+            aria-pressed={primary === "more"}
+            onClick={() => navigate(tab === "more" ? "home" : "more")}
+          >
+            <MoreHorizontal size={20} />
+          </button>
+          <button
+            type="button"
+            className="appearance-toggle"
+            aria-label={c.appearance}
+            onClick={() =>
+              preferences.setTheme(
+                preferences.theme === "light" ? "dark" : "light",
+              )
+            }
+          >
+            {preferences.theme === "light" ? (
+              <Moon size={18} />
+            ) : (
+              <Sun size={18} />
+            )}
+            <span>{preferences.theme === "light" ? c.dark : c.light}</span>
+          </button>
+          <div className="language-switch" aria-label="Language">
+            {localeOptions.map((option) => (
+              <button
+                type="button"
+                key={option.value}
+                onClick={() => setLocale(option.value)}
+                aria-pressed={locale === option.value}
+                className={locale === option.value ? "is-active" : ""}
+              >
+                {option.short}
+              </button>
+            ))}
+          </div>
         </div>
       </header>
 
-      <section className="map-stage">
-        <MacauMap
-          roads={roads.data}
-          cameras={cameras.data}
-          lrt={lrt.data}
-          selectedLrtLine={
-            tab === "lrt" || assistantFocus?.kind === "lrt" ? selectedLrtLine : null
-          }
-          lrtFocus={tab === "lrt" || assistantFocus?.kind === "lrt"}
-          mapFocus={tab}
-          busRoute={
-            tab === "bus" || assistantFocus?.kind === "bus" ? busEta.data : null
-          }
-          busColor={
-            tab === "bus" || assistantFocus?.kind === "bus"
-              ? (selectedRoute?.company.color ?? null)
-              : null
-          }
-          parking={parking.data}
-          selectedParkingId={tab === "parking" ? selectedParkingId : null}
-          onParkingSelect={setSelectedParkingId}
-          notices={notices.data ?? []}
-          selectedNoticeId={tab === "notices" ? activeNoticeId : null}
-          selectedCameraId={selectedCamera?.id ?? null}
-          view3d={view3d}
-          visibleLayers={layers}
-          onCameraSelect={setSelectedCamera}
-        />
-
-        <div className="map-toolbar">
-          <button
-            type="button"
-            onClick={() => setLayerOpen((current) => !current)}
-            aria-expanded={layerOpen}
-            aria-label={t("layers")}
+      <section className="workspace-body">
+        <aside className="workspace-panel" data-tab={tab} ref={panelRef}>
+          <div className="workspace-panel-header">
+            {!["home", "bus", "lrt", "parking", "assistant", "more"].includes(
+              tab,
+            ) ? (
+              <button
+                type="button"
+                className="back-button"
+                aria-label={c.more}
+                onClick={() => navigate("more")}
+              >
+                <ArrowLeft size={19} />
+              </button>
+            ) : null}
+            <h1>{title}</h1>
+            <div className="view-switch" role="group" aria-label={t("mapMode")}>
+              <button
+                type="button"
+                aria-pressed={view === "list"}
+                onClick={() => setView("list")}
+              >
+                <List size={16} />
+                {c.list}
+              </button>
+              <button
+                type="button"
+                aria-pressed={view === "map"}
+                onClick={() => setView("map")}
+              >
+                <MapIcon size={16} />
+                {c.map}
+              </button>
+            </div>
+          </div>
+          <div
+            className="workspace-scroll"
+            id="workspace-content"
+            role="tabpanel"
+            aria-labelledby={`nav-${primary}`}
+            ref={scrollRef}
           >
-            <Layers3 size={17} aria-hidden="true" />
-            <span>{t("layers")}</span>
-          </button>
+            {locationError ? (
+              <p className="data-warning" role="status">
+                {c.locationFailed}
+              </p>
+            ) : null}
+            {currentSource && !(tab === "bus" && selectedRoute) ? (
+              <SourceStateNote state={currentSource} />
+            ) : null}
+            {tab === "home" ? (
+              <TravelHome
+                favorites={preferences.favorites}
+                routes={busRoutes.data}
+                parking={parking.data}
+                weather={weather.data}
+                weatherMeta={weather.meta}
+                parkingMeta={parking.meta}
+                location={location}
+                onLocate={locate}
+                locating={locating}
+                onOpen={openFavorite}
+                onBus={() => navigate("bus")}
+                onParking={() => navigate("parking")}
+                onLrt={() => navigate("lrt")}
+                onAsk={(question) => {
+                  setAssistantRequest({ id: Date.now(), question });
+                  navigate("assistant");
+                }}
+                onOverview={() => navigate("overview")}
+              />
+            ) : null}
+            {tab === "bus" ? (
+              <BusPanel
+                routes={busRoutes.data}
+                selected={selectedRoute}
+                direction={busDirection}
+                eta={busEta}
+                selectedStopKey={selectedStopKey}
+                onSelectStop={(key) =>
+                  move(() => setSelectedStopKey(key), {
+                    from: `[data-stop-key="${CSS.escape(key)}"]`,
+                    to: ".waiting-card",
+                    focus: ".waiting-card",
+                    scrollTop: 0,
+                  })
+                }
+                onSelect={(route) => {
+                  routeCatalogScroll.current =
+                    scrollRef.current?.scrollTop ?? 0;
+                  move(
+                    () => {
+                      setSelectedRoute(route);
+                      setBusDirection(0);
+                      setSelectedStopKey(null);
+                    },
+                    {
+                      from: `[data-route-code="${CSS.escape(route.routeCode)}"]`,
+                      to: ".bus-route-header",
+                      focus: ".bus-route-header",
+                      scrollTop: 0,
+                    },
+                  );
+                }}
+                onDirectionChange={(direction) => {
+                  if (direction === busDirection) return;
+                  move(
+                    () => {
+                      setBusDirection(direction);
+                      setSelectedStopKey(null);
+                    },
+                    { direction: direction === 0 ? "back" : "forward" },
+                  );
+                }}
+                onBack={() => {
+                  const target = `[data-route-code="${CSS.escape(selectedRoute?.routeCode ?? "")}"]`;
+                  move(
+                    () => {
+                      setSelectedRoute(null);
+                      setSelectedStopKey(null);
+                    },
+                    {
+                      direction: "back",
+                      from: ".bus-route-header",
+                      to: target,
+                      focus: target,
+                      scrollTop: routeCatalogScroll.current,
+                    },
+                  );
+                }}
+                onMap={() => setView("map")}
+                isSaved={preferences.isSaved}
+                onSave={preferences.toggle}
+              />
+            ) : null}
+            {tab === "parking" ? (
+              <ParkingPanel
+                facilities={parking.data}
+                selectedId={selectedParkingId}
+                onSelect={(id) =>
+                  move(() => setSelectedParkingId(id), {
+                    from: `[data-parking-id="${CSS.escape(id)}"]`,
+                    to: ".parking-detail",
+                    focus: ".parking-detail",
+                  })
+                }
+                kind={parkingKind}
+                onKindChange={setParkingKind}
+                location={location}
+                onLocate={locate}
+                locating={locating}
+                onMap={() => setView("map")}
+                isSaved={preferences.isSaved}
+                onSave={preferences.toggle}
+              />
+            ) : null}
+            {tab === "overview" ? (
+              <OverviewPanel
+                roads={roads.data}
+                bridges={bridges.data}
+                weather={weather.data}
+                borders={borders.data}
+                notices={notices.data}
+                roadsMeta={roads.meta}
+                bridgesMeta={bridges.meta}
+                weatherMeta={weather.meta}
+                bordersMeta={borders.meta}
+              />
+            ) : null}
+            {tab === "lrt" ? (
+              <LrtPanel
+                network={lrt.data}
+                notices={lrtNotices.data ?? []}
+                selectedLine={selectedLrtLine}
+                onSelectLine={(line) => {
+                  setSelectedLrtLine(line);
+                  setSelectedLrtStation(null);
+                }}
+                selectedStation={selectedLrtStation}
+                onSelectStation={(id) => {
+                  setSelectedLrtStation(id);
+                  setView("map");
+                }}
+              />
+            ) : null}
+            {tab === "notices" ? (
+              <NoticesPanel
+                notices={notices}
+                news={news}
+                selectedId={selectedNoticeId}
+                onSelect={(id) => {
+                  setSelectedNoticeId(id);
+                  setView("map");
+                }}
+              />
+            ) : null}
+            {tab === "cameras" ? (
+              <CameraPanel
+                cameras={cameras.data}
+                selectedId={selectedCamera?.id ?? null}
+                onSelect={setSelectedCamera}
+              />
+            ) : null}
+            <div hidden={tab !== "assistant"}>
+              <AssistantPanel
+                request={assistantRequest}
+                route={selectedRoute}
+                direction={busDirection}
+                onAction={applyAssistantAction}
+                onOpenTab={(action) => {
+                  navigate(action.kind === "bus" ? "bus" : "lrt");
+                }}
+              />
+            </div>
+            {tab === "more" ? (
+              <div className="more-grid">
+                {moreItems
+                  .filter(
+                    (item) => item.id !== "lrt" && item.id !== "assistant",
+                  )
+                  .map(({ id, label, icon: Icon }) => (
+                    <button type="button" key={id} onClick={() => navigate(id)}>
+                      <Icon size={21} />
+                      <span>{label}</span>
+                      <span aria-hidden="true">→</span>
+                    </button>
+                  ))}
+              </div>
+            ) : null}
+            {tab === "sources" ? (
+              <div className="source-directory">
+                <p className="notice-explanation">{c.newsIntro}</p>
+                {sources.map(({ label, state }) => (
+                  <section key={label}>
+                    <div className="section-heading">
+                      <h2>{label}</h2>
+                      <button
+                        className="text-action"
+                        type="button"
+                        onClick={state.refresh}
+                      >
+                        {c.refresh}
+                      </button>
+                    </div>
+                    <SourceStateNote state={state} />
+                  </section>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        </aside>
+
+        <div className="workspace-map map-stage" ref={mapRef}>
+          <MacauMap
+            theme={preferences.theme}
+            roads={roads.data}
+            cameras={cameras.data}
+            lrt={lrt.data}
+            selectedLrtLine={
+              tab === "lrt" || assistantFocus?.kind === "lrt"
+                ? selectedLrtLine
+                : null
+            }
+            lrtFocus={tab === "lrt" || assistantFocus?.kind === "lrt"}
+            busRoute={busVisible ? busEta.data : null}
+            busColor={
+              busVisible ? (selectedRoute?.company.color ?? null) : null
+            }
+            mapFocus={mapFocus}
+            parking={parking.data}
+            selectedParkingId={tab === "parking" ? selectedParkingId : null}
+            onParkingSelect={setSelectedParkingId}
+            parkingKind={parkingKind}
+            notices={mapNotices}
+            selectedNoticeId={tab === "notices" ? selectedNoticeId : null}
+            selectedCameraId={selectedCamera?.id ?? null}
+            view3d={view3d}
+            visibleLayers={layers}
+            onCameraSelect={setSelectedCamera}
+            selectedStopKey={selectedStopKey}
+            onStopSelect={setSelectedStopKey}
+            selectedLrtStation={selectedLrtStation}
+            onLrtStationSelect={setSelectedLrtStation}
+          />
+          <div className="workspace-map-top">
+            <button
+              type="button"
+              className="map-return"
+              onClick={() => setView("list")}
+            >
+              <ArrowLeft size={17} />
+              {c.list}
+            </button>
+            <button
+              type="button"
+              className="quick-3d"
+              aria-label="3D"
+              aria-pressed={view3d}
+              onClick={() => setView3d(!view3d)}
+            >
+              3D
+            </button>
+            <button
+              type="button"
+              className="map-settings"
+              aria-expanded={layerOpen}
+              aria-label={t("layers")}
+              onClick={() => setLayerOpen(!layerOpen)}
+            >
+              <Layers3 size={18} />
+              {t("layers")}
+            </button>
+          </div>
           {layerOpen ? (
-            <div className="layer-menu">
-              {(["roads", "cameras", "lrt"] as const).map((layer) => (
-                <label key={layer}>
-                  <span>{t(layer)}</span>
-                  <input
-                    type="checkbox"
-                    checked={layers[layer]}
-                    onChange={() =>
-                      setLayers((current) => ({ ...current, [layer]: !current[layer] }))
-                    }
-                  />
-                </label>
-              ))}
-              <div className="layer-mode" role="group" aria-label={t("mapMode")}>
-                <button
-                  type="button"
-                  className={view3d ? "is-active" : ""}
-                  aria-pressed={view3d}
-                  onClick={() => setView3d(true)}
-                >
-                  {t("view3d")}
-                </button>
+            <div className="workspace-layer-menu">
+              <div className="segmented" role="group" aria-label={t("mapMode")}>
                 <button
                   type="button"
                   className={!view3d ? "is-active" : ""}
                   aria-pressed={!view3d}
                   onClick={() => setView3d(false)}
                 >
-                  {t("view2d")}
+                  2D
+                </button>
+                <button
+                  type="button"
+                  className={view3d ? "is-active" : ""}
+                  aria-pressed={view3d}
+                  onClick={() => setView3d(true)}
+                >
+                  3D
                 </button>
               </div>
-              <p className="layer-note">{t("unmonitoredRoads")}</p>
+              {(["roads", "cameras", "lrt"] as const).map((layer) => (
+                <label key={layer}>
+                  <input
+                    type="checkbox"
+                    checked={layers[layer]}
+                    onChange={() =>
+                      setLayers((current) => ({
+                        ...current,
+                        [layer]: !current[layer],
+                      }))
+                    }
+                  />
+                  {t(layer)}
+                </label>
+              ))}
+              <p>{t("unmonitoredRoads")}</p>
+              <p>{c.modelsNote}</p>
             </div>
           ) : null}
+          <div className="map-context">
+            <span>
+              {tab === "notices"
+                ? c.newsIntro
+                : busVisible
+                  ? t("positionNote")
+                  : tab === "lrt" || assistantFocus?.kind === "lrt"
+                    ? t("lrtNoLive")
+                    : c.mapHint}
+            </span>
+            {selectedStop && busVisible ? (
+              <button type="button" onClick={() => setView("list")}>
+                {selectedStop.stationName} · {c.stopView} →
+              </button>
+            ) : selectedParkingId && tab === "parking" ? (
+              <button type="button" onClick={() => setView("list")}>
+                {
+                  parking.data?.find((item) => item.id === selectedParkingId)
+                    ?.name
+                }{" "}
+                →
+              </button>
+            ) : null}
+          </div>
         </div>
-
-        <aside className="desktop-panel" data-tab={tab}>
-          {panel}
-        </aside>
-
-        <aside className="mobile-sheet" data-expanded={sheetExpanded} ref={sheetRef}>
-          <button
-            type="button"
-            className="sheet-grip"
-            aria-label={sheetExpanded ? t("collapse") : t("expand")}
-            aria-expanded={sheetExpanded}
-            onPointerDown={onSheetPointerDown}
-            onPointerMove={onSheetPointerMove}
-            onPointerUp={(event) => finishSheetDrag(event, false)}
-            onPointerCancel={(event) => finishSheetDrag(event, true)}
-            onClick={() => {
-              if (suppressGripClick.current) {
-                suppressGripClick.current = false;
-                return;
-              }
-              setSheetExpanded((current) => !current);
-            }}
-          >
-            <span />
-            <ChevronDown size={16} aria-hidden="true" />
-          </button>
-          {panel}
-        </aside>
       </section>
-
-      <CameraViewer camera={selectedCamera} onClose={() => setSelectedCamera(null)} />
+      <CameraViewer
+        camera={selectedCamera}
+        onClose={() => setSelectedCamera(null)}
+      />
     </main>
   );
 }

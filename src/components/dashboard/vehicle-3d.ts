@@ -1,11 +1,13 @@
 import type { LrtNetwork } from "@/lib/types";
+import { TRANSIT_DISPLAY_SCALE } from "./transit-display";
+import { bearingBetween, pathLengths, pointAtDistance } from "./bus-motion";
 
 // The LRT train stays extruded; buses render through bus-3d-layer.ts.
 export type TrainLivery = "lrt-taipa" | "lrt-seacpaivan" | "lrt-hengqin";
 
 // A real 21 m train is only a few pixels wide at city zoom, so the display model is
 // exaggerated to stay readable as a marker.
-const DISPLAY_SCALE = 3.6;
+const DISPLAY_SCALE = TRANSIT_DISPLAY_SCALE;
 
 // Macau LRT "Ocean Cruiser": pale body, deep blue front, orange wave stripe.
 const LIVERIES: Record<TrainLivery, { body: string; accent: string; glass: string; front: string }> = {
@@ -65,9 +67,10 @@ function part(
     height: number;
     color: string;
     forwardOffset?: number;
+    scale?: number;
   },
 ): Part {
-  const scale = DISPLAY_SCALE;
+  const scale = options.scale ?? DISPLAY_SCALE;
 
   return {
     coordinates: footprint(
@@ -83,27 +86,35 @@ function part(
   };
 }
 
-/** Rough two-car Macau LRT set (about 21 m). */
-export function trainParts(
-  coordinates: [number, number],
-  bearing: number,
-  livery: TrainLivery,
-): Part[] {
+export interface TrainCarPose { coordinates: [number, number]; bearing: number; }
+
+export function trainCarPoses(path: Array<[number, number]>, distance: number, spacing: number): [TrainCarPose, TrainCarPose] {
+  const lengths = pathLengths(path);
+  const total = lengths.at(-1) ?? 0;
+  const half = Math.min(spacing / 2, total / 2);
+  const centre = Math.max(half, Math.min(total - half, distance));
+  return [half, -half].map((offset) => {
+    const at = centre + offset;
+    const point = pointAtDistance(path, lengths, at);
+    const back = pointAtDistance(path, lengths, at - spacing / 4);
+    const front = pointAtDistance(path, lengths, at + spacing / 4);
+    return { coordinates: point.coordinates, bearing: bearingBetween(back.coordinates, front.coordinates) };
+  }) as [TrainCarPose, TrainCarPose];
+}
+
+/** Flat fallback: each carriage has its own pose on the rail. */
+export function trainParts(coordinates: [number, number], bearing: number, livery: TrainLivery, cars?: [TrainCarPose, TrainCarPose], scale = DISPLAY_SCALE): Part[] {
   const colors = LIVERIES[livery];
   const parts: Part[] = [];
-
-  for (const offset of [5.2, -5.2]) {
+  const poses = cars ?? [5.2, -5.2].map((offset) => ({ coordinates: offsetPoint(...coordinates, 0, offset * DISPLAY_SCALE, bearing), bearing }));
+  for (const pose of poses) {
     parts.push(
-      part(coordinates, bearing, { length: 10, width: 2.9, base: 0.4, height: 3, color: colors.body, forwardOffset: offset }),
-      part(coordinates, bearing, { length: 8.2, width: 2.92, base: 1.6, height: 2.7, color: colors.glass, forwardOffset: offset }),
-      part(coordinates, bearing, { length: 10, width: 2.94, base: 0.9, height: 1.15, color: colors.accent, forwardOffset: offset }),
+      part(pose.coordinates, pose.bearing, { scale, length: 10, width: 2.9, base: 0.4, height: 3, color: colors.body }),
+      part(pose.coordinates, pose.bearing, { scale, length: 8.2, width: 2.92, base: 1.6, height: 2.7, color: colors.glass }),
+      part(pose.coordinates, pose.bearing, { scale, length: 10, width: 2.94, base: 0.9, height: 1.15, color: colors.accent }),
+      part(pose.coordinates, pose.bearing, { scale, length: 1.1, width: 2.9, base: 0.4, height: 3.1, color: colors.front, forwardOffset: 4.7 }),
     );
   }
-
-  parts.push(
-    part(coordinates, bearing, { length: 1.3, width: 2.9, base: 0.4, height: 3.3, color: colors.front, forwardOffset: 10.6 }),
-  );
-
   return parts;
 }
 
@@ -132,7 +143,7 @@ export type TrainFeature =
 export function lrtTrainCollection(
   network: LrtNetwork | null,
   selectedLine: string | null,
-  position?: { coordinates: [number, number]; bearing: number },
+  position?: { coordinates: [number, number]; bearing: number; cars?: [TrainCarPose, TrainCarPose]; scale?: number },
   label?: string,
 ): { type: "FeatureCollection"; features: TrainFeature[] } {
   const line = network?.lines.features.find((feature) => feature.properties.ref === selectedLine);
@@ -152,7 +163,7 @@ export function lrtTrainCollection(
         ? "lrt-seacpaivan"
         : "lrt-hengqin";
 
-  const features: TrainFeature[] = toFeatures(trainParts(center, bearing, livery));
+  const features: TrainFeature[] = toFeatures(trainParts(center, bearing, livery, position?.cars, position?.scale));
   if (label) {
     features.push({
       type: "Feature",

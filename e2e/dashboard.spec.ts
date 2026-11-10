@@ -1,642 +1,269 @@
 import { expect, test, type Page } from "@playwright/test";
+import { mockDashboard, meta } from "./fixtures";
 
-function meta(source: { id: string; name: string; url: string }) {
-  return {
-    generatedAt: "2026-10-03T00:00:00.000Z",
-    updatedAt: "2026-10-03T00:00:00.000Z",
-    stale: false,
-    ttlSeconds: 60,
-    source: {
-      ...source,
-      text: source.name,
-    },
-  };
+async function openRoute(page: Page) {
+  await page.getByRole("tab", { name: "巴士", exact: true }).click();
+  await page.locator(".route-grid button").first().click();
+  await expect(page.locator(".stop-row")).toHaveCount(1);
+}
+async function openMore(page: Page, label: string) {
+  if (label === "輕軌" || label === "AI 助手") { await page.getByRole("tab", { name: label, exact: true }).click(); return; }
+  await page.getByRole("button", { name: "更多", exact: true }).click();
+  await page.locator(".more-grid").getByRole("button", { name: label, exact: true }).click();
+}
+async function showMap(page: Page, isMobile: boolean) {
+  if (isMobile) await page.locator(".view-switch").getByRole("button", { name: "地圖", exact: true }).click();
 }
 
-const roads = {
-  type: "FeatureCollection",
-  features: [
-    {
-      type: "Feature",
-      properties: {
-        id: "1",
-        name: {
-          "zh-Hant": "友誼大馬路",
-          "zh-Hans": "友谊大马路",
-          en: "Avenida da Amizade",
-        },
-        nameVisible: true,
-        lengthMeters: 100,
-        status: "congested",
-        officialLevel: 3,
-      },
-      geometry: {
-        type: "LineString",
-        coordinates: [
-          [113.55, 22.19],
-          [113.56, 22.2],
-        ],
-      },
-    },
-  ],
-};
-
-const cameras = [
-  {
-    id: "49",
-    name: {
-      "zh-Hant": "新馬路與南灣大馬路交界",
-      "zh-Hans": "新马路与南湾大马路交界",
-      en: "Avenida de Almeida Ribeiro",
-    },
-    location: {
-      "zh-Hant": "新馬路與南灣大馬路交界",
-      "zh-Hans": "新马路与南湾大马路交界",
-      en: "Avenida de Almeida Ribeiro",
-    },
-    coordinates: [113.54, 22.19],
-    zone: { "zh-Hant": "澳門區", "zh-Hans": "澳门区", en: "Macao peninsula" },
-    subzone: { "zh-Hant": "中區-1", "zh-Hans": "中区-1", en: "Central-1" },
-    streamUrl: "https://example.com/camera.m3u8",
-    mediaType: "hls",
-  },
-];
-
-const responses: Record<string, unknown> = {
-  "/api/v1/traffic/roads": roads,
-  "/api/v1/traffic/bridges": [
-    {
-      id: "sai-van-n",
-      name: { "zh-Hant": "西灣大橋", "zh-Hans": "西湾大桥", en: "Sai Van Bridge" },
-      direction: "northbound",
-      runtimeSeconds: 120,
-      status: "normal",
-      officialLevel: 1,
-    },
-  ],
-  "/api/v1/traffic/notices": [
-    {
-      id: "notice-1",
-      title: "友誼大馬路臨時交通安排",
-      content: "臨時交通措施測試資料。",
-      publishedAt: null,
-      category: "roadworks",
-      url: "https://www.dsat.gov.mo/",
-    },
-  ],
-  "/api/v1/cameras": cameras,
-  "/api/v1/bus/routes": [
-    {
-      routeName: "3",
-      routeCode: "00003",
-      routeType: 0,
-      company: { id: "orange", name: "澳巴", color: "orange" },
-      hasChange: true,
-      live: true,
-    },
-  ],
-  "/api/v1/parking": [
-    {
-      id: "6033",
-      name: "下環街市",
-      updatedAt: "2026-10-03T00:00:00.000Z",
-      areaStatus: "yellow",
-      coordinates: [113.5345, 22.1908],
-      availability: {
-        lightVehicle: 13,
-        motorcycle: 48,
-        electricVehicle: 4,
-        electricMotorcycle: 10,
-        accessible: 2,
-        heavyVehicleShort: null,
-        heavyVehicleLong: null,
-      },
-    },
-  ],
-  "/api/v1/weather": {
-    observedAt: "2026-10-03T00:00:00.000Z",
-    temperatureCelsius: 28,
-    humidityPercent: 82,
-    wind: "風向: 東南偏東 ; 風速: 8.6 公里/小時",
-    forecast: "大致多雲，有幾陣驟雨。",
-    warnings: [],
-  },
-  "/api/v1/borders": [
-    {
-      id: "portas-do-cerco",
-      name: { "zh-Hant": "關閘", "zh-Hans": "关闸", en: "Portas do Cerco" },
-      status: "clear",
-      estimatedWaitMinutes: 10,
-      updatedAt: "2026-10-03T00:00:00.000Z",
-      sourceUrl: "https://www.fsm.gov.mo/psp/pspmonitor/mobile/",
-    },
-  ],
-  "/api/v1/lrt/network": {
-    lines: {
-      type: "FeatureCollection",
-      features: [
-        {
-          type: "Feature",
-          properties: {
-            id: "1",
-            ref: "Taipa",
-            name: { "zh-Hant": "氹仔線", "zh-Hans": "氹仔线", en: "Taipa Line" },
-            color: "#96C93C",
-          },
-          geometry: {
-            type: "LineString",
-            coordinates: [
-              [113.574, 22.163],
-              [113.545, 22.187],
-            ],
-          },
-        },
-      ],
-    },
-    stations: [
-      {
-        id: "TFT",
-        name: { "zh-Hant": "氹仔碼頭站", "zh-Hans": "氹仔码头站", en: "Taipa Ferry Terminal" },
-        coordinates: [113.574, 22.163],
-        lines: ["Taipa"],
-        interchange: false,
-      },
-      {
-        id: "BARRA",
-        name: { "zh-Hant": "媽閣站", "zh-Hans": "妈阁站", en: "Barra" },
-        coordinates: [113.545, 22.187],
-        lines: ["Taipa"],
-        interchange: true,
-      },
-    ],
-    timetableEdition: "2026-09",
-    sourceUpdatedAt: "2026-10-03T00:00:00.000Z",
-  },
-  "/api/v1/lrt/notices": [],
-};
-
-async function mockDashboard(page: Page) {
-  await page.route("https://tiles.openfreemap.org/styles/bright", async (route) => {
-    await route.fulfill({
-      contentType: "application/json",
-      body: JSON.stringify({ version: 8, sources: {}, layers: [] }),
-    });
-  });
-
-  await page.route("**/api/v1/**", async (route) => {
-    const url = new URL(route.request().url());
-    const etaMatch = url.pathname.match(/^\/api\/v1\/bus\/routes\/([^/]+)\/eta$/);
-    if (etaMatch) {
-      await route.fulfill({
-        json: {
-          data: {
-            routeName: "3",
-            routeCode: etaMatch[1],
-            direction: 0,
-            stops: [
-              {
-                sequence: 0,
-                stationCode: "M1/9",
-                stationName: "關閘總站",
-                stopsAway: 0,
-                coordinates: [113.54918, 22.215502],
-                trafficStatus: "normal",
-                trafficLevel: 1,
-                suspended: false,
-              },
-            ],
-            vehicles: [
-              {
-                id: "E5054",
-                plate: "AD2767",
-                busType: "1",
-                lowFloor: true,
-                speedKph: 12,
-                status: "1",
-                stationCode: "M1/9",
-                stationName: "關閘總站",
-                stationSequence: 0,
-                segmentIndex: 0,
-                coordinates: [113.54918, 22.215502],
-                bearing: 180,
-                estimated: true,
-              },
-            ],
-            routeSegments: [
-              {
-                fromStationCode: "M1/9",
-                toStationCode: "M1/9",
-                trafficStatus: "normal",
-                trafficLevel: 1,
-                coordinates: [
-                  [113.54918, 22.215502],
-                  [113.54862, 22.212759],
-                ],
-              },
-            ],
-            diversion: { suspendedStops: [] },
-          },
-          meta: meta({ id: "bus-eta", name: "DSAT Bus ETA", url: "https://www.dsat.gov.mo/" }),
-        },
-      });
-      return;
-    }
-
-    const body = responses[url.pathname];
-    await route.fulfill({
-      status: body ? 200 : 404,
-      json: body
-        ? {
-            data: body,
-            meta: meta({ id: url.pathname, name: "Test source", url: "https://example.com/" }),
-          }
-        : { message: "Not mocked" },
-    });
-  });
-}
-
-async function countCanvasColor(page: Page, rgb: [number, number, number]) {
-  const shot = await page.locator(".maplibregl-canvas").screenshot();
-  return page.evaluate(
-    async ({ base64, rgb }) => {
-      const image = new Image();
-      image.src = `data:image/png;base64,${base64}`;
-      await image.decode();
-      const canvas = document.createElement("canvas");
-      canvas.width = image.width;
-      canvas.height = image.height;
-      const context = canvas.getContext("2d");
-      if (!context) return 0;
-      context.drawImage(image, 0, 0);
-      const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
-      let matches = 0;
-      for (let index = 0; index < pixels.length; index += 4) {
-        // The canvas screenshot also contains the overlaid desktop panel, so
-        // only count the map area to the right of the 448 px rail.
-        const column = (index / 4) % canvas.width;
-        if (column < 470) continue;
-        // Tight tolerance: only the map layer's own colour, not translucent
-        // chrome edges blended toward it.
-        if (
-          Math.abs(pixels[index] - rgb[0]) < 15 &&
-          Math.abs(pixels[index + 1] - rgb[1]) < 15 &&
-          Math.abs(pixels[index + 2] - rgb[2]) < 15
-        ) {
-          matches += 1;
-        }
-      }
-      return matches;
-    },
-    { base64: shot.toString("base64"), rgb },
-  );
-}
-
-test("desktop map renders the overview and mocked live modules", async ({ page, isMobile }) => {
-  test.skip(isMobile, "desktop project only");
+test.beforeEach(async ({ page }) => {
   await mockDashboard(page);
   await page.goto("/");
-
-  const panel = page.locator(".desktop-panel");
-  await expect(panel).toBeVisible();
-  await expect(page.getByText("澳門交通情報").first()).toBeVisible();
-  await expect(panel.getByText("跨海大橋")).toBeVisible();
-  await expect(page.locator(".maplibregl-canvas")).toBeVisible();
 });
 
-test("map layers paint after style load and respond to the layer toggle", async ({
-  page,
-  isMobile,
-}) => {
-  test.skip(isMobile, "desktop project only");
-  await mockDashboard(page);
-  await page.goto("/");
-
-  const congested = [215, 71, 52] as [number, number, number];
-  await expect
-    .poll(() => countCanvasColor(page, congested), { timeout: 10_000 })
-    .toBeGreaterThan(0);
-
-  await page.getByRole("button", { name: /圖層/ }).click();
-  await page.getByRole("checkbox", { name: "道路" }).click();
-  await expect
-    .poll(() => countCanvasColor(page, congested), { timeout: 10_000 })
-    .toBe(0);
+test("one workspace renders five navigation items and a usable mobile list", async ({ page, isMobile }) => {
+  await expect(page.getByRole("tab")).toHaveCount(5);
+  await expect(page.locator("#workspace-content")).toHaveCount(1);
+  await expect(page.getByRole("heading", { name: "今日點樣出發？" })).toBeVisible();
+  await expect(page.locator(".workspace-map")).toBeVisible({ visible: !isMobile });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
-test("LRT tab hides the road layers for a clean network view", async ({
-  page,
-  isMobile,
-}) => {
-  test.skip(isMobile, "desktop project only");
-  await mockDashboard(page);
-  await page.goto("/");
-
-  const congested = [215, 71, 52] as [number, number, number];
-  await expect
-    .poll(() => countCanvasColor(page, congested), { timeout: 10_000 })
-    .toBeGreaterThan(0);
-
-  const panel = page.locator(".desktop-panel");
-  await panel.getByRole("tab", { name: "輕軌" }).click();
-  await expect
-    .poll(() => countCanvasColor(page, congested), { timeout: 10_000 })
-    .toBe(0);
+test("primary navigation supports keyboard arrows and Home", async ({ page }) => {
+  const home = page.getByRole("tab", { name: "出行", exact: true });
+  await home.focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(page.getByRole("tab", { name: "巴士", exact: true })).toBeFocused();
+  await expect(page.getByRole("searchbox", { name: "搜尋路線號" })).toBeVisible();
+  await page.keyboard.press("Home");
+  await expect(home).toBeFocused();
+  await expect(page.getByRole("heading", { name: "今日點樣出發？" })).toBeVisible();
 });
 
-test("bus and parking panels use normalized API data", async ({ page, isMobile }) => {
-  test.skip(isMobile, "desktop project only");
-  await mockDashboard(page);
-  await page.goto("/");
-  const panel = page.locator(".desktop-panel");
-
-  await panel.getByRole("tab", { name: "巴士" }).click();
-  await panel.locator(".route-grid button").first().click();
-  await expect(panel.locator(".eta-list")).toContainText("關閘總站");
-  await expect(panel.locator(".eta-list")).toContainText("即將進站");
-  await expect(panel.locator(".eta-list .eta-bus")).toContainText("AD2767");
-  await expect(panel.locator(".route-detail-head strong")).toHaveText("3");
-  await expect(panel.locator(".vehicle-row strong")).toHaveText("AD2767");
-  await expect(panel.locator(".vehicle-row")).toContainText("低地台");
-
-  await panel.getByRole("tab", { name: "泊車" }).click();
-  await expect(panel.getByText("下環街市")).toBeVisible();
-  await expect(panel.getByText("13")).toBeVisible();
+test("route selection opens stop-first details without a long catalog above them", async ({ page }) => {
+  await openRoute(page);
+  await expect(page.locator(".route-grid")).toHaveCount(0);
+  await expect(page.locator(".vehicle-details")).not.toHaveAttribute("open");
+  await page.locator(".stop-row").click();
+  await expect(page.locator(".waiting-card")).toBeInViewport();
+  await expect(page.locator(".waiting-card")).toContainText("關閘總站");
+  await expect(page.locator(".waiting-card")).toContainText("即將進站");
 });
 
-test("a focused bus route polls every two seconds", async ({ page, isMobile }) => {
-  test.skip(isMobile, "desktop project only");
-  const requestedAt: number[] = [];
-  await mockDashboard(page);
-  // Count before the shared dashboard mock answers; fallback keeps its fixture.
+test("route search states its scope and gives an empty result", async ({ page }) => {
+  await page.getByRole("tab", { name: "巴士", exact: true }).click();
+  await page.getByRole("searchbox", { name: "搜尋路線號" }).fill("unknown");
+  await expect(page.locator(".route-grid button")).toHaveCount(0);
+  await expect(page.getByText("搵唔到符合嘅結果")).toBeVisible();
+});
+
+test("suspended stops never promise boarding even when the bus slice says due", async ({ page }) => {
   await page.route(/\/api\/v1\/bus\/routes\/[^/]+\/eta\?/, async (route) => {
-    requestedAt.push(Date.now());
-    await route.fallback();
+    await route.fulfill({ json: { data: { routeName: "3", routeCode: "00003", direction: 0,
+      stops: [{ sequence: 0, stationCode: "M1/9", stationName: "關閘總站", stopsAway: 0, coordinates: [113.54918, 22.215502], trafficStatus: "normal", trafficLevel: 1, suspended: true }],
+      vehicles: [], routeSegments: [], diversion: { suspendedStops: [{ stationCode: "M1/9", stationName: "關閘總站" }] } },
+      meta: meta({ id: "bus", name: "Test source", url: "https://example.com" }) } });
   });
-  await page.goto("/");
-
-  const panel = page.locator(".desktop-panel");
-  await panel.getByRole("tab", { name: "巴士" }).click();
-  await panel.locator(".route-grid button").first().click();
-  await expect(panel.locator(".eta-list")).toContainText("即將進站");
-
-  requestedAt.length = 0;
-  await page.waitForTimeout(9_000);
-
-  // A 2 s cadence makes four or five requests in nine seconds; the old 5 s
-  // cadence made two.
-  expect(requestedAt.length).toBeGreaterThanOrEqual(3);
+  await openRoute(page);
+  await expect(page.locator(".stop-row")).not.toContainText("即將進站");
+  await page.locator(".stop-row").click();
+  await expect(page.locator(".waiting-card")).toContainText("暫停");
+  await expect(page.locator(".waiting-card")).not.toContainText("即將進站");
 });
 
-test("selecting a route from a long catalog scrolls its detail into view", async ({
-  page,
-  isMobile,
-}) => {
-  test.skip(isMobile, "desktop project only");
-  await mockDashboard(page);
-  await page.route("**/api/v1/bus/routes", async (route) => {
-    const longCatalog = Array.from({ length: 40 }, (_, index) => ({
-      routeName: String(index + 1),
-      routeCode: String(index + 1).padStart(5, "0"),
-      routeType: 0,
-      company: { id: "orange", name: "澳巴", color: "orange" },
-      hasChange: false,
-      live: true,
-    }));
-    await route.fulfill({
-      json: {
-        data: longCatalog,
-        meta: meta({ id: "bus-routes", name: "Test source", url: "https://example.com/" }),
-      },
-    });
-  });
-  await page.goto("/");
-  const panel = page.locator(".desktop-panel");
-
-  await panel.getByRole("tab", { name: "巴士" }).click();
-  await expect(panel.locator(".route-grid button")).toHaveCount(40);
-  await panel.locator(".route-grid button").first().click();
-
-  await expect(panel.locator(".route-detail-head")).toBeInViewport();
-  await expect(panel.locator(".eta-list")).not.toBeEmpty();
+test("saved waiting stops survive a reload and reopen the official route", async ({ page }) => {
+  await openRoute(page);
+  await page.locator(".stop-row").click();
+  await page.locator(".bus-workspace .save-button").click();
+  await page.reload();
+  await expect(page.locator(".saved-list button")).toContainText("關閘總站");
+  await page.locator(".saved-list button").click();
+  await expect(page.locator(".waiting-card")).toContainText("關閘總站");
 });
 
-test("traffic notices do not repeat the title as the body", async ({ page, isMobile }) => {
-  test.skip(isMobile, "desktop project only");
-  await mockDashboard(page);
-  await page.route("**/api/v1/traffic/notices", async (route) => {
-    await route.fulfill({
-      json: {
-        data: [
-          {
-            id: "notice-dup",
-            title: "同一段文字",
-            content: "同一段文字",
-            publishedAt: null,
-            category: "roadworks",
-            url: "https://www.dsat.gov.mo/",
-          },
-        ],
-        meta: meta({ id: "notices", name: "Test source", url: "https://example.com/" }),
-      },
-    });
-  });
-  await page.goto("/");
-  const panel = page.locator(".desktop-panel");
-
-  await panel.getByRole("tab", { name: "消息" }).click();
-  await panel.locator(".notice-more summary").click();
-  await expect(panel.locator(".notice-select strong")).toHaveText("同一段文字");
-  await expect(panel.locator(".notice-select p")).toHaveCount(0);
+test("bus polling stops when parking is open and resumes on return", async ({ page }) => {
+  let requests = 0;
+  page.on("request", (request) => { if (/\/bus\/routes\/[^/]+\/eta\?/.test(request.url())) requests += 1; });
+  await openRoute(page);
+  await expect.poll(() => requests, { timeout: 6_000 }).toBeGreaterThan(1);
+  await page.getByRole("tab", { name: "泊車", exact: true }).click();
+  const before = requests;
+  await page.waitForTimeout(4_500);
+  expect(requests).toBe(before);
+  await page.getByRole("tab", { name: "巴士", exact: true }).click();
+  await expect.poll(() => requests).toBeGreaterThan(before);
 });
 
-test("parking list selects and highlights a car park", async ({ page, isMobile }) => {
-  test.skip(isMobile, "desktop project only");
-  await mockDashboard(page);
-  await page.goto("/");
-  const panel = page.locator(".desktop-panel");
-
-  await panel.getByRole("tab", { name: "泊車" }).click();
-  const row = panel.locator(".parking-row").first();
-  await expect(row).toBeVisible();
-  await expect(row).toHaveAttribute("aria-pressed", "false");
-  await row.click();
-  await expect(row).toHaveAttribute("aria-pressed", "true");
-  await expect(row).toHaveClass(/is-active/);
+test("parking switches vehicle type and displays its complete breakdown", async ({ page }) => {
+  await page.getByRole("tab", { name: "泊車", exact: true }).click();
+  await expect(page.locator(".parking-row")).toContainText("13");
+  await page.getByLabel("車種", { exact: true }).selectOption("motorcycle");
+  await expect(page.locator(".parking-count strong")).toHaveText("48");
+  await page.locator(".parking-row").click();
+  await expect(page.locator(".parking-detail")).toBeInViewport();
+  await expect(page.locator(".parking-breakdown")).toContainText("傷殘車位");
+  await page.locator(".parking-detail .save-button").click();
+  await page.getByRole("tab", { name: "出行", exact: true }).click();
+  await expect(page.locator(".saved-list")).toContainText("下環街市");
 });
 
-test("bus GLB models load only after a route is focused at street zoom", async ({
-  page,
-  isMobile,
-}) => {
-  test.skip(isMobile, "desktop project only");
-  await mockDashboard(page);
-  const modelRequests: string[] = [];
-  page.on("request", (request) => {
-    if (request.url().includes(".glb")) modelRequests.push(request.url());
-  });
-  await page.goto("/");
-  await page.waitForTimeout(1_000);
-  expect(modelRequests).toHaveLength(0);
+test("switching sections exposes the search field at the top", async ({ page }) => {
+  await openRoute(page);
+  await page.locator(".vehicle-details").scrollIntoViewIfNeeded();
+  await page.getByRole("tab", { name: "泊車", exact: true }).click();
+  await expect(page.getByRole("searchbox", { name: "搜尋停車場" })).toBeInViewport();
+});
 
-  const panel = page.locator(".desktop-panel");
-  await panel.getByRole("tab", { name: "巴士" }).click();
-  await panel.locator(".route-grid button").first().click();
-  await expect(panel.locator(".eta-list")).toContainText("關閘總站");
-  expect(modelRequests).toHaveLength(0);
+test("published news includes dates, availability and its incident-feed limitation", async ({ page }) => {
+  await openMore(page, "交通公告");
+  await expect(page.locator(".published-list")).toContainText("官方航班暫停通知");
+  await expect(page.locator(".notice-explanation")).toContainText("並非完整即時事故流");
+  await expect(page.locator(".data-warning")).toContainText("部分來源");
+  await expect(page.locator(".published-list")).toContainText("發布");
+});
 
-  for (let index = 0; index < 6; index += 1) {
-    await page.locator(".maplibregl-ctrl-zoom-in").click();
-    await page.waitForTimeout(400);
+test("unavailable weather is not rendered as no active warnings", async ({ page }) => {
+  await page.route("**/api/v1/weather", (route) => route.fulfill({ status: 503, json: { message: "Unavailable" } }));
+  await page.reload();
+  await expect(page.getByText("未取得天氣資料，無法判斷有否警告。")).toBeVisible();
+  await expect(page.getByText("現時沒有生效警告")).toHaveCount(0);
+});
+
+test("source directory exposes failures and a retry", async ({ page }) => {
+  await page.route("**/api/v1/borders", (route) => route.fulfill({ status: 503, json: { message: "Unavailable" } }));
+  await page.reload();
+  await openMore(page, "資料來源與狀態");
+  await expect(page.locator(".source-directory .has-error")).toContainText("暫時無法取得資料");
+  await expect(page.locator(".source-directory").getByRole("button", { name: "重新取得" }).first()).toBeVisible();
+});
+
+test("language and appearance remain usable", async ({ page }) => {
+  await page.getByRole("button", { name: "EN", exact: true }).click();
+  await expect(page.getByRole("tab", { name: "Travel", exact: true })).toBeVisible();
+  const before = await page.locator(".resident-app").getAttribute("data-theme");
+  await page.getByRole("button", { name: "Appearance", exact: true }).click();
+  await expect(page.locator(".resident-app")).toHaveAttribute("data-theme", before === "light" ? "dark" : "light");
+  await page.reload();
+  await expect(page.locator(".resident-app")).toHaveAttribute("data-theme", before === "light" ? "dark" : "light");
+});
+
+test("LRT station selection opens a usable map and keeps the schematic notice", async ({ page, isMobile }) => {
+  await openMore(page, "輕軌");
+  await page.locator(".lrt-lines button").first().click();
+  await expect(page.locator(".lrt-station-button")).toHaveCount(2);
+  await page.locator(".lrt-station-button").first().click();
+  await expect(page.locator(".workspace-map")).toBeVisible();
+  if (isMobile) {
+    await page.getByRole("button", { name: "列表", exact: true }).click();
+    await expect(page.locator(".workspace-panel")).toBeVisible();
   }
-  await expect.poll(() => modelRequests.length, { timeout: 15_000 }).toBeGreaterThan(0);
+  await expect(page.locator(".workspace-panel")).toContainText("地圖列車為示意動畫");
 });
 
-test("2D mode keeps flat bus markers and loads no GLB models", async ({
-  page,
-  isMobile,
-}) => {
-  test.skip(isMobile, "desktop project only");
-  await mockDashboard(page);
-  const modelRequests: string[] = [];
-  page.on("request", (request) => {
-    if (request.url().includes(".glb")) modelRequests.push(request.url());
-  });
-  await page.goto("/");
-
-  await page.getByRole("button", { name: /圖層/ }).click();
-  await page.locator(".layer-mode button").filter({ hasText: "2D" }).click();
-  const panel = page.locator(".desktop-panel");
-  await panel.getByRole("tab", { name: "巴士" }).click();
-  await panel.locator(".route-grid button").first().click();
-  await expect(panel.locator(".eta-list")).toContainText("關閘總站");
-
-  for (let index = 0; index < 6; index += 1) {
-    await page.locator(".maplibregl-ctrl-zoom-in").click();
-    await page.waitForTimeout(300);
-  }
-  await page.waitForTimeout(1_000);
-  expect(modelRequests).toHaveLength(0);
-
-  await page.locator(".layer-mode button").filter({ hasText: "3D" }).click();
-  await expect.poll(() => modelRequests.length, { timeout: 15_000 }).toBeGreaterThan(0);
+test("3D loads models on demand while 2D keeps flat markers", async ({ page, isMobile }) => {
+  const models: string[] = [];
+  page.on("request", (request) => { if (request.url().includes(".glb")) models.push(request.url()); });
+  await openRoute(page);
+  await page.locator(".stop-row").click();
+  await showMap(page, isMobile);
+  await expect(page.locator(".maplibregl-canvas")).toBeVisible();
+  expect(models).toHaveLength(0);
+  await page.getByRole("button", { name: "圖層", exact: true }).click();
+  await page.locator(".workspace-layer-menu").getByRole("button", { name: "3D", exact: true }).click();
+  await expect.poll(() => models.length, { timeout: 15_000 }).toBeGreaterThan(0);
+  await expect.poll(() => models.some((url) => url.endsWith("bus-stop.glb"))).toBe(true);
+  await expect.poll(() => models.some((url) => url.endsWith("bus-tcm.glb"))).toBe(true);
 });
 
-test("LRT panel selects a line and lists its stations", async ({ page, isMobile }) => {
-  test.skip(isMobile, "desktop project only");
-  await mockDashboard(page);
-  await page.goto("/");
-  const panel = page.locator(".desktop-panel");
-
-  await panel.getByRole("tab", { name: "輕軌" }).click();
-  await panel.locator(".lrt-lines button").first().click();
-
-  await expect(panel.locator(".lrt-stations li")).toHaveCount(2);
-  await expect(panel.locator(".lrt-stations")).toContainText("氹仔碼頭站");
-  await expect(panel.locator(".lrt-interchange")).toHaveText("轉乘站");
-});
-
-test("camera panel opens the accessible viewer", async ({ page, isMobile }) => {
-  test.skip(isMobile, "desktop project only");
-  await mockDashboard(page);
-  await page.goto("/");
-  const panel = page.locator(".desktop-panel");
-
-  await panel.getByRole("tab", { name: "鏡頭" }).click();
-  await panel.getByRole("button", { name: /新馬路/ }).click();
-
+test("camera viewer opens and closes with the keyboard", async ({ page }) => {
+  await openMore(page, "交通鏡頭");
+  await page.locator(".camera-list button").first().click();
   await expect(page.getByRole("dialog")).toBeVisible();
-  await expect(page.getByRole("dialog").getByText("新馬路與南灣大馬路交界").first()).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
 });
 
-test("mobile bottom sheet expands and language changes", async ({ page, isMobile }) => {
-  test.skip(!isMobile, "mobile project only");
-  await mockDashboard(page);
-  await page.goto("/");
-
-  const sheet = page.locator(".mobile-sheet");
-  await expect(sheet).toBeVisible();
-  await expect(sheet).toHaveAttribute("data-expanded", "false");
-  await sheet.locator(".sheet-grip").click();
-  await expect(sheet).toHaveAttribute("data-expanded", "true");
-
-  await page.getByTitle("English").click();
-  await expect(sheet.getByText("Overview")).toBeVisible();
+test("AI answer stays available when navigating to another module", async ({ page }) => {
+  await openMore(page, "AI 助手");
+  await page.locator(".assistant-suggestions button").first().click();
+  await expect(page.locator(".assistant-answer")).toContainText("友誼大橋");
+  await page.getByRole("tab", { name: "泊車", exact: true }).click();
+  await openMore(page, "AI 助手");
+  await expect(page.locator(".assistant-answer")).toContainText("友誼大橋");
 });
 
-test("mobile bottom sheet drags between collapsed and expanded", async ({ page, isMobile }) => {
-  test.skip(!isMobile, "mobile project only");
-  await mockDashboard(page);
-  await page.goto("/");
-
-  const sheet = page.locator(".mobile-sheet");
-  const grip = page.locator(".sheet-grip");
-  await expect(sheet).toHaveAttribute("data-expanded", "false");
-
-  const drag = async (distance: number) => {
-    const box = await grip.boundingBox();
-    if (!box) throw new Error("sheet grip is not visible");
-    const x = box.x + box.width / 2;
-    const y = box.y + box.height / 2;
-    await page.mouse.move(x, y);
-    await page.mouse.down();
-    await page.waitForTimeout(60);
-    await page.mouse.move(x, y + distance, { steps: 10 });
-    await page.waitForTimeout(60);
-    await page.mouse.up();
-  };
-
-  await drag(-90);
-  await expect(sheet).toHaveAttribute("data-expanded", "true", { timeout: 10_000 });
-  // The sheet height animates for 220 ms. Let it settle before measuring the
-  // grip again, otherwise the second drag starts from a stale box.
-  await page.waitForTimeout(400);
-  await drag(90);
-  await expect(sheet).toHaveAttribute("data-expanded", "false", { timeout: 10_000 });
+test("nearby uses browser location without sending coordinates to the public API", async ({ page, context }) => {
+  await context.grantPermissions(["geolocation"]);
+  await context.setGeolocation({ longitude: 113.5345126, latitude: 22.1907894 });
+  const outbound: string[] = [];
+  page.on("request", (request) => { if (request.url().includes("/api/v1/")) outbound.push(`${request.url()} ${request.postData() ?? ""}`); });
+  await page.getByRole("button", { name: "使用目前位置", exact: true }).click();
+  await expect(page.locator(".nearby-row")).toContainText("直線距離");
+  expect(outbound.every((request) => !request.includes("113.5345126") && !request.includes("22.1907894"))).toBe(true);
 });
 
-test("AI tutor returns a grounded answer", async ({ page, isMobile }) => {
-  test.skip(isMobile, "desktop project only");
-  await mockDashboard(page);
-  let requestBody: { question: string; locale: string } | undefined;
-  await page.route("**/api/v1/assistant", async (route) => {
-    requestBody = route.request().postDataJSON() as {
-      question: string;
-      locale: string;
-    };
-    await route.fulfill({
-      json: {
-        data: {
-          answer: "友誼大橋現在需要約 4 分鐘。先比較兩個方向的行車時間，再想想天氣是否相關。",
-          model: "test-model",
-          locale: "zh-Hant",
-          snapshotAt: "2026-10-09T07:00:00.000Z",
-          contextSummary: ["跨海大橋行車時間（2 項）", "天氣：27°C、濕度 80%"],
-          action: { kind: "bus", routeCode: "00003", direction: 0 },
-        },
-        meta: meta({
-          id: "assistant",
-          name: "Test model",
-          url: "https://example.com/",
-        }),
-      },
-    });
-  });
-  await page.goto("/");
-  const panel = page.locator(".desktop-panel");
+test("a real touch swipe scrolls the catalog without selecting a route", async ({ page, isMobile }) => {
+  test.skip(!isMobile, "touch project");
+  await page.route("**/api/v1/bus/routes", (route) => route.fulfill({ json: { data: Array.from({ length: 80 }, (_, i) => ({ routeName: String(i + 1), routeCode: String(i + 1).padStart(5, "0"), routeType: 0, company: { id: "orange", name: "澳巴", color: "orange" }, hasChange: false, live: true })), meta: meta({ id: "routes", name: "Test source", url: "https://example.com" }) } }));
+  await page.reload();
+  await page.getByRole("tab", { name: "巴士", exact: true }).tap();
+  await expect(page.locator(".route-grid button")).toHaveCount(80);
+  const box = await page.locator(".workspace-scroll").boundingBox();
+  const x = box!.x + box!.width / 2;
+  const start = box!.y + box!.height * .8;
+  const end = box!.y + box!.height * .2;
+  const session = await page.context().newCDPSession(page);
+  await session.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y: start }] });
+  for (let step = 1; step <= 10; step += 1) {
+    await session.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x, y: start + (end-start) * step / 10 }] });
+    await page.waitForTimeout(16);
+  }
+  await session.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  await expect.poll(() => page.locator(".workspace-scroll").evaluate((element) => element.scrollTop)).toBeGreaterThan(100);
+  await expect(page.locator(".route-detail-head")).toHaveCount(0);
+  await page.getByRole("tab", { name: "泊車", exact: true }).tap();
+  await expect(page.getByRole("searchbox", { name: "搜尋停車場" })).toBeInViewport();
+});
 
-  await panel.getByRole("tab", { name: "AI 助手" }).click();
-  await panel.locator(".assistant-suggestions button").first().click();
+test("layout fits narrow phones, tablets and desktop widths", async ({ page }) => {
+  for (const width of [320, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    for (const button of await page.locator(".workspace-nav button").all()) {
+      const box = await button.boundingBox();
+      expect(box!.width).toBeGreaterThanOrEqual(44);
+      expect(box!.height).toBeGreaterThanOrEqual(44);
+    }
+  }
+});
 
-  await expect(panel.locator(".assistant-answer")).toContainText("友誼大橋");
-  await expect(panel.locator(".assistant-context")).toContainText("跨海大橋行車時間");
-  expect(requestBody?.locale).toBe("zh-Hant");
-  expect(requestBody?.question.length).toBeGreaterThan(0);
 
-  await expect(panel.locator(".assistant-action")).toContainText("開啟巴士分頁");
-  await panel.locator(".assistant-action").click();
-  await expect(panel.getByRole("tab", { name: "巴士" })).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
-  await expect(panel.locator(".route-detail-head strong")).toHaveText("3");
+test("a homepage AI question opens its answer with snapshot evidence", async ({ page }) => {
+  let question = "";
+  await page.route("**/api/v1/assistant", async (route) => { question = route.request().postDataJSON().question; await route.fallback(); });
+  await page.locator("#home-question").fill("而家邊條橋比較暢順？");
+  await page.locator(".home-ai form").getByRole("button").click();
+  await expect(page.getByRole("tab", { name: "AI 助手", exact: true })).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator(".assistant-answer")).toContainText("友誼大橋");
+  await expect(page.locator(".assistant-context")).toContainText("官方道路狀態");
+  await expect(page.locator(".assistant-note")).toBeVisible();
+  expect(question).toBe("而家邊條橋比較暢順？");
+});
+
+test("AI provider failure shows an unavailable answer", async ({ page }) => {
+  await page.route("**/api/v1/assistant", (route) => route.fulfill({ status: 503, json: { message: "Unavailable" } }));
+  await page.locator("#home-question").fill("巴士有冇改道？");
+  await page.locator(".home-ai form").getByRole("button").click();
+  await expect(page.locator(".assistant-entry .error-copy")).toBeVisible();
+  await expect(page.locator(".assistant-answer")).toHaveCount(0);
+});
+
+
+test("hidden historical LRT faults are collapsed instead of shown as current service", async ({ page }) => {
+  await page.route("**/api/v1/lrt/notices", (route) => route.fulfill({ json: { data: [{ id: "old", title: "2024 舊故障消息", content: "當時的服務安排", publishedAt: "2024-09-29T06:41:07.000Z", active: false }], meta: meta({ id: "lrt-notices", name: "Test source", url: "https://example.com" }) } }));
+  await page.reload();
+  await page.getByRole("tab", { name: "輕軌", exact: true }).click();
+  await expect(page.locator(".historical-notices")).not.toHaveAttribute("open");
+  await expect(page.getByText("2024 舊故障消息", { exact: true })).not.toBeVisible();
+  await page.locator(".historical-notices summary").click();
+  await expect(page.getByText("2024 舊故障消息", { exact: true })).toBeVisible();
 });

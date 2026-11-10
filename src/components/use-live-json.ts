@@ -27,6 +27,7 @@ export function useLiveJson<T>(
   });
   const controllerRef = useRef<AbortController | null>(null);
   const failuresRef = useRef(0);
+  const resourceRef = useRef(url);
 
   const load = useCallback(
     async (background = false): Promise<boolean> => {
@@ -47,6 +48,7 @@ export function useLiveJson<T>(
           cache: "no-store",
         });
         const body = (await response.json()) as ApiEnvelope<T> | { message?: string };
+        if (controller.signal.aborted) return false;
         if (!response.ok || !("data" in body)) {
           throw new Error("message" in body ? body.message : `HTTP ${response.status}`);
         }
@@ -70,8 +72,13 @@ export function useLiveJson<T>(
   useEffect(() => {
     // A different URL is a different resource. Clear the previous payload so
     // a route switch cannot show the old route's arrivals while it reloads.
-    setState({ data: null, meta: null, error: null, loading: enabled });
+    const changed = resourceRef.current !== url;
+    resourceRef.current = url;
+    setState((current) => changed
+      ? { data: null, meta: null, error: null, loading: enabled }
+      : { ...current, loading: enabled && current.data === null });
     failuresRef.current = 0;
+    if (!enabled) return;
     let cancelled = false;
     let timer: number | undefined;
 
@@ -107,7 +114,7 @@ export function useLiveJson<T>(
       document.removeEventListener("visibilitychange", onVisibility);
       controllerRef.current?.abort();
     };
-  }, [enabled, intervalMs, load]);
+  }, [enabled, intervalMs, load, url]);
 
   return { ...state, refresh: () => load(true) };
 }

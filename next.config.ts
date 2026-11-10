@@ -26,6 +26,7 @@ const nextConfig: NextConfig = {
   output: "standalone",
   poweredByHeader: false,
   reactStrictMode: true,
+  devIndicators: false,
   // The dashboard is often opened as 127.0.0.1 during local testing. Without
   // this entry Next 16 blocks dev assets for that hostname and the map never
   // initializes.

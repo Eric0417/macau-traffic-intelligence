@@ -1,0 +1,61 @@
+{
+  "date": "2026-11-10",
+  "scenario": "Frozen publisher position, selected bus stop, 3D enabled; camera/shaders settle for 2s, then count WebGL drawElements/drawArrays over 3s while normal 2s route polling continues",
+  "environment": "Local Next.js dev server, repository Playwright Chromium, mocked public API and OpenFreeMap style; same Mac; one worker",
+  "desktop": {
+    "before": {
+      "drawCalls": 4000,
+      "antialias": false,
+      "samples": 0
+    },
+    "after": {
+      "drawCalls": 64,
+      "antialias": true,
+      "samples": 4
+    },
+    "canvasPixels": [
+      832,
+      644
+    ],
+    "clientPixels": [
+      832,
+      644
+    ],
+    "devicePixelRatio": 1
+  },
+  "mobile": {
+    "before": {
+      "drawCalls": 1984,
+      "antialias": false,
+      "samples": 0
+    },
+    "after": {
+      "drawCalls": 64,
+      "antialias": true,
+      "samples": 4
+    },
+    "canvasPixels": [
+      1170,
+      1608
+    ],
+    "clientPixels": [
+      390,
+      536
+    ],
+    "devicePixelRatio": 3
+  },
+  "verification": [
+    "Frozen-position/restart test passes on desktop and emulated mobile",
+    "Existing six map-rendering cases pass",
+    "Typecheck, ESLint and production build pass"
+  ],
+  "limits": "Draw calls are workload counts, not FPS, INP or physical-device performance. Native canvas resolution was already correct. Antialias capability depends on actual device. No supersampling or model world-size changes were made.",
+  "fullSuite": {
+    "passed": 65,
+    "skipped": 1,
+    "desktopDrawCallsInThreeSeconds": 64,
+    "mobileDrawCallsInThreeSeconds": 128,
+    "workers": 4,
+    "drawCallBudget": 200
+  }
+}

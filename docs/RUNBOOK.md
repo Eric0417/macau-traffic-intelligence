@@ -72,3 +72,11 @@ Use the Render dashboard, `render deploys` plus the rollback action, or push a r
 - OpenFreeMap style availability
 - Official camera HLS availability
 - Upstream token format changes in `src/server/dsat-token.ts`
+
+## Resident revision release notes
+
+The `codex/resident-workspace` revision is local and not deployed. Before releasing it, verify Node certificate validation for DSAT parking, legacy notices and DSAT RSS, and set the existing DeepSeek `ASSISTANT_API_KEY` on the server. The local checkout currently has no assistant key; a real provider response has not been validated. Do not put keys in client configuration or commits.
+
+After an approved release, invalidate only the affected cached source records (`borders`, `parking`, `notices`, `lrt-network`, `lrt-notices`) or wait for their TTLs. The old cache can contain generated border minutes, misparsed timestamps or the old LRT geometry. Keep the source ids and API v1 unchanged. Do not flush user or unrelated application data. Restarting this local development server clears its process-memory cache.
+
+`official-news` is enabled by default and controlled by `SOURCE_OFFICIAL_NEWS_ENABLED`. Inspect `data.feeds[].available` as well as envelope stale state. A successful GCS feed does not make DSAT RSS available. None of these feeds provides a complete ongoing-incident list.

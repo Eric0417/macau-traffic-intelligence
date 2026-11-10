@@ -2,9 +2,13 @@
 
 Live: https://macau-traffic-intelligence.onrender.com
 
-Macau Traffic Intelligence is a map-first public transport dashboard for Macau. It combines live road congestion, bridge travel times, official HLS traffic cameras, live bus positions and stops-away counts, parking availability, weather warnings, border information, traffic notices, and the official LRT network.
+Macau Traffic Intelligence is a resident travel workspace for Macau. It combines road congestion, bridge travel times, official HLS cameras, bus positions and stops-away counts, parking by vehicle type, weather, border status, published traffic announcements and the LRT network.
 
-The interface is a dark, data-first transit console: system typography, translucent dark materials, a single system-blue tint for interactive state, semantic status colours, a vertical navigation rail on desktop, and a bottom tab bar with a draggable sheet on mobile. It is a web approximation of Apple's design guidance, not an Apple component kit, and it uses the platform system font on Apple devices with a matching sans fallback elsewhere.
+The local resident-workspace revision has five primary sections: Travel, Buses, LRT, Parking and AI. Desktop shows a list beside the map. Phones switch between a normal scrolling list and a map, with navigation outside the content. Day/night appearance and favourites stay on the device. Location is requested explicitly and used only for straight-line parking distances in the browser. The map starts in 2D; optional 3D includes schematic buses, signs and LRT platforms.
+
+AI has a homepage question form and a primary navigation entry. Answers use the server data snapshot and show its time and evidence. DeepSeek remains the configured provider default; this local environment currently needs `ASSISTANT_API_KEY` to produce real answers.
+
+The 2026-11-10 revision is local and has not been deployed. The live link above identifies the existing service. Execution plan: [tasks/plan.md](tasks/plan.md). Verification and remaining source limitations: [docs/qa/resident-workspace/VERIFICATION.md](docs/qa/resident-workspace/VERIFICATION.md).
 
 The application is an independent implementation inspired by the architecture and open-source spirit of [HK Traffic Intelligence](https://github.com/keithligh/hk-traffic-intelligence). It does not reuse that project's source code.
 
@@ -49,18 +53,19 @@ Next 16 allows one dev server per project and blocks dev assets from hostnames i
 
 ## Data Refresh
 
-The server fetches live data at runtime, so a redeploy is not needed when a source changes. Bus routes and the LRT network refresh every 6 hours, live bus positions every 2 seconds, roads every 60 seconds, parking every 30 seconds, and notices every 5 minutes. The LRT network is rebuilt from OpenStreetMap route relations with the checked-in `data/lrt-network.json` as fallback.
+The server fetches live data at runtime, so a redeploy is not needed when a source changes. Bus routes and the LRT network refresh every 6 hours, live bus positions every 2 seconds, roads every 60 seconds, parking every 30 seconds, published arrangements every 5 minutes, and government RSS news every 3 minutes. A selected live bus route polls only while the bus view or its AI map context is active. The LRT network is rebuilt from OpenStreetMap route relations with the checked-in `data/lrt-network.json` as fallback.
 
 After a deploy, run `WARMUP_BASE_URL=https://macau-traffic-intelligence.onrender.com npm run warmup` so the first real visitor does not wait for the cold LRT rebuild. The health endpoint also reports per-source failure counts.
 
 ## Public API
 
-All response bodies use `{ data, meta }`. `meta` reports the source, source timestamp, generated time, TTL, and whether the payload is stale.
+All response bodies use `{ data, meta }`. `meta` reports the source, cache retrieval timestamp, generated time, TTL, and whether the payload is stale.
 
 ```text
 GET /api/v1/traffic/roads
 GET /api/v1/traffic/bridges
 GET /api/v1/traffic/notices
+GET /api/v1/traffic/news
 GET /api/v1/cameras
 GET /api/v1/bus/routes
 GET /api/v1/bus/routes/{routeCode}/eta?direction=0|1
@@ -97,15 +102,17 @@ Set the required source flags from `.env.example` only when a source must be dis
 - Live bus markers use the position estimate the official report publishes per plate and glide along the official route polyline toward the newest estimate at a bounded bus speed, so a coarse step is absorbed as motion instead of a jump; the publisher's positions are not GPS, and each marker states the stop its bus is approaching. A 3D/2D mode control in the layer menu switches to flat, enlarged livery-coloured markers when the 3D models are hard to read.
 - The selected bus route is drawn from the official `route/traffic` polyline and coloured by the official traffic level of each segment.
 - Focusing a bus route hides the camera, LRT, congestion, and 3D building layers, keeps the route stops labelled, and shows buses as rotated 3D icons placed at the position the official report publishes.
-- The 3D map can be rotated and tilted freely; the compass in the navigation control resets the bearing.
-- At street zoom, buses switch from livery-coloured markers to generic GLB models rendered at 1.8x display scale, and the selected LRT line shows its extruded schematic train. The bus models are painted after the operators' current liveries (TCM orange/white, Transmac yellow/blue, LRT "Ocean Cruiser" pale blue with orange wave). The train moves along the line as a labelled schematic animation; it is not a live position.
+- Mouse devices can rotate and tilt the 3D map. Touch devices use pan and pinch zoom with rotation and touch pitch disabled; the compass resets the bearing.
+- In optional 3D, street zoom loads low-polygon operator-livery buses, red/white cylindrical bus-stop signs and LRT canopy/platform markers. The five GLBs total 962,612 bytes. These are schematic assets, not verified vehicle identities or surveyed station buildings. Blender source, previews and references are in `docs/models/`. Flat markers remain available when a model fails to load.
 - Route buttons only warn about real suspensions reported by the diversion feed, not the raw `routeChange` flag.
-- Each tab narrows the map to its subject: parking lists and maps the DSAT car parks (OpenStreetMap coordinates, ODbL, 78 of 92 matched), clicking one flies to it and highlights it, cameras show only camera markers, and Alerts highlights the monitored roads named in the selected incident.
-- The Alerts tab leads with incident-classified DSAT messages (accidents, fires, flooding, fallen trees, collisions, urgent repairs); planned roadworks and diversions are collapsed below. There is no separate official real-time accident feed, and the Macau news portals block automated access, so DSAT special messages remain the source.
-- The LRT tab selects a line, highlights its stations on the map, and lists them with interchange badges; no live train positions are claimed because DSAT/MLM publish none, and the moving train is labelled as a schematic animation.
+- Each section narrows the map to its subject. Parking uses checked-in coordinates for 92 DSAT facilities, 78 from OpenStreetMap and 14 from the government GIS layer. Selecting one flies to its position. Cameras show camera markers. A selected announcement can match monitored road names without claiming a verified accident location.
+- Government transport news uses GCS and DSAT RSS. Published arrangements remain separate. Publisher dates and retrieval times are distinguished. These feeds do not establish a complete live incident service or prove an event is ongoing. Empty or failed feeds do not mean no accidents. See `docs/SOURCE_AUDIT_2026-11-10.md`.
+- Border waiting minutes remain unknown until a numeric publisher field is verified; qualitative status is kept. Invalid parking timestamps remain unknown. Source failures are visible and may retain older data with delayed status.
+- LRT geometry follows OSM track ways. Assembly now joins both ends without invented straight-line shortcuts, and selected interchange platforms use per-line coordinates. The two train carriages turn independently and remain explicitly schematic.
+- The LRT tab selects a line, highlights its stations on the map, and lists them with interchange badges; no live train positions are claimed because this app has no verified official live-position source, and the moving train is labelled as a schematic animation.
 - The 3D view tilts the camera and shows extruded OpenFreeMap buildings on a flat ground plane, so roads stay level; it can be switched off in the layer menu.
 - Camera streams are not recorded or proxied.
-- The AI learning assistant answers from a compact snapshot of the cached normalized data. When a question names a bus route or a road, that live detail is loaded first, and the official LRT network is included with the statement that no live train positions exist. Bus positions remain the publisher's own estimates, never GPS, and the assistant works with stops-away counts rather than invented minutes; route place questions are checked against the official stop list on the server. Answers can focus the map on the named bus route or LRT line, and a button opens the matching panel. The model never receives raw upstream payloads, credentials, or personal data. Answers are attributed to the configured model and are not stored.
+- The AI learning assistant answers from a compact snapshot of the cached normalized data. When a question names a bus route or a road, that live detail is loaded first, and the official LRT network is included with the statement that this app has no verified official live train positions. Bus positions remain the publisher's own estimates, never GPS, and the assistant works with stops-away counts rather than invented minutes; route place questions are checked against the official stop list on the server. Answers can focus the map on the named bus route or LRT line, and a button opens the matching panel. The model never receives raw upstream payloads, credentials, or personal data. Answers are attributed to the configured model and are not stored.
 
 The application code is MIT licensed. Data remains subject to the terms and attribution requirements of its publishing organisation.
 

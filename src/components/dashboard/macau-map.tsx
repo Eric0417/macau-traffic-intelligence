@@ -5,8 +5,12 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import type {
   GeoJSONSource,
   Map as MapLibreMap,
+  BackgroundLayerSpecification,
+  FillLayerSpecification,
+  LineLayerSpecification,
+  SymbolLayerSpecification,
 } from "maplibre-gl";
-import { MACAU_BOUNDS, MACAU_CENTER } from "@/lib/config";
+import { BUS_MODEL_MIN_ZOOM, MACAU_BOUNDS, MACAU_CENTER } from "@/lib/config";
 import type {
   BusEta,
   Camera,
@@ -20,6 +24,7 @@ import { useLanguage } from "@/components/language-provider";
 import type {
   Bus3DLayer as Bus3DLayerType,
   Bus3DVehicle,
+  TransitLandmark,
 } from "@/components/dashboard/bus-3d-layer";
 import type { BusLivery } from "@/components/dashboard/bus-3d-layer";
 import {
@@ -28,9 +33,11 @@ import {
   createBusMotion,
   pathLengths,
   pointAtDistance,
+  projectOnPath,
 } from "@/components/dashboard/bus-motion";
 import type { BusMotion } from "@/components/dashboard/bus-motion";
-import { lrtTrainCollection } from "@/components/dashboard/vehicle-3d";
+import { TRANSIT_DISPLAY_SCALE, type TransitModelKind } from "./transit-display";
+import { lrtTrainCollection, trainCarPoses } from "@/components/dashboard/vehicle-3d";
 
 export type MapLayer = "roads" | "cameras" | "lrt";
 export type MapFocus =
@@ -60,6 +67,12 @@ interface MacauMapProps {
   view3d: boolean;
   visibleLayers: Record<MapLayer, boolean>;
   onCameraSelect: (camera: Camera) => void;
+  parkingKind: keyof ParkingFacility["availability"];
+  selectedStopKey: string | null;
+  onStopSelect: (key: string) => void;
+  selectedLrtStation: string | null;
+  onLrtStationSelect: (id: string) => void;
+  theme: "light" | "dark";
 }
 
 function cameraCollection(cameras: Camera[]) {
@@ -86,7 +99,7 @@ function busCollections(busRoute: BusEta | null) {
       ? [
           {
             type: "Feature" as const,
-            properties: { id: `${stop.stationCode}-${stop.sequence}`, name: stop.stationName },
+            properties: { id: `${stop.sequence}:${stop.stationCode}`, name: stop.stationName },
             geometry: { type: "Point" as const, coordinates: stop.coordinates },
           },
         ]
@@ -116,7 +129,7 @@ function parkingTone(available: number | null): "good" | "medium" | "low" | "unk
   return "good";
 }
 
-function parkingFeatures(facilities: ParkingFacility[]) {
+function parkingFeatures(facilities: ParkingFacility[], kind: keyof ParkingFacility["availability"] = "lightVehicle") {
   return facilities.flatMap((facility) =>
     facility.coordinates
       ? [
@@ -125,8 +138,8 @@ function parkingFeatures(facilities: ParkingFacility[]) {
             properties: {
               id: facility.id,
               name: facility.name,
-              tone: parkingTone(facility.availability.lightVehicle),
-              available: facility.availability.lightVehicle ?? -1,
+              tone: parkingTone(facility.availability[kind]),
+              available: facility.availability[kind] ?? -1,
             },
             geometry: {
               type: "Point" as const,
@@ -152,6 +165,10 @@ function noticeRoadFeatures(
   });
 }
 
+function lrtStationCoordinates(station: LrtNetwork["stations"][number], line: string | null): [number, number] {
+  return line ? station.lineCoordinates?.[line] ?? station.coordinates : station.coordinates;
+}
+
 function lrtSelection(
   network: LrtNetwork | null,
   lineRef: string | null,
@@ -173,11 +190,12 @@ function lrtSelection(
       features: stations.map((station) => ({
         type: "Feature" as const,
         properties: {
+          id: station.id,
           name: station.name[locale] || station.name["zh-Hant"],
           interchange: station.interchange,
           color: line?.properties.color ?? "#0f766e",
         },
-        geometry: { type: "Point" as const, coordinates: station.coordinates },
+        geometry: { type: "Point" as const, coordinates: lrtStationCoordinates(station, lineRef) },
       })),
     },
   };
@@ -201,25 +219,50 @@ export function MacauMap({
   view3d,
   visibleLayers,
   onCameraSelect,
+  parkingKind,
+  selectedStopKey,
+  onStopSelect,
+  selectedLrtStation,
+  onLrtStationSelect,
+  theme,
 }: MacauMapProps) {
   const { locale, t } = useLanguage();
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
+  const basePaintRef = useRef(new Map<string, {
+    type: string;
+    paint: Pick<NonNullable<BackgroundLayerSpecification["paint"]>, "background-color">
+      & Pick<NonNullable<FillLayerSpecification["paint"]>, "fill-color">
+      & Pick<NonNullable<LineLayerSpecification["paint"]>, "line-color">
+      & Pick<NonNullable<SymbolLayerSpecification["paint"]>, "text-color" | "text-halo-color">;
+  }>());
   const [mapReady, setMapReady] = useState(false);
-  const [bus3dReady, setBus3dReady] = useState(false);
+  const busHasRoute = Boolean(busRoute);
+  const [readyBusModels, setReadyBusModels] = useState<TransitModelKind[]>([]);
+  const bus3dReady = readyBusModels.includes(busColor === "orange" ? "tcm" : "transmac");
+  const [transitLayerReady, setTransitLayerReady] = useState(false);
+  const [viewportVersion, setViewportVersion] = useState(0);
+  const [mapVisible, setMapVisible] = useState(true);
   const camerasRef = useRef(cameras);
   const onCameraSelectRef = useRef(onCameraSelect);
   const onParkingSelectRef = useRef(onParkingSelect);
+  const onStopSelectRef = useRef(onStopSelect);
+  const onLrtStationSelectRef = useRef(onLrtStationSelect);
   const view3dRef = useRef(view3d);
   const fittedRouteRef = useRef<string | null>(null);
   const fittedLrtRef = useRef<string | null>(null);
   const bus3dLayerRef = useRef<Bus3DLayerType | null>(null);
   const bus3dVehiclesRef = useRef<Bus3DVehicle[]>([]);
+  const trainCarsRef = useRef<TransitLandmark[]>([]);
+  const landmarksRef = useRef<TransitLandmark[]>([]);
   const busTracksRef = useRef<Map<string, BusMotion>>(new Map());
   const busRouteRef = useRef(busRoute);
   const flownParkingRef = useRef<string | null>(null);
   const flownNoticeRef = useRef<string | null>(null);
   const flownCameraRef = useRef<string | null>(null);
+  const flownStopRef = useRef<string | null>(null);
+
+  useEffect(() => { onStopSelectRef.current = onStopSelect; onLrtStationSelectRef.current = onLrtStationSelect; }, [onStopSelect, onLrtStationSelect]);
 
   useEffect(() => {
     view3dRef.current = view3d;
@@ -243,6 +286,7 @@ export function MacauMap({
 
   useEffect(() => {
     let disposed = false;
+    let observer: ResizeObserver | null = null;
 
     async function createMap() {
       const maplibre = await import("maplibre-gl");
@@ -260,7 +304,13 @@ export function MacauMap({
         maxPitch: 65,
         maxBounds: MACAU_BOUNDS,
         attributionControl: false,
+        // Three.js shares this context. Antialiasing must be requested here,
+        // when the canvas is created, rather than on the later renderer.
+        canvasContextAttributes: { antialias: true },
+        dragRotate: !window.matchMedia("(pointer: coarse)").matches,
+        touchPitch: false,
       });
+      map.touchZoomRotate.disableRotation();
 
       map.addControl(
         new maplibre.NavigationControl({ showCompass: true, visualizePitch: true }),
@@ -276,6 +326,16 @@ export function MacauMap({
 
       map.on("load", () => {
         if (!disposed) setMapReady(true);
+        basePaintRef.current = new Map((map.getStyle().layers ?? []).map((layer) => [layer.id, {
+          type: layer.type,
+          paint: {
+            "background-color": layer.type === "background" ? map.getPaintProperty(layer.id, "background-color") : undefined,
+            "fill-color": layer.type === "fill" ? map.getPaintProperty(layer.id, "fill-color") : undefined,
+            "line-color": layer.type === "line" ? map.getPaintProperty(layer.id, "line-color") : undefined,
+            "text-color": layer.type === "symbol" ? map.getPaintProperty(layer.id, "text-color") : undefined,
+            "text-halo-color": layer.type === "symbol" ? map.getPaintProperty(layer.id, "text-halo-color") : undefined,
+          },
+        }]));
         const firstSymbolId = map.getStyle().layers?.find((layer) => layer.type === "symbol")?.id;
         const hasBaseSource = Boolean(map.getSource("openmaptiles"));
 
@@ -549,6 +609,10 @@ export function MacauMap({
           },
         });
 
+        map.addLayer({ id: "bus-station-hit", type: "circle", source: "bus-stations", paint: { "circle-radius": 32, "circle-color": "rgba(0,0,0,0.001)" } });
+        map.addLayer({ id: "lrt-station-hit", type: "circle", source: "lrt-stations", paint: { "circle-radius": 32, "circle-color": "rgba(0,0,0,0.001)" } });
+        map.addLayer({ id: "lrt-selected-hit", type: "circle", source: "lrt-selected-stations", paint: { "circle-radius": 32, "circle-color": "rgba(0,0,0,0.001)" } });
+
         map.addLayer({
           id: "bus-vehicle-points",
           type: "circle",
@@ -793,25 +857,6 @@ export function MacauMap({
           });
         }
 
-        void import("@/components/dashboard/bus-3d-layer")
-          .then(({ Bus3DLayer }) => {
-            if (disposed || map.getLayer("bus-3d")) return;
-            const layer = new Bus3DLayer(() => setBus3dReady(true));
-            bus3dLayerRef.current = layer;
-            map.addLayer(
-              layer,
-              map.getLayer("bus-labels") ? "bus-labels" : undefined,
-            );
-            if (view3dRef.current) {
-              layer.setVehicles(bus3dVehiclesRef.current);
-            }
-            layer.setVisible(Boolean(busRouteRef.current) && view3dRef.current);
-            map.triggerRepaint();
-          })
-          .catch((error: unknown) => {
-            console.error("Bus 3D layer failed to load", error);
-          });
-
         map.on("mouseenter", "camera-points", () => {
           map.getCanvas().style.cursor = "pointer";
         });
@@ -833,14 +878,36 @@ export function MacauMap({
           const id = String(event.features?.[0]?.properties?.id ?? "");
           if (id) onParkingSelectRef.current(id);
         });
+        map.on("click", "bus-station-hit", (event) => {
+          const id = String(event.features?.[0]?.properties?.id ?? "");
+          if (id) onStopSelectRef.current(id);
+        });
+        for (const layer of ["lrt-station-hit", "lrt-selected-hit"]) {
+          map.on("click", layer, (event) => {
+            const id = String(event.features?.[0]?.properties?.id ?? "");
+            if (id) onLrtStationSelectRef.current(id);
+          });
+        }
       });
 
       mapRef.current = map;
+      observer = new ResizeObserver(() => {
+        if (disposed) return;
+        const visible = Boolean(containerRef.current?.clientWidth && containerRef.current?.clientHeight);
+        setMapVisible(visible);
+        if (!visible) return;
+        map.resize();
+        fittedRouteRef.current = null;
+        fittedLrtRef.current = null;
+        setViewportVersion((version) => version + 1);
+      });
+      observer.observe(containerRef.current);
     }
 
     void createMap();
     return () => {
       disposed = true;
+      observer?.disconnect();
       mapRef.current?.remove();
       mapRef.current = null;
     };
@@ -848,10 +915,59 @@ export function MacauMap({
 
   useEffect(() => {
     const map = mapRef.current;
+    if (!map || !mapReady || !view3d || bus3dLayerRef.current) return;
+    let cancelled = false;
+    void import("@/components/dashboard/bus-3d-layer").then(({ Bus3DLayer }) => {
+      if (cancelled || map.getLayer("bus-3d")) return;
+      const layer = new Bus3DLayer((kind) => setReadyBusModels((current) => current.includes(kind) ? current : [...current, kind]));
+      bus3dLayerRef.current = layer;
+      map.addLayer(layer, map.getLayer("bus-labels") ? "bus-labels" : undefined);
+      layer.setVehicles(bus3dVehiclesRef.current);
+      layer.setLandmarks(landmarksRef.current);
+      layer.setTrainCars(trainCarsRef.current);
+      layer.setVisible(true);
+      setTransitLayerReady(true);
+    }).catch((error: unknown) => console.error("Transit 3D layer failed to load", error));
+    return () => { cancelled = true; };
+  }, [mapReady, view3d]);
+
+  useEffect(() => {
+    const landmarks: TransitLandmark[] = busRoute ? busRoute.stops.flatMap((stop) => stop.coordinates ? [{ id: `stop:${stop.sequence}:${stop.stationCode}`, coordinates: stop.coordinates, bearing: 0, model: "bus-stop" as const, selected: `${stop.sequence}:${stop.stationCode}` === selectedStopKey }] : [])
+      : lrt && (lrtFocus || ((mapFocus === "overview" || mapFocus === "assistant") && visibleLayers.lrt)) ? lrt.stations.filter((station) => !selectedLrtLine || station.lines.includes(selectedLrtLine)).map((station) => {
+        const line = lrt.lines.features.find((item) => item.properties.ref === (selectedLrtLine ?? station.lines[0]));
+        const path = line?.geometry.coordinates as Array<[number, number]> | undefined;
+        const lengths = path ? pathLengths(path) : [];
+        const coordinates = lrtStationCoordinates(station, selectedLrtLine ?? station.lines[0]);
+        const bearing = path?.length ? pointAtDistance(path, lengths, projectOnPath(path, lengths, coordinates)).bearing : 0;
+        return { id: `lrt:${station.id}`, coordinates, bearing, model: "lrt-platform" as const, selected: station.id === selectedLrtStation };
+      }) : [];
+    landmarksRef.current = landmarks;
+    bus3dLayerRef.current?.setLandmarks(landmarks);
+  }, [busRoute, lrt, lrtFocus, mapFocus, selectedLrtLine, visibleLayers.lrt, transitLayerReady, selectedStopKey, selectedLrtStation]);
+
+  useEffect(() => {
+    const map = mapRef.current;
     if (!map || !mapReady) return;
     const source = map.getSource("roads") as GeoJSONSource | undefined;
     if (roads && source) source.setData(roads);
   }, [roads, mapReady]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    const properties = ["background-color", "fill-color", "line-color", "text-color", "text-halo-color"] as const;
+    for (const [id, original] of basePaintRef.current) {
+      if (!map.getLayer(id)) continue;
+      const colors: Partial<Record<typeof properties[number], string>> = original.type === "background" ? { "background-color": "#15232b" }
+        : original.type === "fill" ? { "fill-color": /water/.test(id) ? "#193d4c" : /park|wood|landcover/.test(id) ? "#243b35" : /building/.test(id) ? "#35454d" : "#1c2d35" }
+        : original.type === "line" ? { "line-color": /water/.test(id) ? "#2e535f" : "#627781" }
+        : original.type === "symbol" ? { "text-color": "#d5e0e5", "text-halo-color": "#17242c" } : {};
+      for (const property of properties) {
+        const color = colors[property];
+        if (color) map.setPaintProperty(id, property, theme === "dark" ? color : original.paint[property]);
+      }
+    }
+  }, [theme, mapReady]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -866,7 +982,7 @@ export function MacauMap({
     const useModels = view3d && bus3dReady;
     // GLB models replace the flat marker at street zoom in 3D mode. In 2D mode
     // the enlarged, livery-coloured marker stays visible at every zoom.
-    map.setLayerZoomRange("bus-vehicle-points", 10.7, useModels ? 16.99 : 24);
+    map.setLayerZoomRange("bus-vehicle-points", 10.7, useModels ? BUS_MODEL_MIN_ZOOM - .01 : 24);
     map.setPaintProperty(
       "bus-vehicle-points",
       "circle-color",
@@ -889,32 +1005,28 @@ export function MacauMap({
     const stationSource = map.getSource("bus-stations") as GeoJSONSource | undefined;
     routeSource?.setData(line);
     stationSource?.setData(stations);
-    bus3dLayerRef.current?.setVisible(Boolean(busRoute) && view3d);
+    bus3dLayerRef.current?.setVisible(view3d && (Boolean(busRoute) || lrtFocus));
 
     const key = busRoute ? `${busRoute.routeCode}-${busRoute.direction}` : null;
     const points = (busRoute?.stops ?? []).flatMap((stop) =>
       stop.coordinates ? [stop.coordinates] : [],
     );
-    if (key && key !== fittedRouteRef.current && points.length > 1) {
+    if (key && key !== fittedRouteRef.current && points.length > 1 && !selectedStopKey) {
       fittedRouteRef.current = key;
-      const width = map.getContainer().clientWidth;
       map.fitBounds(
         [
           [Math.min(...points.map((point) => point[0])), Math.min(...points.map((point) => point[1]))],
           [Math.max(...points.map((point) => point[0])), Math.max(...points.map((point) => point[1]))],
         ],
         {
-          padding:
-            width >= 1024
-              ? { top: 90, right: 90, bottom: 120, left: 500 }
-              : { top: 90, right: 40, bottom: 260, left: 40 },
+          padding: { top: 72, right: 32, bottom: 120, left: 32 },
           maxZoom: 14.5,
           duration: 900,
         },
       );
     }
     if (!key) fittedRouteRef.current = null;
-  }, [busRoute, view3d, mapReady]);
+  }, [busRoute, view3d, lrtFocus, mapReady, viewportVersion, selectedStopKey]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -963,6 +1075,7 @@ export function MacauMap({
     const routeKey = `${busRoute.routeCode}-${busRoute.direction}`;
     const route = buildRoutePath(busRoute.routeSegments);
     const now = Date.now();
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const previousTracks = busTracksRef.current;
     const tracks = new Map<string, BusMotion>();
     for (const vehicle of busRoute.vehicles) {
@@ -972,7 +1085,7 @@ export function MacauMap({
         routeKey,
         livery,
         now,
-        previousTracks.get(vehicle.id) ?? null,
+        reducedMotion ? null : previousTracks.get(vehicle.id) ?? null,
       );
       if (motion) tracks.set(vehicle.id, motion);
     }
@@ -984,38 +1097,50 @@ export function MacauMap({
       true,
     );
 
+    const moving = () => motions.some((motion) => motion.distance !== motion.target || motion.speed !== 0);
+    if (reducedMotion || !mapVisible || !moving()) return;
     let frame = 0;
     let disposed = false;
+    let lastFrame = 0;
+    const frameInterval = window.matchMedia("(pointer: coarse)").matches ? 1000 / 30 : 1000 / 60;
     // Glide each bus toward the newest official estimate along the official
     // polyline. Corrections are speed-limited, so a coarse ETA step changes
     // direction or distance smoothly instead of teleporting the marker.
     const tick = () => {
+      frame = 0;
       if (disposed) return;
-      if (document.visibilityState !== "visible") {
-        frame = window.requestAnimationFrame(tick);
-        return;
-      }
+      if (document.visibilityState !== "visible") return;
       const timestamp = Date.now();
+      if (timestamp - lastFrame < frameInterval) { frame = window.requestAnimationFrame(tick); return; }
+      lastFrame = timestamp;
       renderStates(
         motions.map((motion) => advanceBusMotion(motion, timestamp)),
         false,
       );
-      frame = window.requestAnimationFrame(tick);
+      if (moving()) frame = window.requestAnimationFrame(tick);
     };
+    const onVisibility = () => {
+      if (document.visibilityState !== "visible") {
+        window.cancelAnimationFrame(frame);
+        frame = 0;
+      } else if (!frame && moving()) frame = window.requestAnimationFrame(tick);
+    };
+    document.addEventListener("visibilitychange", onVisibility);
     frame = window.requestAnimationFrame(tick);
 
     return () => {
       disposed = true;
       window.cancelAnimationFrame(frame);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [busRoute, busColor, mapReady, view3d]);
+  }, [busRoute, busColor, mapReady, view3d, mapVisible]);
 
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
     const source = map.getSource("parking") as GeoJSONSource | undefined;
     const selectedSource = map.getSource("parking-selected") as GeoJSONSource | undefined;
-    const features = parkingFeatures(parking ?? []);
+    const features = parkingFeatures(parking ?? [], parkingKind);
     source?.setData({ type: "FeatureCollection", features });
     selectedSource?.setData({
       type: "FeatureCollection",
@@ -1036,7 +1161,9 @@ export function MacauMap({
       });
     }
     if (!selectedParkingId) flownParkingRef.current = null;
-  }, [parking, selectedParkingId, mapReady]);
+  }, [parking, selectedParkingId, parkingKind, mapReady, viewportVersion]);
+
+
 
   useEffect(() => {
     const map = mapRef.current;
@@ -1097,7 +1224,7 @@ export function MacauMap({
         "buildings-3d",
         "visibility",
         view3d &&
-          !busRoute &&
+          !busHasRoute &&
           !lrtFocus &&
           (mapFocus === "overview" || mapFocus === "assistant")
           ? "visible"
@@ -1107,12 +1234,26 @@ export function MacauMap({
     // The ground stays flat: no terrain elevation is applied, so roads are not
     // bent by the DEM. The 3D toggle only tilts the camera and shows buildings.
     map.setTerrain(null);
-    map.easeTo({
-      pitch: view3d ? 45 : 0,
-      bearing: view3d ? map.getBearing() : 0,
-      duration: 700,
-    });
-  }, [view3d, busRoute, lrtFocus, mapFocus, mapReady]);
+    const pitch = view3d ? 45 : 0;
+    const bearing = view3d ? map.getBearing() : 0;
+    // An unchanged camera mode must not cancel a route or parking selection flight.
+    if (Math.abs(map.getPitch() - pitch) > .1 || Math.abs(map.getBearing() - bearing) > .1) {
+      map.easeTo({ pitch, bearing, duration: 700 });
+    }
+  }, [view3d, busHasRoute, lrtFocus, mapFocus, mapReady]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    const stop = busRoute?.stops.find((item) => `${item.sequence}:${item.stationCode}` === selectedStopKey);
+    if (map.getLayer("bus-station-halo")) map.setPaintProperty("bus-station-halo", "circle-color", ["case", ["==", ["get", "id"], selectedStopKey ?? ""], "rgba(20,108,148,.5)", "rgba(20,108,148,.12)"]);
+    const key = stop ? `${busRoute?.routeCode}:${busRoute?.direction}:${selectedStopKey}:${view3d}:${viewportVersion}` : null;
+    if (stop?.coordinates && key !== flownStopRef.current) {
+      flownStopRef.current = key;
+      map.flyTo({ center: stop.coordinates, zoom: view3d ? 17.8 : 16, pitch: view3d ? 45 : 0, duration: 500 });
+    }
+    if (!stop) flownStopRef.current = null;
+  }, [busRoute, selectedStopKey, mapReady, viewportVersion, view3d]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -1125,6 +1266,7 @@ export function MacauMap({
       features: lrt.stations.map((station) => ({
         type: "Feature" as const,
         properties: {
+          id: station.id,
           name: station.name[locale],
           interchange: station.interchange,
         },
@@ -1156,9 +1298,8 @@ export function MacauMap({
           .map((station) => station.coordinates),
       ];
 
-      if (points.length > 1) {
+      if (points.length > 1 && !selectedLrtStation) {
         fittedLrtRef.current = selectedLrtLine;
-        const width = map.getContainer().clientWidth;
         map.fitBounds(
           [
             [
@@ -1171,10 +1312,7 @@ export function MacauMap({
             ],
           ],
           {
-            padding:
-              width >= 1024
-              ? { top: 90, right: 90, bottom: 120, left: 500 }
-                : { top: 90, right: 40, bottom: 260, left: 40 },
+            padding: { top: 72, right: 32, bottom: 120, left: 32 },
             maxZoom: 15,
             duration: 900,
           },
@@ -1182,7 +1320,13 @@ export function MacauMap({
       }
     }
     if (!selectedLrtLine) fittedLrtRef.current = null;
-  }, [lrt, selectedLrtLine, locale, mapReady]);
+  }, [lrt, selectedLrtLine, locale, mapReady, selectedLrtStation, viewportVersion]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    const station = lrt?.stations.find((item) => item.id === selectedLrtStation);
+    if (map && mapReady && station && lrtFocus) map.flyTo({ center: lrtStationCoordinates(station, selectedLrtLine), zoom: view3d ? 16.8 : 15.5, pitch: view3d ? 45 : 0, duration: 500 });
+  }, [lrt, selectedLrtStation, selectedLrtLine, lrtFocus, view3d, mapReady, viewportVersion]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -1195,48 +1339,50 @@ export function MacauMap({
     );
     if (!line || !selectedLrtLine) {
       source.setData({ type: "FeatureCollection", features: [] });
+      trainCarsRef.current = [];
+      bus3dLayerRef.current?.setTrainCars([]);
       return;
     }
 
     const path = line.geometry.coordinates as Array<[number, number]>;
     const lengths = pathLengths(path);
-    const total = lengths[lengths.length - 1] ?? 0;
-    // Labelled schematic animation only; the LRT publishes no live positions.
+    const total = lengths.at(-1) ?? 0;
     const speed = 35 / 3.6;
     const startedAt = Date.now();
+    const station = lrt?.stations.find((item) => item.id === selectedLrtStation);
+    const start = station ? projectOnPath(path, lengths, lrtStationCoordinates(station, selectedLrtLine)) : 0;
     const schematicLabel = t("lrtSchematic");
+    const draw = (distance: number) => {
+      const point = pointAtDistance(path, lengths, distance);
+      const scale = TRANSIT_DISPLAY_SCALE;
+      const cars = trainCarPoses(path, distance, 10.8 * scale);
+      trainCarsRef.current = cars.map((car, index) => ({ id: `train:${selectedLrtLine}:${index}`, model: "lrt-car", coordinates: car.coordinates, bearing: (car.bearing + (index === 1 ? 180 : 0)) % 360 }));
+      bus3dLayerRef.current?.setTrainCars(view3d ? trainCarsRef.current : []);
+      source.setData(lrtTrainCollection(lrt, selectedLrtLine, { ...point, cars, scale }, schematicLabel));
+    };
+    draw(start);
+    if (!mapVisible || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     let frame = 0;
     let lastUpdate = 0;
     let disposed = false;
     const tick = () => {
       if (disposed) return;
-      if (document.visibilityState !== "visible") {
-        frame = window.requestAnimationFrame(tick);
-        return;
-      }
       const now = Date.now();
-      if (now - lastUpdate > 100) {
+      if (document.visibilityState === "visible" && now - lastUpdate > 100) {
         lastUpdate = now;
-        const travelled = total > 0 ? (speed * (now - startedAt)) / 1000 : 0;
-        const point = pointAtDistance(path, lengths, travelled % total);
-        source.setData(
-          lrtTrainCollection(
-            lrt,
-            selectedLrtLine,
-            { coordinates: point.coordinates, bearing: point.bearing },
-            schematicLabel,
-          ),
-        );
+        const progress = total > 0 ? (start + speed * (now - startedAt) / 1000) % (2 * total) : 0;
+        draw(progress > total ? 2 * total - progress : progress);
       }
       frame = window.requestAnimationFrame(tick);
     };
     frame = window.requestAnimationFrame(tick);
+    return () => { disposed = true; window.cancelAnimationFrame(frame); };
+  }, [lrt, selectedLrtLine, selectedLrtStation, locale, mapReady, mapVisible, view3d, transitLayerReady, t]);
 
-    return () => {
-      disposed = true;
-      window.cancelAnimationFrame(frame);
-    };
-  }, [lrt, selectedLrtLine, locale, mapReady, t]);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (mapReady && map?.getLayer("lrt-train-3d")) map.setLayerZoomRange("lrt-train-3d", 12, view3d && readyBusModels.includes("lrt-car") ? 11.99 : 24);
+  }, [mapReady, view3d, readyBusModels]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -1263,6 +1409,8 @@ export function MacauMap({
       ["camera-points", camerasFocus || (baseFocus && visibleLayers.cameras)],
       ["lrt-lines", lrtOnly ? !selectedLrtLine : baseFocus && visibleLayers.lrt],
       ["lrt-stations", lrtOnly ? !selectedLrtLine : baseFocus && visibleLayers.lrt],
+      ["lrt-station-hit", lrtOnly ? !selectedLrtLine : baseFocus && visibleLayers.lrt],
+      ["lrt-selected-hit", !busFocus && Boolean(selectedLrtLine)],
       ["lrt-selected-line", !busFocus && Boolean(selectedLrtLine)],
       ["lrt-selected-stations", !busFocus && Boolean(selectedLrtLine)],
       ["lrt-selected-labels", !busFocus && Boolean(selectedLrtLine)],
@@ -1275,6 +1423,7 @@ export function MacauMap({
       ["parking-labels", parkingFocus],
       ["bus-station-halo", busFocus],
       ["bus-stations", busFocus],
+      ["bus-station-hit", busFocus],
       ["bus-vehicle-points", busFocus],
       ["bus-station-labels", busFocus],
       ["bus-labels", busFocus],
@@ -1285,7 +1434,7 @@ export function MacauMap({
         map.setLayoutProperty(id, "visibility", visible ? "visible" : "none");
       }
     });
-    bus3dLayerRef.current?.setVisible(busFocus && view3d);
+    bus3dLayerRef.current?.setVisible(view3d && (busFocus || lrtOnly || (baseFocus && visibleLayers.lrt)));
   }, [
     visibleLayers,
     busRoute,
@@ -1296,6 +1445,7 @@ export function MacauMap({
     mapFocus,
     mapReady,
     view3d,
+    transitLayerReady,
   ]);
 
   return (
@@ -1304,6 +1454,8 @@ export function MacauMap({
       className="absolute inset-0"
       role="application"
       aria-label={t("tagline")}
-    />
+    >
+      {!mapReady ? <div className="map-loading" role="status">{t("loading")}</div> : null}
+    </div>
   );
 }

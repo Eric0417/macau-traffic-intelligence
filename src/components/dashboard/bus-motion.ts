@@ -30,7 +30,7 @@ export function pathLengths(path: LngLat[]): number[] {
   return lengths;
 }
 
-function bearingBetween(a: LngLat, b: LngLat): number {
+export function bearingBetween(a: LngLat, b: LngLat): number {
   return (
     ((Math.atan2(b[0] - a[0], b[1] - a[1]) * 180) / Math.PI + 360) % 360
   );

@@ -3,8 +3,8 @@ import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { useLiveJson } from "@/components/use-live-json";
 
-function Probe({ url }: { url: string }) {
-  const state = useLiveJson<{ value: string }>(url, 60_000);
+function Probe({ url, enabled = true }: { url: string; enabled?: boolean }) {
+  const state = useLiveJson<{ value: string }>(url, 60_000, enabled);
   return (
     <span data-testid="value">
       {state.data?.value ?? (state.loading ? "loading" : "empty")}
@@ -31,6 +31,17 @@ function envelope(value: string) {
 }
 
 describe("useLiveJson", () => {
+  it("retains the last slice while polling is disabled and does not fetch", async () => {
+    const fetchMock = vi.fn(async () => ({ ok: true, json: async () => envelope("A") } as Response));
+    vi.stubGlobal("fetch", fetchMock);
+    try {
+      const { rerender } = render(<Probe url="/a" />);
+      await waitFor(() => expect(screen.getByTestId("value").textContent).toBe("A"));
+      rerender(<Probe url="/a" enabled={false} />);
+      expect(screen.getByTestId("value").textContent).toBe("A");
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    } finally { cleanup(); vi.unstubAllGlobals(); }
+  });
   it("clears the previous payload when the url changes", async () => {
     let resolveSecond: (() => void) | undefined;
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
