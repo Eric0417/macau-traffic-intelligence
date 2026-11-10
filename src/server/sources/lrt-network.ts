@@ -33,6 +33,7 @@ export const lrtNetworkSchema = z.object({
       id: z.string(),
       name: localizedSchema,
       coordinates: z.tuple([z.number(), z.number()]),
+      lineCoordinates: z.record(z.string(), z.tuple([z.number(), z.number()])).optional(),
       lines: z.array(z.string()),
       interchange: z.boolean(),
     }),
@@ -162,61 +163,41 @@ function coordinateOf(element: OverpassElement | undefined): [number, number] | 
   return [element.lon, element.lat];
 }
 
-// Member ways are unordered and may run either direction. Join them end to end
-// by repeatedly attaching the closest matching endpoint.
-function assembleCoordinates(
-  relation: OverpassRelation,
-  elements: Map<string, OverpassElement>,
-): Array<[number, number]> {
-  const ways = (relation.members ?? [])
-    .filter((member) => member.type === "way")
+// A relation may begin with a way in the middle of the line. Attach to both
+// ends using shared endpoints; never bridge disconnected ways by proximity.
+function assembleCoordinates(relation: OverpassRelation, elements: Map<string, OverpassElement>): Array<[number, number]> {
+  const pending = (relation.members ?? []).filter((member) => member.type === "way")
     .map((member) => elements.get(`way:${member.ref}`))
-    .filter((way): way is OverpassElement => Boolean(way?.nodes?.length))
-    .map((way) =>
-      (way.nodes ?? [])
-        .map((nodeId) => elements.get(`node:${nodeId}`))
-        .filter((node): node is OverpassElement => Boolean(node)),
-    );
-
-  const pending = ways.filter((way) => way.length > 1);
+    .flatMap((way) => {
+      const points = (way?.nodes ?? []).flatMap((id) => {
+        const coordinate = coordinateOf(elements.get(`node:${id}`));
+        return coordinate ? [coordinate] : [];
+      });
+      return points.length > 1 ? [points] : [];
+    });
   if (!pending.length) return [];
-
-  const coordinates = pending
-    .shift()!
-    .map((node) => [node.lon!, node.lat!] as [number, number]);
-
+  let coordinates = pending.shift()!;
+  const touches = (a: [number, number], b: [number, number]) => distanceMeters(a, b) < .5;
   while (pending.length) {
-    const tail = coordinates.at(-1)!;
-    let best: { index: number; reverse: boolean; distance: number } | null = null;
-
+    let attached = false;
     for (let index = 0; index < pending.length; index += 1) {
       const way = pending[index];
-      const first = [way[0].lon!, way[0].lat!] as [number, number];
-      const last = [
-        way.at(-1)!.lon!,
-        way.at(-1)!.lat!,
-      ] as [number, number];
-      const candidates = [
-        { index, reverse: false, distance: Math.hypot(tail[0] - first[0], tail[1] - first[1]) },
-        { index, reverse: true, distance: Math.hypot(tail[0] - last[0], tail[1] - last[1]) },
-    ];
-      const candidate = candidates.sort((a, b) => a.distance - b.distance)[0];
-      if (!best || candidate.distance < best.distance) best = candidate;
+      const head = coordinates[0], tail = coordinates.at(-1)!;
+      if (touches(tail, way[0])) coordinates.push(...way.slice(1));
+      else if (touches(tail, way.at(-1)!)) coordinates.push(...way.toReversed().slice(1));
+      else if (touches(head, way.at(-1)!)) coordinates = [...way.slice(0, -1), ...coordinates];
+      else if (touches(head, way[0])) coordinates = [...way.toReversed().slice(0, -1), ...coordinates];
+      else continue;
+      pending.splice(index, 1);
+      attached = true;
+      break;
     }
-
-    if (!best) break;
-    const [selected] = pending.splice(best.index, 1);
-    const oriented = best.reverse ? selected.toReversed() : selected;
-    coordinates.push(
-      ...oriented.map((node) => [node.lon!, node.lat!] as [number, number]),
-    );
+    if (!attached) return [];
   }
-
-  return coordinates.filter((coordinate, index, all) => {
-    if (index === 0) return true;
-    const prior = all[index - 1];
-    return Math.hypot(coordinate[0] - prior[0], coordinate[1] - prior[1]) > 0.000002;
-  });
+  const firstStop = (relation.members ?? []).find(isStopMember);
+  const start = firstStop ? coordinateOf(elements.get(`node:${firstStop.ref}`)) : null;
+  if (start && distanceMeters(start, coordinates.at(-1)!) < distanceMeters(start, coordinates[0])) coordinates.reverse();
+  return coordinates.filter((coordinate, index, all) => index === 0 || distanceMeters(coordinate, all[index - 1]) > .2);
 }
 
 function lineName(tags: Record<string, string>, fallback: LrtNetwork["lines"]["features"][number]["properties"]["name"] | undefined, ref: string) {
@@ -296,8 +277,11 @@ export function buildLrtNetwork(
       });
     if (stopNodes.length < 2) continue;
 
-    const coordinates = assembleCoordinates(relation, byKey);
+    let coordinates = assembleCoordinates(relation, byKey);
     if (coordinates.length < 2) continue;
+    const firstIndex = coordinates.findIndex((point) => distanceMeters(point, stopNodes[0].coordinates) < .5);
+    const lastIndex = coordinates.findIndex((point) => distanceMeters(point, stopNodes.at(-1)!.coordinates) < .5);
+    if (firstIndex >= 0 && lastIndex > firstIndex) coordinates = coordinates.slice(firstIndex, lastIndex + 1);
 
     const tags = relation.tags ?? {};
     const curatedLine = curated.lines.features.find(
@@ -330,6 +314,7 @@ export function buildLrtNetwork(
 
       if (existing) {
         if (!existing.lines.includes(ref)) existing.lines.push(ref);
+        existing.lineCoordinates = { ...existing.lineCoordinates, [ref]: stopCoordinates };
         existing.interchange = existing.lines.length > 1;
         continue;
       }
@@ -346,6 +331,7 @@ export function buildLrtNetwork(
         id: curatedStation?.id ?? `osm-${node.id}`,
         name: stopName(tagsForStop, curatedStation, node.id),
         coordinates: stopCoordinates,
+        lineCoordinates: { [ref]: stopCoordinates },
         lines: [ref],
         interchange: false,
       });

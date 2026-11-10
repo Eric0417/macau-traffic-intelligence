@@ -1,0 +1,52 @@
+{
+  "date": "2026-11-10",
+  "geometry": "OpenStreetMap track geometry; not a survey or live train position",
+  "normalizedSha256": "85106b851f9b42cd7993b6fa159da6508ac1d5da179d22d5372583aace86fab2",
+  "lines": [
+    {
+      "ref": "Taipa",
+      "source": "https://api.openstreetmap.org/api/0.6/relation/10402162/full.json",
+      "coordinateCount": 389,
+      "geometryLengthMeters": 11277.7,
+      "longestSourceEdgeMeters": 1320.0,
+      "start": [
+        113.5741204,
+        22.1630017
+      ],
+      "end": [
+        113.5293547,
+        22.1838859
+      ]
+    },
+    {
+      "ref": "Seac Pai Van",
+      "source": "https://api.openstreetmap.org/api/0.6/relation/18238277/full.json",
+      "coordinateCount": 27,
+      "geometryLengthMeters": 801.3,
+      "longestSourceEdgeMeters": 363.1,
+      "start": [
+        113.56185,
+        22.1314553
+      ],
+      "end": [
+        113.5632219,
+        22.1379315
+      ]
+    },
+    {
+      "ref": "Hengqin",
+      "source": "https://api.openstreetmap.org/api/0.6/relation/18361945/full.json",
+      "coordinateCount": 31,
+      "geometryLengthMeters": 1748.4,
+      "longestSourceEdgeMeters": 344.6,
+      "start": [
+        113.5448501,
+        22.1406693
+      ],
+      "end": [
+        113.5595427,
+        22.1389992
+      ]
+    }
+  ]
+}

@@ -91,7 +91,7 @@ describe("notice parsers", () => {
     expect(notices[0]).toMatchObject({
       title: "2025-04-09 - 2027-07-15, 東北大馬路,有限度通車",
       category: "roadworks",
-      publishedAt: new Date("2025-04-09T00:00:00+08:00").toISOString(),
+      publishedAt: null,
     });
   });
 });

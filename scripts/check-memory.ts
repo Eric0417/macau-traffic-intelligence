@@ -18,6 +18,7 @@ async function main() {
     "parking",
     "weather",
     "notices",
+    "official-news",
     "lrt-network",
     "lrt-notices",
     "borders",

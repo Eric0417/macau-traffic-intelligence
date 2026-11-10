@@ -4,6 +4,7 @@ import { busRoutesSource } from "../src/server/sources/bus";
 import { camerasSource } from "../src/server/sources/cameras";
 import { lrtNetworkSource, lrtNoticesSource } from "../src/server/sources/lrt";
 import { noticesSource } from "../src/server/sources/notices";
+import { officialNewsSource } from "../src/server/sources/official-news";
 import { parkingSource } from "../src/server/sources/parking";
 import { roadsSource } from "../src/server/sources/roads";
 import { weatherSource } from "../src/server/sources/weather";
@@ -11,6 +12,7 @@ import type { SourceDefinition } from "../src/server/source";
 
 function itemCount(value: unknown): number {
   if (Array.isArray(value)) return value.length;
+  if (value && typeof value === "object" && "items" in value && Array.isArray(value.items)) return value.items.length;
   if (
     value &&
     typeof value === "object" &&
@@ -30,6 +32,7 @@ const checks: Array<{ source: SourceDefinition<unknown>; optional?: boolean }> =
   { source: parkingSource },
   { source: weatherSource },
   { source: noticesSource },
+  { source: officialNewsSource },
   { source: lrtNetworkSource },
   { source: lrtNoticesSource },
   { source: bordersSource, optional: true },
@@ -46,6 +49,7 @@ async function main() {
           status: "ok",
           optional: Boolean(optional),
           itemCount: itemCount(data),
+          ...(source.id === "official-news" && data && typeof data === "object" && "feeds" in data ? { feeds: data.feeds } : {}),
           durationMs: Date.now() - startedAt,
         };
       } catch (error) {

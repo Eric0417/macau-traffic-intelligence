@@ -6,6 +6,8 @@ All notable user-visible and architectural changes are recorded here.
 
 - Removed application-generated border waiting minutes. Official qualitative status remains; minutes stay unknown until an official numeric field is verified.
 - Parking publisher timestamps stay unknown when absent or invalid, and previously fresh snapshots age into delayed status if the client loses contact.
+- Added normalized government transport news from the official GCS and DSAT RSS feeds, with publication dates and per-feed availability. These are published announcements, not a complete live incident stream.
+- Roadwork start dates are no longer reported as publication dates. Complete DSAT notice-source failure keeps the last valid cache instead of publishing an empty successful list.
 
 ## Two-second bus refresh - 2026-10-11
 

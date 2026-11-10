@@ -13,10 +13,6 @@ import {
 const NOTICE_RSS = "https://www.mlm.com.mo/rss/tc/notice.rss";
 const parser = new XMLParser({ ignoreAttributes: false, trimValues: true });
 
-function first<T>(value: T | T[] | undefined): T | undefined {
-  return Array.isArray(value) ? value[0] : value;
-}
-
 export async function loadLrtNetwork() {
   try {
     return await fetchLrtNetworkFromOverpass();
@@ -30,10 +26,10 @@ export async function loadLrtNetwork() {
   }
 }
 
-export async function loadLrtNotices() {
-  const xml = await fetchText(NOTICE_RSS);
+export function parseLrtNotices(xml: string) {
   const parsed = parser.parse(xml);
-  const rawItems = first(parsed?.rss?.channel?.item);
+  if (!parsed?.rss?.channel) throw new Error("LRT notice RSS unavailable");
+  const rawItems = parsed.rss.channel.item;
   const items = Array.isArray(rawItems) ? rawItems : rawItems ? [rawItems] : [];
 
   return items
@@ -45,8 +41,9 @@ export async function loadLrtNotices() {
         .replace(/\s+/g, " ")
         .trim();
       const publishedAt = String(item.pubDate ?? "");
-      const date = new Date(publishedAt);
-      const active = String(item.show ?? "true") !== "false";
+      const date = new Date(publishedAt.replace(/\bCST$/, "+0800"));
+      // Publisher display flag, not independently verified incident status.
+      const active = String(item.show) === "true";
 
       if (!id || !content || Number.isNaN(date.getTime())) return null;
 
@@ -60,6 +57,10 @@ export async function loadLrtNotices() {
     })
     .filter((notice): notice is NonNullable<typeof notice> => notice !== null)
     .slice(0, 30);
+}
+
+export async function loadLrtNotices() {
+  return parseLrtNotices(await fetchText(NOTICE_RSS));
 }
 
 export const lrtNetworkSource: SourceDefinition<Awaited<ReturnType<typeof loadLrtNetwork>>> = {

@@ -167,6 +167,11 @@ export const trafficNoticeSchema = z.object({
   url: z.string().url(),
 });
 
+export const officialNewsSchema = z.object({
+  items: z.array(trafficNoticeSchema),
+  feeds: z.array(z.object({ name: z.string(), url: z.string().url(), available: z.boolean() })),
+});
+
 export const lrtNoticeSchema = z.object({
   id: z.string(),
   title: z.string(),

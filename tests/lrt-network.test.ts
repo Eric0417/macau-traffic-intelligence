@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { metersBetween, pathLengths, pointAtDistance, projectOnPath } from "@/components/dashboard/bus-motion";
 import { loadLrtNetwork } from "@/server/sources/lrt";
 import {
   buildLrtNetwork,
@@ -133,11 +134,36 @@ function fallbackPayload() {
 }
 
 describe("LRT network", () => {
+  it("joins both ends of unordered track ways without a straight-line shortcut", () => {
+    const nodes = [1, 2, 3, 4].map((id) => ({ type: "node", id, lat: 22.19, lon: 113.54 + id*.001, tags: { name: `站${id}` } }));
+    const relation = { type: "relation", id: 800, tags: { route: "light_rail", ref: "Test" }, members: [{ type: "way", ref: 10, role: "" }, { type: "way", ref: 11, role: "" }, { type: "way", ref: 12, role: "" }, { type: "node", ref: 1, role: "stop" }, { type: "node", ref: 4, role: "stop" }] };
+    const ways = [{ type: "way", id: 10, nodes: [2, 3] }, { type: "way", id: 11, nodes: [1, 2] }, { type: "way", id: 12, nodes: [4, 3] }];
+    const result = buildLrtNetwork({ elements: [...nodes, ...ways, relation] });
+    expect(result.lines.features[0].geometry.coordinates).toEqual(nodes.map((node) => [node.lon, node.lat]));
+    const broken = buildLrtNetwork({ elements: [...nodes, { ...nodes[0], id: 5, lon: 113.56 }, { ...nodes[0], id: 6, lon: 113.57 }, ...ways.map((way) => way.id === 11 ? { ...way, nodes: [5, 6] } : way), relation] });
+    expect(broken.lines.features).toHaveLength(0);
+  });
   it("ships a usable fallback with the three operating lines and 15 stations", () => {
     expect(isUsableLrtNetwork(lrtNetworkFallback)).toBe(true);
     expect(lrtNetworkFallback.lines.features).toHaveLength(3);
     expect(lrtNetworkFallback.stations).toHaveLength(15);
     expect(lrtNetworkFallback.stations.filter((station) => station.interchange)).toHaveLength(2);
+  });
+
+  it("keeps every line's station on its own track and trims terminal overrun", () => {
+    for (const line of lrtNetworkFallback.lines.features) {
+      const path = line.geometry.coordinates as Array<[number, number]>;
+      const lengths = pathLengths(path);
+      for (const station of lrtNetworkFallback.stations.filter((item) => item.lines.includes(line.properties.ref))) {
+        const coordinate = station.lineCoordinates?.[line.properties.ref] ?? station.coordinates;
+        const projected = pointAtDistance(path, lengths, projectOnPath(path, lengths, coordinate));
+        expect(metersBetween(coordinate, projected.coordinates)).toBeLessThan(5);
+      }
+      if (line.properties.ref === "Taipa") {
+        expect(path[0]).toEqual(lrtNetworkFallback.stations.find((station) => station.id === "TFT")?.coordinates);
+        expect(path.at(-1)).toEqual(lrtNetworkFallback.stations.find((station) => station.id === "BAR")?.coordinates);
+      }
+    }
   });
 
   it("builds lines and stops from an Overpass payload", () => {
@@ -158,6 +184,7 @@ describe("LRT network", () => {
 
     expect(interchange?.interchange).toBe(true);
     expect(interchange?.lines).toEqual(["Taipa", "Seac Pai Van"]);
+    expect(interchange?.lineCoordinates).toEqual({ Taipa: [113.5630495, 22.1387456], "Seac Pai Van": [113.5632219, 22.1379315] });
   });
 
   it("keeps new stations from the live payload with a converted name", () => {

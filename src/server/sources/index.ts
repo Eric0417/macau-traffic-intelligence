@@ -5,6 +5,7 @@ import { busRoutesSource } from "@/server/sources/bus";
 import { camerasSource } from "@/server/sources/cameras";
 import { lrtNetworkSource, lrtNoticesSource } from "@/server/sources/lrt";
 import { noticesSource } from "@/server/sources/notices";
+import { officialNewsSource } from "@/server/sources/official-news";
 import { parkingSource } from "@/server/sources/parking";
 import { roadsSource } from "@/server/sources/roads";
 import { weatherSource } from "@/server/sources/weather";
@@ -17,6 +18,7 @@ export const sources = {
   parking: parkingSource,
   weather: weatherSource,
   notices: noticesSource,
+  officialNews: officialNewsSource,
   lrtNetwork: lrtNetworkSource,
   lrtNotices: lrtNoticesSource,
   borders: bordersSource,

@@ -51,6 +51,13 @@ const snapshot: LearningSnapshot = {
   lrt: null,
 };
 
+it("treats publication and snapshot time separately and never infers no incidents", () => {
+  const system = buildAssistantMessages("有冇事故？", "zh-Hant", snapshot)[0].content;
+  expect(system).toContain("not a complete live incident feed");
+  expect(system).toContain("does not mean no incidents");
+  expect(system).toContain("Never derive border waiting minutes");
+});
+
 const routes: BusRoute[] = [
   {
     routeName: "3",

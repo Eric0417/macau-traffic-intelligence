@@ -71,7 +71,10 @@ export interface LearningSnapshot {
     estimatedWaitMinutes: number | null;
   }> | null;
   notices: Array<{ title: string; category: string; publishedAt: string | null }> | null;
-  lrtNotices: Array<{ title: string; active: boolean }> | null;
+  officialNews?: Array<{ title: string; publishedAt: string | null; url: string }> | null;
+  newsFeedStatus?: Array<{ name: string; available: boolean }> | null;
+  sourceStatus?: Array<{ id: string; name: string; updatedAt: string; stale: boolean }>;
+  lrtNotices: Array<{ title: string; active: boolean; publishedAt?: string }> | null;
   bus: {
     catalogAvailable: boolean;
     routeCount: number;
@@ -89,6 +92,7 @@ export interface LearningSnapshot {
     } | null;
     liveRoutes: Array<{
       routeName: string;
+      routeCode: string;
       direction: 0 | 1;
       liveVehicleCount: number;
       vehicles: Array<{
@@ -263,7 +267,7 @@ function summariseLrt(
       lines: station.lines,
       interchange: station.interchange,
     })),
-    note: "The LRT publishes no official live train positions. This is the official network and service notices only.",
+    note: "This app has no verified official live train-position source. Track geometry is OSM-derived with official station names; service notices are dated publications.",
   };
 }
 
@@ -434,7 +438,7 @@ function summariseLrtNotices(
   return notices
     .filter((notice) => notice.active)
     .slice(0, 3)
-    .map((notice) => ({ title: notice.title, active: notice.active }));
+    .map((notice) => ({ title: notice.title, active: notice.active, publishedAt: notice.publishedAt }));
 }
 
 export const BUS_POSITION_NOTE =
@@ -450,6 +454,7 @@ function summariseBusSlice(
 
   return {
     routeName: eta.routeName,
+    routeCode: eta.routeCode,
     direction: eta.direction,
     liveVehicleCount: eta.vehicles.length,
     vehicles: eta.vehicles.slice(0, 6).map((vehicle) => ({
@@ -505,6 +510,7 @@ export async function buildLearningSnapshot(
     notices,
     lrtNotices,
     lrtNetwork,
+    officialNews,
   ] = await Promise.all([
     readSource(sources.roads),
     readSource(sources.bridges),
@@ -514,6 +520,7 @@ export async function buildLearningSnapshot(
     readSource(sources.notices),
     readSource(sources.lrtNotices),
     readSource(sources.lrtNetwork),
+    readSource(sources.officialNews),
   ]);
 
   const baseReads: Array<SourceRead<unknown> | null> = [
@@ -525,6 +532,7 @@ export async function buildLearningSnapshot(
     notices,
     lrtNotices,
     lrtNetwork,
+    officialNews,
   ];
   for (const read of baseReads) {
     if (read?.refresh) refreshes.push(read.refresh);
@@ -533,8 +541,9 @@ export async function buildLearningSnapshot(
   const busRelated =
     Boolean(focus) || (question ? looksBusRelated(question) : false);
   let catalog: BusRoute[] | null = null;
+  let catalogRead: SourceRead<BusRoute[]> | null = null;
   if (busRelated) {
-    const catalogRead = await readSource(sources.busRoutes);
+    catalogRead = await readSource(sources.busRoutes);
     if (catalogRead) {
       catalog = catalogRead.result.data;
       if (catalogRead.refresh) refreshes.push(catalogRead.refresh);
@@ -620,6 +629,9 @@ export async function buildLearningSnapshot(
     parking: summariseParking(parking?.result.data ?? null),
     borders: summariseBorders(borders?.result.data ?? null, locale),
     notices: summariseNotices(notices?.result.data ?? null),
+    officialNews: officialNews?.result.data.items.slice(0, 8).map(({ title, publishedAt, url }) => ({ title, publishedAt, url })) ?? null,
+    newsFeedStatus: officialNews?.result.data.feeds.map(({ name, available }) => ({ name, available })) ?? null,
+    sourceStatus: [...baseReads, catalogRead, ...busReads].flatMap((read) => read ? [{ id: read.result.attribution.id, name: read.result.attribution.name, updatedAt: read.result.updatedAt, stale: read.result.stale }] : []),
     lrtNotices: summariseLrtNotices(lrtNotices?.result.data ?? null),
     bus: busRelated
       ? {
@@ -671,10 +683,13 @@ export function buildAssistantMessages(
     "bus.liveRoutes[].stops lists every stop of that route in order. When asked whether a route serves a place, decide yes or no from the stop list and answer that in the first sentence; only then name the relevant stops. If the place is not in the list, say it is not served and do not imply otherwise.",
     "If bus.placeCheck is present, its served value is the authoritative answer to whether that route serves the place. The system adds an opening line with that value, so confirm it and never contradict it. Keep the reply to at most three short sentences: the served value, up to three nearby stops from the stop list, and a next step.",
     "If a named route is not in bus.liveRoutes, or a named road is not in roads.mentionedSegments, say that the live detail was not loaded instead of guessing.",
-    "lrt lists the official LRT network: lines, stations, and interchanges. lrt.lines[].stations lists the station names of each line; if asked how many stations a line has, count that list. The LRT has no official live train-position feed, so never claim a train position or a countdown; use the LRT service notices for service status.",
+    "lrt lists the official LRT network: lines, stations, and interchanges. lrt.lines[].stations lists the station names of each line; if asked how many stations a line has, count that list. The app has no verified official live train-position source, so never claim a live train position or countdown; LRT notices are dated publications. Their active field means publisher display status, not independently verified ongoing service disruption. State publication dates and do not treat historical notices as current service status.",
     "Never mention JSON field names such as liveVehicleCount or segmentTraffic in the answer; describe the same facts in plain words.",
     "Keep units as published (stop counts, minutes, °C, km/h, number of spaces). Structure comparisons as short lists or sentences, not tables.",
     "Live readings change quickly; describe what the data shows now and never promise that a condition will persist.",
+    "For each bus route and direction, use the matching sourceStatus id bus-eta-{routeCode}-{direction} for its retrieval time and stale flag. A fresh bus-routes catalog does not make a bus reading fresh. If stale is true, describe values as last retrieved readings with their timestamp, not current positions or arrivals.",
+    "notices and officialNews are published announcements, not a complete live incident feed. No retrieved announcement does not mean no incidents. An incident keyword or publication date does not establish that an event is still ongoing. State the publisher date and uncertainty; the snapshot time is only retrieval context. Use sourceStatus to identify older or stale data. If newsFeedStatus includes an unavailable feed, state that news coverage is incomplete.",
+    "Never derive border waiting minutes from qualitative status codes. A suspended bus stop takes priority over an approaching-bus value; do not tell the user they can board there.",
     "Do not give turn-by-turn driving directions. For travel decisions, remind the user that official apps and on-site signs are authoritative.",
     "Never ask for or repeat personal data. The snapshot contains public government data only.",
     "Keep the whole reply under 220 words.",
@@ -806,27 +821,34 @@ function contextSummary(snapshot: LearningSnapshot, locale: Locale): string[] {
   if (snapshot.notices) {
     items.push(
       join(
-        `交通消息：最新 ${snapshot.notices.length} 則`,
-        `交通消息：最新 ${snapshot.notices.length} 则`,
-        `Traffic notices: latest ${snapshot.notices.length}`,
+        `已取得交通公告：${snapshot.notices.length} 則`,
+        `已取得交通公告：${snapshot.notices.length} 则`,
+        `Retrieved traffic announcements: ${snapshot.notices.length}`,
       ),
     );
+  }
+  if (snapshot.officialNews) {
+    items.push(join(
+      `政府交通新聞：${snapshot.officialNews.length} 則，並非完整即時事故流`,
+      `政府交通新闻：${snapshot.officialNews.length} 则，并非完整即时事故流`,
+      `Government transport news: ${snapshot.officialNews.length} items; not a complete live incident feed`,
+    ));
   }
   if (snapshot.lrtNotices) {
     items.push(
       join(
-        `輕軌服務公告：生效中的 ${snapshot.lrtNotices.length} 則`,
-        `轻轨服务公告：生效中的 ${snapshot.lrtNotices.length} 则`,
-        `LRT service notices: ${snapshot.lrtNotices.length} active`,
+        `輕軌已展示公告： ${snapshot.lrtNotices.length} 則`,
+        `轻轨已展示公告： ${snapshot.lrtNotices.length} 则`,
+        `LRT displayed publications: ${snapshot.lrtNotices.length}`,
       ),
     );
   }
   if (snapshot.lrt) {
     items.push(
       join(
-        `輕軌網絡：${snapshot.lrt.lines.length} 條線、${snapshot.lrt.stations.length} 個站；官方無實時列車位置`,
-        `轻轨网络：${snapshot.lrt.lines.length} 条线、${snapshot.lrt.stations.length} 个站；官方无实时列车位置`,
-        `LRT network: ${snapshot.lrt.lines.length} lines, ${snapshot.lrt.stations.length} stations; no official live train positions`,
+        `輕軌網絡：${snapshot.lrt.lines.length} 條線、${snapshot.lrt.stations.length} 個站；未核實到官方實時列車位置`,
+        `轻轨网络：${snapshot.lrt.lines.length} 条线、${snapshot.lrt.stations.length} 个站；未核实到官方实时列车位置`,
+        `LRT network: ${snapshot.lrt.lines.length} lines, ${snapshot.lrt.stations.length} stations; no verified official live positions`,
       ),
     );
   }

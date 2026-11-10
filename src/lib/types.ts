@@ -196,6 +196,7 @@ export interface LrtNetwork {
     id: string;
     name: LocalizedText;
     coordinates: [number, number];
+    lineCoordinates?: Record<string, [number, number]>;
     lines: string[];
     interchange: boolean;
   }>;
@@ -210,6 +211,11 @@ export interface TrafficNotice {
   publishedAt: string | null;
   category: "incident" | "roadworks" | "bus-change" | "general";
   url: string;
+}
+
+export interface OfficialNews {
+  items: TrafficNotice[];
+  feeds: Array<{ name: string; url: string; available: boolean }>;
 }
 
 export interface LearningAssistantRequest {

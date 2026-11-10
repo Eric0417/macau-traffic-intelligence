@@ -109,7 +109,7 @@ export function parseCroadHtml(html: string, base: string): TrafficNotice[] {
         id: `roadworks:${href}`,
         title: text,
         content: text,
-        publishedAt: parseDate(text),
+        publishedAt: null,
         category: categoryFor("roadworks", text),
         url: absoluteUrl(href, base),
       }),
@@ -179,6 +179,9 @@ export async function loadNotices() {
   const notices = dedupe(
     results.flatMap((result) => (result.status === "fulfilled" ? result.value : [])),
   );
+  if (results.every((result) => result.status === "rejected")) {
+    throw new Error("DSAT notice lists unavailable");
+  }
   const incidents = notices.filter((notice) => notice.category === "incident").sort(byDateDesc);
   const rest = notices.filter((notice) => notice.category !== "incident").sort(byDateDesc);
   return [...incidents, ...rest].slice(0, 60);
@@ -186,9 +189,9 @@ export async function loadNotices() {
 
 export const noticesSource: SourceDefinition<Awaited<ReturnType<typeof loadNotices>>> = {
   id: "notices",
-  name: "DSAT 特別交通消息",
+  name: "DSAT 交通公告",
   url: "https://www.dsat.gov.mo/dsat/emergency.aspx",
-  attribution: "交通事務局突發交通、臨時交通安排及巴士改道消息",
+  attribution: "交通事務局已發布的交通安排與改道公告；並非完整即時事故流",
   envKey: "SOURCE_NOTICES_ENABLED",
   ttlSeconds: 300,
   staleTtlSeconds: 86_400,
