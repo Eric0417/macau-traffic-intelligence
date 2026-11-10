@@ -10,6 +10,7 @@ import {
   Star,
   Sparkles,
   Send,
+  Thermometer,
 } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
 import { residentCopy } from "@/lib/resident-copy";
@@ -71,13 +72,24 @@ export function TravelHome({
   return (
     <div className="travel-home panel-stack">
       <section className="travel-heading">
-        <div className="eyebrow">
-          {new Date().toLocaleDateString(locale === "en" ? "en-GB" : "zh-MO", {
-            timeZone: "Asia/Macau",
-            month: "short",
-            day: "numeric",
-            weekday: "short",
-          })}
+        <div className="travel-dateline">
+          <span className="eyebrow">
+            {new Date().toLocaleDateString(
+              locale === "en" ? "en-GB" : "zh-MO",
+              {
+                timeZone: "Asia/Macau",
+                month: "short",
+                day: "numeric",
+                weekday: "short",
+              },
+            )}
+          </span>
+          {weather?.temperatureCelsius != null ? (
+            <span className="travel-temperature">
+              <Thermometer size={16} aria-hidden="true" />
+              {weather.temperatureCelsius}°C
+            </span>
+          ) : null}
         </div>
         <h2>{c.today}</h2>
         <p>{c.intro}</p>
@@ -105,52 +117,43 @@ export function TravelHome({
           <ArrowUpRight size={16} />
         </button>
       </div>
-      <section className="home-ai">
-        <div className="home-ai-title">
-          <span className="ai-glyph">
-            <Sparkles size={21} />
-          </span>
-          <div>
-            <h2>{t("assistant")}</h2>
-            <p>{c.aiPrompt}</p>
-          </div>
-        </div>
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (question.trim()) onAsk(question.trim());
-          }}
-        >
-          <label className="sr-only" htmlFor="home-question">
-            {t("assistantPlaceholder")}
-          </label>
-          <input
-            id="home-question"
-            type="text"
-            maxLength={500}
-            value={question}
-            onChange={(event) => setQuestion(event.target.value)}
-            placeholder={c.aiExample}
-          />
+      <section className="panel-section home-nearby">
+        <div className="section-heading">
+          <h2>{c.nearbyParking}</h2>
           <button
-            type="submit"
-            aria-label={t("assistantSend")}
-            disabled={!question.trim()}
+            type="button"
+            className="nearby-locate"
+            onClick={onLocate}
+            disabled={locating}
           >
-            <Send size={18} />
+            <MapPin size={15} aria-hidden="true" />
+            {locating ? c.locating : c.locate}
           </button>
-        </form>
-        <div className="home-ai-examples">
-          {[t("assistantQ1"), t("assistantQ2")].map((item) => (
-            <button type="button" key={item} onClick={() => onAsk(item)}>
-              {item}
-              <ArrowUpRight size={13} />
-            </button>
-          ))}
         </div>
-        <p className="home-ai-note">{c.aiEvidence}</p>
+        <p className="quiet-copy">{c.locationNote}</p>
+        {nearby.map((park) => (
+          <button
+            type="button"
+            className="nearby-row"
+            onClick={() => onOpen({ kind: "parking", id: park.id })}
+            key={park.id}
+          >
+            <span>
+              {park.name}
+              <small>
+                {c.straightLine}{" "}
+                {Math.round(distanceMeters(location!, park.coordinates!))} m
+              </small>
+            </span>
+            <strong>
+              {park.availability.lightVehicle ?? "–"}
+              <small>{c.remaining}</small>
+            </strong>
+          </button>
+        ))}
+        <SourceNote meta={parkingMeta} />
       </section>
-      <section className="panel-section">
+      <section className="panel-section home-saved">
         <div className="section-heading">
           <h2>{c.saved}</h2>
           <Star size={17} />
@@ -211,43 +214,52 @@ export function TravelHome({
           </div>
         )}
       </section>
-      <section className="panel-section">
-        <div className="section-heading">
-          <h2>{c.nearbyParking}</h2>
-          <MapPin size={17} />
+      <section className="home-ai">
+        <div className="home-ai-title">
+          <span className="ai-glyph">
+            <Sparkles size={21} />
+          </span>
+          <div>
+            <h2>{t("assistant")}</h2>
+            <p>{c.aiPrompt}</p>
+          </div>
         </div>
-        <SourceNote meta={parkingMeta} />
-        <button
-          type="button"
-          className="text-action"
-          onClick={onLocate}
-          disabled={locating}
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (question.trim()) onAsk(question.trim());
+          }}
         >
-          {locating ? c.locating : c.locate}
-        </button>
-        <p className="quiet-copy">{c.locationNote}</p>
-        {nearby.map((park) => (
+          <label className="sr-only" htmlFor="home-question">
+            {t("assistantPlaceholder")}
+          </label>
+          <input
+            id="home-question"
+            type="text"
+            maxLength={500}
+            value={question}
+            onChange={(event) => setQuestion(event.target.value)}
+            placeholder={c.aiExample}
+          />
           <button
-            type="button"
-            className="nearby-row"
-            onClick={() => onOpen({ kind: "parking", id: park.id })}
-            key={park.id}
+            type="submit"
+            aria-label={t("assistantSend")}
+            disabled={!question.trim()}
           >
-            <span>
-              {park.name}
-              <small>
-                {c.straightLine}{" "}
-                {Math.round(distanceMeters(location!, park.coordinates!))} m
-              </small>
-            </span>
-            <strong>
-              {park.availability.lightVehicle ?? "–"}
-              <small>{c.remaining}</small>
-            </strong>
+            <Send size={18} />
           </button>
-        ))}
+        </form>
+        <div className="home-ai-examples">
+          {[t("assistantQ1"), t("assistantQ2")].map((item) => (
+            <button type="button" key={item} onClick={() => onAsk(item)}>
+              {item}
+              <ArrowUpRight size={13} />
+            </button>
+          ))}
+        </div>
+        <p className="home-ai-note">{c.aiEvidence}</p>
       </section>
-      <section className="panel-section">
+      <section className="panel-section home-weather">
         <div className="section-heading">
           <h2>{t("weather")}</h2>
           <span>

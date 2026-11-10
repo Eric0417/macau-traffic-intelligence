@@ -50,12 +50,22 @@
     "Typecheck, ESLint and production build pass"
   ],
   "limits": "Draw calls are workload counts, not FPS, INP or physical-device performance. Native canvas resolution was already correct. Antialias capability depends on actual device. No supersampling or model world-size changes were made.",
-  "fullSuite": {
+  "beforeStopClearanceFullSuite": {
     "passed": 65,
     "skipped": 1,
     "desktopDrawCallsInThreeSeconds": 64,
     "mobileDrawCallsInThreeSeconds": 128,
     "workers": 4,
     "drawCallBudget": 200
+  },
+  "stopClearanceRevision": {
+    "focusedDesktopDrawCallsInThreeSeconds": 90,
+    "focusedMobileDrawCallsInThreeSeconds": 180,
+    "fullSuitePassed": 77,
+    "fullSuiteSkipped": 1,
+    "fullSuiteMobileDrawCallsInThreeSeconds": 180,
+    "drawCallBudget": 200,
+    "antialiasSamples": 4,
+    "note": "Added stop-display leader and hit layers; native canvas pixel dimensions are unchanged. Earlier 64-draw results above describe the revision before these layers."
   }
 }

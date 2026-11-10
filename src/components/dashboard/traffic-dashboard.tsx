@@ -53,6 +53,9 @@ import { BusPanel } from "./bus-panel";
 import { ParkingPanel } from "./parking-panel";
 import { NoticesPanel } from "./notices-panel";
 import { TravelHome } from "./travel-home";
+import { JourneyPlanner } from "./journey-planner";
+import type { BusJourneyLeg } from "@/lib/bus-journey";
+import { stopKey } from "@/lib/resident-tools";
 import { useWorkspaceMotion } from "./use-workspace-motion";
 import { WorkspaceNav } from "./workspace-nav";
 import {
@@ -113,7 +116,8 @@ export function TrafficDashboard() {
   const [selectedNoticeId, setSelectedNoticeId] = useState<string | null>(null);
   const [selectedRoute, setSelectedRoute] = useState<BusRoute | null>(null);
   const [busDirection, setBusDirection] = useState<0 | 1>(0);
-  const [selectedStopKey, setSelectedStopKey] = useState<string | null>(null);
+  const [manualStopKey, setSelectedStopKey] = useState<string | null>(null);
+  const [journeyBoarding, setJourneyBoarding] = useState<BusJourneyLeg | null>(null);
   const [selectedLrtLine, setSelectedLrtLine] = useState<string | null>(null);
   const [selectedLrtStation, setSelectedLrtStation] = useState<string | null>(
     null,
@@ -148,6 +152,7 @@ export function TrafficDashboard() {
   const bridges = useLiveJson<BridgeTime[]>("/api/v1/traffic/bridges", 60_000);
   const cameras = useLiveJson<Camera[]>("/api/v1/cameras", 21_600_000);
   const busRoutes = useLiveJson<BusRoute[]>("/api/v1/bus/routes", 21_600_000);
+  const liveRouteCodes = useMemo(() => new Set(busRoutes.data?.filter((route) => route.live).map((route) => route.routeCode)), [busRoutes.data]);
   const busEta = useLiveJson<BusEta>(
     selectedRoute
       ? `/api/v1/bus/routes/${encodeURIComponent(selectedRoute.routeCode)}/eta?direction=${busDirection}`
@@ -155,6 +160,14 @@ export function TrafficDashboard() {
     2_000,
     Boolean(selectedRoute?.live) && busVisible,
   );
+  const selectedStopKey = useMemo(() => {
+    if (!journeyBoarding) return manualStopKey;
+    if (!busEta.data || busEta.data.routeCode !== journeyBoarding.routeCode || busEta.data.direction !== journeyBoarding.direction) return null;
+    const matches = busEta.data.stops.filter((stop) => stop.stationCode === journeyBoarding.from.stationCode);
+    // A refreshed sequence can differ from the dated planner. Ambiguous stops
+    // stay unselected so the user chooses the current boarding occurrence.
+    return matches.length === 1 ? stopKey(matches[0]) : null;
+  }, [journeyBoarding, busEta.data, manualStopKey]);
   const parking = useLiveJson<ParkingFacility[]>("/api/v1/parking", 30_000);
   const weather = useLiveJson<WeatherSnapshot>("/api/v1/weather", 60_000);
   const notices = useLiveJson<TrafficNotice[]>(
@@ -231,6 +244,7 @@ export function TrafficDashboard() {
   ]);
 
   const navigate = (next: Tab) => {
+    if (!selectedStopKey) setJourneyBoarding(null);
     if (next === requestedTab.current && next === tab) {
       setView("list");
       return;
@@ -283,6 +297,7 @@ export function TrafficDashboard() {
     );
   };
   const openFavorite = (favorite: Favorite) => {
+    setJourneyBoarding(null);
     if (favorite.kind === "parking") {
       setSelectedParkingId(favorite.id);
       navigate("parking");
@@ -299,6 +314,7 @@ export function TrafficDashboard() {
     }
   };
   const applyAssistantAction = (action: LearningAssistantAction | null) => {
+    setJourneyBoarding(null);
     if (action?.kind === "bus" && action.routeCode) {
       const route = busRoutes.data?.find(
         (item) =>
@@ -549,6 +565,27 @@ export function TrafficDashboard() {
                 onOverview={() => navigate("overview")}
               />
             ) : null}
+            <div hidden={tab !== "bus" || selectedRoute !== null}>
+              <JourneyPlanner
+                enabled={tab === "bus"}
+                location={location}
+                locating={locating}
+                locationError={locationError}
+                onLocate={locate}
+                liveRouteCodes={liveRouteCodes}
+                onInspect={(leg) => {
+                  const route = busRoutes.data?.find((entry) => entry.routeCode === leg.routeCode);
+                  if (!route) return;
+                  routeCatalogScroll.current = scrollRef.current?.scrollTop ?? 0;
+                  move(() => {
+                    setSelectedRoute(route);
+                    setBusDirection(leg.direction);
+                    setSelectedStopKey(null);
+                    setJourneyBoarding(leg);
+                  }, { from: ".journey-planner", to: ".bus-route-header", focus: ".bus-route-header", scrollTop: 0 });
+                }}
+              />
+            </div>
             {tab === "bus" ? (
               <BusPanel
                 routes={busRoutes.data}
@@ -556,15 +593,17 @@ export function TrafficDashboard() {
                 direction={busDirection}
                 eta={busEta}
                 selectedStopKey={selectedStopKey}
-                onSelectStop={(key) =>
+                onSelectStop={(key) => {
+                  setJourneyBoarding(null);
                   move(() => setSelectedStopKey(key), {
                     from: `[data-stop-key="${CSS.escape(key)}"]`,
                     to: ".waiting-card",
                     focus: ".waiting-card",
                     scrollTop: 0,
-                  })
-                }
+                  });
+                }}
                 onSelect={(route) => {
+                  setJourneyBoarding(null);
                   routeCatalogScroll.current =
                     scrollRef.current?.scrollTop ?? 0;
                   move(
@@ -582,6 +621,7 @@ export function TrafficDashboard() {
                   );
                 }}
                 onDirectionChange={(direction) => {
+                  setJourneyBoarding(null);
                   if (direction === busDirection) return;
                   move(
                     () => {
@@ -592,6 +632,7 @@ export function TrafficDashboard() {
                   );
                 }}
                 onBack={() => {
+                  setJourneyBoarding(null);
                   const target = `[data-route-code="${CSS.escape(selectedRoute?.routeCode ?? "")}"]`;
                   move(
                     () => {
@@ -757,7 +798,7 @@ export function TrafficDashboard() {
             visibleLayers={layers}
             onCameraSelect={setSelectedCamera}
             selectedStopKey={selectedStopKey}
-            onStopSelect={setSelectedStopKey}
+            onStopSelect={(key) => { setJourneyBoarding(null); setSelectedStopKey(key); }}
             selectedLrtStation={selectedLrtStation}
             onLrtStationSelect={setSelectedLrtStation}
           />

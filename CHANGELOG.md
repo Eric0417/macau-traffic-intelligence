@@ -2,6 +2,14 @@
 
 All notable user-visible and architectural changes are recorded here.
 
+## Connected workspace and bus journeys - 2026-11-10
+
+- Rebuilt the page as a continuous list/map workspace with compact 3D transport entries, nearby/saved information before supporting content, lighter AI input, integrated route/stop rows and consistent selected-result surfaces. Existing scoped card transitions and reduced-motion behavior remain.
+- Kept arriving buses clear of schematic stop signs. Sign positions now account for scaled vehicle footprints and route bends, with a leader to the unchanged official anchor. Fixed world proportions are retained.
+- Added bus journeys from current location or an official stop to a destination stop. Direct and one-transfer options use a dated official DSAT network of 90 routes and 111 directions. Results show stop count, straight-line access distance and data date, and open the selected leg's live arrivals. Location is processed only in the browser.
+- Added the official MLM service page adapter and 17 station timetable links across three lines. The app distinguishes the published schedule edition from retrieval time and does not label timetable data as live arrivals.
+- Added fixture regressions for directional journey search, repeated stops, nearby candidates, stale result context, station-sign clearance and official timetable parsing. Source policy for the bus snapshot is recorded in ADR 0012.
+
 ## Resident travel workspace - 2026-11-10
 
 - Enabled antialiasing when MapLibre creates the WebGL context shared with Three.js, while retaining native device resolution and fixed model proportions. Stationary bus markers stop their animation loop and resume when the official estimate changes.

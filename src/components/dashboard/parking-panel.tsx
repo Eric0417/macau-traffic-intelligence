@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { MapPin, Star } from "lucide-react";
+import { MapPin, Search, Star } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
 import { residentCopy } from "@/lib/resident-copy";
 import {
@@ -58,7 +58,7 @@ export function ParkingPanel({
   const selected = facilities?.find((item) => item.id === selectedId);
 
   return (
-    <div className="panel-stack">
+    <div className="panel-stack parking-workspace">
       <section className="panel-section">
         <div className="section-heading">
           <h2>{t("parking")}</h2>
@@ -66,7 +66,8 @@ export function ParkingPanel({
             {filtered.length} {c.results}
           </span>
         </div>
-        <label className="search-field">
+        <label className="search-field has-search-icon">
+          <Search size={17} aria-hidden="true" />
           <span className="sr-only">{t("parkingSearch")}</span>
           <input
             type="search"

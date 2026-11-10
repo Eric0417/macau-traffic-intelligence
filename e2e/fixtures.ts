@@ -63,6 +63,20 @@ const cameras = [
 ];
 
 const responses: Record<string, unknown> = {
+  "/api/v1/bus/network": {
+    fetchedAt: "2026-11-10T10:00:00.000Z", coverage: { catalogRoutes: 2, loadedRoutes: 2, missingRoutes: [] },
+    routes: [
+      { routeName: "3", routeCode: "00003", direction: 0, circular: false, company: { id: "orange", name: "澳巴", color: "orange" }, stops: [
+        { stationCode: "M1/9", stationName: "關閘總站", coordinates: [113.54918, 22.215502] },
+        { stationCode: "M2", stationName: "測試轉乘站", coordinates: [113.54, 22.19] },
+      ] },
+      { routeName: "8", routeCode: "00008", direction: 1, circular: false, company: { id: "blue", name: "新福利", color: "blue" }, stops: [
+        { stationCode: "M2", stationName: "測試轉乘站", coordinates: [113.54, 22.19] },
+        { stationCode: "M3", stationName: "測試終點站", coordinates: [113.53, 22.18] },
+      ] },
+    ],
+  },
+  "/api/v1/lrt/service": { lines: ["氹仔線", "石排灣線", "橫琴線"].map((name) => ({ name, weekdayHours: "06:30 - 23:15", weekendHours: "06:30 - 23:59", frequency: "約6分鐘一班", journeyTime: "全程約2分鐘", timetables: [{ stationName: "官方測試站", url: "https://www.mlm.com.mo/images/stations/TimeTable/2026_09/TT_BAR_2026_09_V2.jpg" }] })), revisionNote: "列車出發時刻表更新於2026年9月。" },
   "/api/v1/assistant": { answer: "友誼大橋目前較慢，請核對官方路況。", model: "fixture", locale: "zh-Hant", snapshotAt: new Date().toISOString(), contextSummary: ["官方道路狀態"] },
   "/api/v1/traffic/news": { items: [{ id: "gcs:test", title: "官方航班暫停通知", content: "官方公布的安排。", publishedAt: "2026-11-10T08:16:00.000Z", category: "general", url: "https://www.gcs.gov.mo/detail/zh-hant/test" }], feeds: [{ name: "新聞局政府新聞", url: "https://govinfohub.gcs.gov.mo/api/rss/n/zh-hant", available: true }, { name: "交通事務局新聞", url: "https://www.dsat.gov.mo/tc/news_rss.aspx", available: false }] },
   "/api/v1/traffic/roads": roads,

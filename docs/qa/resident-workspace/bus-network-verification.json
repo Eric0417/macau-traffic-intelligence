@@ -1,0 +1,36 @@
+{
+  "fetchedAt": "2026-11-10T11:51:19.223Z",
+  "catalogRoutes": 90,
+  "directions": 111,
+  "stopOccurrences": 2826,
+  "uniqueStationCodes": 599,
+  "missingRoutes": [],
+  "snapshotBytes": 283032,
+  "snapshotSha256": "6f20129981d519464b5804c48dda174b99a0b2ea07f42d5cd7d86b74565a8055",
+  "sourcePages": [
+    "https://bis.dsat.gov.mo:37812/macauweb/",
+    "https://bis.dsat.gov.mo/pointToPoint/pointToPoint.html"
+  ],
+  "buildEndpoints": [
+    "https://bis.dsat.gov.mo:37812/macauweb/getRouteAndCompanyList.html",
+    "https://bis.dsat.gov.mo:37812/macauweb/routestation/location"
+  ],
+  "publicApiVerified": "GET http://localhost:3100/api/v1/bus/network",
+  "publicApiResult": "90 complete catalog routes, 111 directions, no missing routes; normalized snapshot only",
+  "plannerBenchmark": {
+    "environment": "Local Node CPU; no browser, device or FPS claim",
+    "origin": "Every indexed stop within 500 m straight-line of [113.54918, 22.215502] near M1/9",
+    "destination": "M3/1 媽閣交通樞紐",
+    "warmupRuns": 5,
+    "samples": 50,
+    "p50Milliseconds": 1.303584,
+    "p95Milliseconds": 2.23875
+  },
+  "limitations": [
+    "Dated manual topology build; response retrieval metadata does not refresh the topology date",
+    "No service-hour, current-operation, diversion, arrival-time or fare guarantee",
+    "Published forward stop order only, including repeated stops; no new trip after the terminal",
+    "Same exact station code for transfers; nearby platforms are not joined",
+    "Access and egress distances are straight-line measurements, not verified walking routes"
+  ]
+}

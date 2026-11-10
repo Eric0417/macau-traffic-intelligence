@@ -15,12 +15,14 @@ async function main() {
     "bridges",
     "cameras",
     "bus-routes",
+    "bus-network",
     "parking",
     "weather",
     "notices",
     "official-news",
     "lrt-network",
     "lrt-notices",
+    "lrt-service",
     "borders",
   ];
 

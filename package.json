@@ -22,6 +22,7 @@
     "warmup": "tsx scripts/warmup.ts",
     "build:lrt": "tsx scripts/build-lrt-network.ts",
     "build:parking": "tsx scripts/build-parking-locations.ts",
+    "build:bus-network": "NODE_OPTIONS='--conditions=react-server' tsx scripts/build-bus-network.ts",
     "docs:check": "tsx scripts/check-memory.ts"
   },
   "dependencies": {

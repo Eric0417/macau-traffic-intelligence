@@ -18,6 +18,7 @@ import { useLanguage } from "@/components/language-provider";
 import { localized } from "@/lib/i18n";
 import { metaIsDelayed } from "@/lib/live-status";
 import { residentCopy } from "@/lib/resident-copy";
+import { LrtServicePanel } from "./lrt-service-panel";
 import type {
   ApiEnvelope,
   BorderStatus,
@@ -306,6 +307,7 @@ export function LrtPanel({
         ) : null}
       </section>
 
+      <LrtServicePanel lineName={lines.find((line) => line.properties.ref === selectedLine)?.properties.name["zh-Hant"]} />
       <section className="panel-section">
         <div className="section-heading">
           <h2>{t("lrtNotice")}</h2>

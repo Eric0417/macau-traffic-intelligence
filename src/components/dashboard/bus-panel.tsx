@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { ArrowLeft, BusFront, MapPin, Star } from "lucide-react";
+import { useMemo, useState, type CSSProperties } from "react";
+import { ArrowLeft, BusFront, MapPin, Search, Star } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
 import { residentCopy } from "@/lib/resident-copy";
 import { stopKey, stopStatus } from "@/lib/resident-tools";
@@ -68,13 +68,14 @@ export function BusPanel({
 
   if (!selected)
     return (
-      <div className="panel-stack">
-        <section className="panel-section">
+      <div className="panel-stack bus-catalog">
+        <section className="panel-section route-catalog">
           <div className="section-heading">
             <h2>{c.allRoutes}</h2>
             <span className="count-label">{filtered.length}</span>
           </div>
-          <label className="search-field">
+          <label className="search-field has-search-icon">
+            <Search size={17} aria-hidden="true" />
             <span className="sr-only">{c.routeSearch}</span>
             <input
               type="search"
@@ -89,6 +90,9 @@ export function BusPanel({
                 type="button"
                 key={route.routeCode}
                 data-route-code={route.routeCode}
+                style={
+                  { "--route-color": route.company.color } as CSSProperties
+                }
                 onClick={() => onSelect(route)}
               >
                 <strong>{route.routeName}</strong>
@@ -109,7 +113,10 @@ export function BusPanel({
     );
 
   return (
-    <div className="panel-stack bus-workspace">
+    <div
+      className="panel-stack bus-workspace"
+      style={{ "--route-color": selected.company.color } as CSSProperties}
+    >
       <section className="panel-section bus-route-header" tabIndex={-1}>
         <button type="button" className="text-action" onClick={onBack}>
           <ArrowLeft size={17} />
@@ -224,7 +231,8 @@ export function BusPanel({
               {eta.data.stops.length} {t("stops")}
             </span>
           </div>
-          <label className="search-field">
+          <label className="search-field has-search-icon">
+            <Search size={17} aria-hidden="true" />
             <span className="sr-only">{c.stopSearch}</span>
             <input
               type="search"
