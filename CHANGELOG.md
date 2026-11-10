@@ -2,6 +2,14 @@
 
 All notable user-visible and architectural changes are recorded here.
 
+## Journey clarity and route map - 2026-11-10
+
+- Removed the white inset shine from dark navigation while retaining visible keyboard focus.
+- Numbered each journey option, grouped its bus legs, and added explicit boarding/alighting codes, per-leg stop counts and circular-line labels. Service hours remain visibly unverified.
+- Fixed ranking that put 30-stop direct trips before 9-stop transfers. Options now sort by ridden stops, straight-line access distance, then transfer count. An explicit nearby-stop setting includes other platforms within 500 metres.
+- Added a whole-journey map and step list. Each bus leg uses a separate colour and verified official geometry; missing or inconsistent geometry is omitted with a warning. Map and live leg details preserve the selected journey when returning.
+- Added walking navigation links opened by the user. The page identifies straight-line access links and discloses that opening Google Maps shares that walking leg's endpoints. No automatic external routing request is made.
+
 ## Connected workspace and bus journeys - 2026-11-10
 
 - Rebuilt the page as a continuous list/map workspace with compact 3D transport entries, nearby/saved information before supporting content, lighter AI input, integrated route/stop rows and consistent selected-result surfaces. Existing scoped card transitions and reduced-motion behavior remain.

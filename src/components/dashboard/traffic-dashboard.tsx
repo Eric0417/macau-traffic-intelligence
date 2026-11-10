@@ -54,6 +54,8 @@ import { ParkingPanel } from "./parking-panel";
 import { NoticesPanel } from "./notices-panel";
 import { TravelHome } from "./travel-home";
 import { JourneyPlanner } from "./journey-planner";
+import { JourneyMapDetail, type SelectedJourney } from "./journey-map-detail";
+import { buildJourneyMap, type JourneyMapInput } from "./journey-map";
 import type { BusJourneyLeg } from "@/lib/bus-journey";
 import { stopKey } from "@/lib/resident-tools";
 import { useWorkspaceMotion } from "./use-workspace-motion";
@@ -118,6 +120,7 @@ export function TrafficDashboard() {
   const [busDirection, setBusDirection] = useState<0 | 1>(0);
   const [manualStopKey, setSelectedStopKey] = useState<string | null>(null);
   const [journeyBoarding, setJourneyBoarding] = useState<BusJourneyLeg | null>(null);
+  const [selectedJourney, setSelectedJourney] = useState<SelectedJourney | null>(null);
   const [selectedLrtLine, setSelectedLrtLine] = useState<string | null>(null);
   const [selectedLrtStation, setSelectedLrtStation] = useState<string | null>(
     null,
@@ -168,6 +171,27 @@ export function TrafficDashboard() {
     // stay unselected so the user chooses the current boarding occurrence.
     return matches.length === 1 ? stopKey(matches[0]) : null;
   }, [journeyBoarding, busEta.data, manualStopKey]);
+  const journeyLeg0 = selectedJourney?.journey.legs[0];
+  const journeyLeg1 = selectedJourney?.journey.legs[1];
+  const journeyEta0 = useLiveJson<BusEta>(
+    journeyLeg0 ? `/api/v1/bus/routes/${encodeURIComponent(journeyLeg0.routeCode)}/eta?direction=${journeyLeg0.direction}` : "/api/v1/health",
+    2_000, Boolean(journeyLeg0) && tab === "bus" && !selectedRoute,
+  );
+  const journeyEta1 = useLiveJson<BusEta>(
+    journeyLeg1 ? `/api/v1/bus/routes/${encodeURIComponent(journeyLeg1.routeCode)}/eta?direction=${journeyLeg1.direction}` : "/api/v1/health",
+    2_000, Boolean(journeyLeg1) && tab === "bus" && !selectedRoute,
+  );
+  const journeyInput = useMemo<JourneyMapInput | null>(() => selectedJourney ? {
+    id: `${selectedJourney.journey.id}:${selectedJourney.origin.join(",")}:${selectedJourney.destination.join(",")}`,
+    origin: selectedJourney.origin,
+    destination: selectedJourney.destination,
+    legs: selectedJourney.journey.legs.map((leg, index) => ({ leg, eta: index === 0 ? journeyEta0.data : journeyEta1.data })),
+  } : null, [selectedJourney, journeyEta0.data, journeyEta1.data]);
+  const journeyGeometry = useMemo(() => journeyInput ? buildJourneyMap(journeyInput, locale) : null, [journeyInput, locale]);
+  const journeyReady = Boolean(selectedJourney) && [journeyEta0, ...(journeyLeg1 ? [journeyEta1] : [])].every((state, index) => {
+    const leg = selectedJourney!.journey.legs[index];
+    return (state.data?.routeCode === leg.routeCode && state.data.direction === leg.direction) || (!state.loading && Boolean(state.error));
+  });
   const parking = useLiveJson<ParkingFacility[]>("/api/v1/parking", 30_000);
   const weather = useLiveJson<WeatherSnapshot>("/api/v1/weather", 60_000);
   const notices = useLiveJson<TrafficNotice[]>(
@@ -191,7 +215,7 @@ export function TrafficDashboard() {
       if (!panel || !map) return;
       const focused = document.activeElement;
       const leaving = view === "map" ? panel : map;
-      const transferFocus = media.matches && leaving.contains(focused);
+      const transferFocus = media.matches && (leaving.contains(focused) || (view === "map" && selectedJourney !== null && selectedRoute === null));
       panel.inert = media.matches && view === "map";
       map.inert = media.matches && view === "list";
       if (!panel.inert) panel.ariaHidden = null;
@@ -211,7 +235,7 @@ export function TrafficDashboard() {
     syncInteraction();
     media.addEventListener("change", syncInteraction);
     return () => media.removeEventListener("change", syncInteraction);
-  }, [view]);
+  }, [view, selectedJourney, selectedRoute]);
 
   useEffect(() => {
     const timer = window.setInterval(() => setClock(Date.now()), 10_000);
@@ -278,6 +302,7 @@ export function TrafficDashboard() {
     );
   };
   const locate = () => {
+    setSelectedJourney(null);
     setLocationError(false);
     if (!navigator.geolocation) {
       setLocationError(true);
@@ -297,6 +322,7 @@ export function TrafficDashboard() {
     );
   };
   const openFavorite = (favorite: Favorite) => {
+    setSelectedJourney(null);
     setJourneyBoarding(null);
     if (favorite.kind === "parking") {
       setSelectedParkingId(favorite.id);
@@ -314,6 +340,7 @@ export function TrafficDashboard() {
     }
   };
   const applyAssistantAction = (action: LearningAssistantAction | null) => {
+    setSelectedJourney(null);
     setJourneyBoarding(null);
     if (action?.kind === "bus" && action.routeCode) {
       const route = busRoutes.data?.find(
@@ -540,7 +567,7 @@ export function TrafficDashboard() {
                 {c.locationFailed}
               </p>
             ) : null}
-            {currentSource && !(tab === "bus" && selectedRoute) ? (
+            {currentSource && !(tab === "bus" && (selectedRoute || selectedJourney)) ? (
               <SourceStateNote state={currentSource} />
             ) : null}
             {tab === "home" ? (
@@ -565,7 +592,23 @@ export function TrafficDashboard() {
                 onOverview={() => navigate("overview")}
               />
             ) : null}
-            <div hidden={tab !== "bus" || selectedRoute !== null}>
+            {tab === "bus" && selectedJourney && !selectedRoute ? <JourneyMapDetail
+              selected={selectedJourney}
+              states={[journeyEta0, ...(journeyLeg1 ? [journeyEta1] : [])]}
+              missingLegs={journeyGeometry?.missingLegs ?? []}
+              liveRouteCodes={liveRouteCodes}
+              onBack={() => move(() => { setSelectedJourney(null); setView("list"); }, { direction: "back", from: ".journey-map-detail", to: ".journey-planner", focus: ".journey-planner button[type=submit]", scrollTop: 0 })}
+              onMap={() => setView("map")}
+              onInspect={(leg) => {
+                const route = busRoutes.data?.find((entry) => entry.routeCode === leg.routeCode);
+                if (!route) return;
+                move(() => {
+                  setSelectedRoute(route); setBusDirection(leg.direction);
+                  setSelectedStopKey(null); setJourneyBoarding(leg); setView("list");
+                }, { from: ".journey-map-detail", to: ".bus-route-header", focus: ".bus-route-header", scrollTop: 0 });
+              }}
+            /> : null}
+            <div hidden={tab !== "bus" || selectedRoute !== null || selectedJourney !== null}>
               <JourneyPlanner
                 enabled={tab === "bus"}
                 location={location}
@@ -573,11 +616,19 @@ export function TrafficDashboard() {
                 locationError={locationError}
                 onLocate={locate}
                 liveRouteCodes={liveRouteCodes}
+                onShowJourney={(journey, origin, destination, networkFetchedAt, destinationName) => {
+                  move(() => {
+                    setSelectedRoute(null); setJourneyBoarding(null); setSelectedStopKey(null);
+                    setSelectedJourney({ journey, origin, destination, networkFetchedAt, destinationName });
+                    setView("map");
+                  }, { from: ".journey-planner", to: ".journey-map-detail", focus: ".journey-map-detail", scrollTop: 0 });
+                }}
                 onInspect={(leg) => {
                   const route = busRoutes.data?.find((entry) => entry.routeCode === leg.routeCode);
                   if (!route) return;
                   routeCatalogScroll.current = scrollRef.current?.scrollTop ?? 0;
                   move(() => {
+                    setSelectedJourney(null);
                     setSelectedRoute(route);
                     setBusDirection(leg.direction);
                     setSelectedStopKey(null);
@@ -586,10 +637,11 @@ export function TrafficDashboard() {
                 }}
               />
             </div>
-            {tab === "bus" ? (
+            {tab === "bus" && (!selectedJourney || selectedRoute) ? (
               <BusPanel
                 routes={busRoutes.data}
                 selected={selectedRoute}
+                backLabel={selectedJourney ? (locale === "en" ? "Back to journey" : locale === "zh-Hans" ? "返回行程" : "返回行程") : undefined}
                 direction={busDirection}
                 eta={busEta}
                 selectedStopKey={selectedStopKey}
@@ -603,6 +655,7 @@ export function TrafficDashboard() {
                   });
                 }}
                 onSelect={(route) => {
+                  setSelectedJourney(null);
                   setJourneyBoarding(null);
                   routeCatalogScroll.current =
                     scrollRef.current?.scrollTop ?? 0;
@@ -633,6 +686,10 @@ export function TrafficDashboard() {
                 }}
                 onBack={() => {
                   setJourneyBoarding(null);
+                  if (selectedJourney) {
+                    move(() => { setSelectedRoute(null); setSelectedStopKey(null); }, { direction: "back", from: ".bus-route-header", to: ".journey-map-detail", focus: ".journey-map-detail", scrollTop: 0 });
+                    return;
+                  }
                   const target = `[data-route-code="${CSS.escape(selectedRoute?.routeCode ?? "")}"]`;
                   move(
                     () => {
@@ -772,6 +829,7 @@ export function TrafficDashboard() {
 
         <div className="workspace-map map-stage" ref={mapRef}>
           <MacauMap
+            journey={tab === "bus" && !selectedRoute && journeyReady ? journeyInput : null}
             theme={preferences.theme}
             roads={roads.data}
             cameras={cameras.data}
@@ -874,13 +932,19 @@ export function TrafficDashboard() {
             <span>
               {tab === "notices"
                 ? c.newsIntro
+                : tab === "bus" && selectedJourney && !selectedRoute
+                  ? (!journeyReady
+                    ? (locale === "en" ? "Checking official route geometry…" : locale === "zh-Hans" ? "正在核对官方走线…" : "正在核對官方走線…")
+                    : (locale === "en" ? "Coloured lines: verified bus geometry. Dashed links: straight-line access, not walking paths." : locale === "zh-Hans" ? "实线为已核实巴士走线；虚线只表示直线接驳，并非实际步行路线。" : "實線為已核實巴士走線；虛線只表示直線接駁，並非實際步行路線。"))
                 : busVisible
                   ? t("positionNote")
                   : tab === "lrt" || assistantFocus?.kind === "lrt"
                     ? t("lrtNoLive")
                     : c.mapHint}
             </span>
-            {selectedStop && busVisible ? (
+            {tab === "bus" && selectedJourney && !selectedRoute ? <button type="button" onClick={() => setView("list")}>
+              {locale === "en" ? "Boarding, transfer & alighting steps →" : locale === "zh-Hans" ? "查看上车、转乘及下车步骤 →" : "查看上車、轉乘及落車步驟 →"}
+            </button> : selectedStop && busVisible ? (
               <button type="button" onClick={() => setView("list")}>
                 {selectedStop.stationName} · {c.stopView} →
               </button>

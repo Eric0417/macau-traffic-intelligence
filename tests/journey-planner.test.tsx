@@ -16,7 +16,7 @@ const network: BusNetwork = {
     { stationCode: "B", stationName: "終點站", coordinates: [113.56, 22.19] },
   ] }],
 };
-const props = { enabled: true, location: [113.5401, 22.19] as [number, number], locating: false, locationError: false, onLocate: vi.fn(), onInspect: vi.fn(), liveRouteCodes: new Set(["00003"]) };
+const props = { enabled: true, location: [113.5401, 22.19] as [number, number], locating: false, locationError: false, onLocate: vi.fn(), onInspect: vi.fn(), onShowJourney: vi.fn(), liveRouteCodes: new Set(["00003"]) };
 function source(data = network) {
   vi.mocked(useLiveJson).mockReturnValue({ data, loading: false, error: null, meta: null, refresh: vi.fn() });
 }
@@ -29,6 +29,24 @@ function choose(label: string, value: string) {
 afterEach(cleanup);
 
 describe("journey result context", () => {
+  it("keeps a manually chosen platform until the user explicitly includes nearby stops", () => {
+    const a = network.routes[0].stops[0], b = network.routes[0].stops[1];
+    const nearby = { stationCode: "C", stationName: "附近上車站", coordinates: [113.542, 22.19] as [number, number] };
+    source({ ...network, routes: [
+      { ...network.routes[0], stops: [a, ...Array.from({ length: 8 }, (_, index) => ({ stationCode: `X${index}`, stationName: `途中站${index}`, coordinates: [113.55, 22.19] as [number, number] })), b] },
+      { ...network.routes[0], routeName: "23", routeCode: "00023", stops: [nearby, b] },
+    ] });
+    render(<JourneyPlanner {...props} />);
+    choose("起點", "A"); choose("終點", "B");
+    fireEvent.click(screen.getByRole("button", { name: "尋找巴士方案" }));
+    expect(screen.getByText("乘車合共 9 站")).toBeTruthy();
+    fireEvent.click(screen.getByRole("checkbox", { name: /包括起終點 500 米內站牌/ }));
+    expect(screen.queryByText("乘車合共 9 站")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "尋找巴士方案" }));
+    expect(screen.getByText("乘車合共 1 站")).toBeTruthy();
+    expect(screen.getByText(/到上車站直線距離/)).toBeTruthy();
+  });
+
   it("returns keyboard focus to the input after choosing a suggestion", () => {
     source(); render(<JourneyPlanner {...props} />);
     choose("起點", "A");

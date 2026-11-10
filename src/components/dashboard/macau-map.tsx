@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type {
   GeoJSONSource,
@@ -39,6 +39,7 @@ import type { BusMotion } from "@/components/dashboard/bus-motion";
 import { TRANSIT_DISPLAY_SCALE, type TransitModelKind } from "./transit-display";
 import { lrtTrainCollection, trainCarPoses } from "@/components/dashboard/vehicle-3d";
 import { busStopDisplayPoses } from "./bus-stop-placement";
+import { buildJourneyMap, type JourneyMapInput } from "./journey-map";
 
 export type MapLayer = "roads" | "cameras" | "lrt";
 export type MapFocus =
@@ -74,6 +75,7 @@ interface MacauMapProps {
   selectedLrtStation: string | null;
   onLrtStationSelect: (id: string) => void;
   theme: "light" | "dark";
+  journey?: JourneyMapInput | null;
 }
 
 function cameraCollection(cameras: Camera[]) {
@@ -206,17 +208,17 @@ export function MacauMap({
   roads,
   cameras,
   lrt,
-  selectedLrtLine,
-  lrtFocus,
-  busRoute,
+  selectedLrtLine: focusedLrtLine,
+  lrtFocus: focusedLrt,
+  busRoute: focusedBusRoute,
   busColor,
   mapFocus,
   parking,
-  selectedParkingId,
+  selectedParkingId: focusedParkingId,
   onParkingSelect,
   notices,
-  selectedNoticeId,
-  selectedCameraId,
+  selectedNoticeId: focusedNoticeId,
+  selectedCameraId: focusedCameraId,
   view3d,
   visibleLayers,
   onCameraSelect,
@@ -226,8 +228,17 @@ export function MacauMap({
   selectedLrtStation,
   onLrtStationSelect,
   theme,
+  journey = null,
 }: MacauMapProps) {
   const { locale, t } = useLanguage();
+  const journeyActive = Boolean(journey);
+  const busRoute = journeyActive ? null : focusedBusRoute;
+  const lrtFocus = !journeyActive && focusedLrt;
+  const selectedLrtLine = journeyActive ? null : focusedLrtLine;
+  const selectedParkingId = journeyActive ? null : focusedParkingId;
+  const selectedNoticeId = journeyActive ? null : focusedNoticeId;
+  const selectedCameraId = journeyActive ? null : focusedCameraId;
+  const journeyGeometry = useMemo(() => journey ? buildJourneyMap(journey, locale) : null, [journey, locale]);
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const basePaintRef = useRef(new Map<string, {
@@ -252,6 +263,7 @@ export function MacauMap({
   const view3dRef = useRef(view3d);
   const fittedRouteRef = useRef<string | null>(null);
   const fittedLrtRef = useRef<string | null>(null);
+  const fittedJourneyRef = useRef<string | null>(null);
   const bus3dLayerRef = useRef<Bus3DLayerType | null>(null);
   const bus3dVehiclesRef = useRef<Bus3DVehicle[]>([]);
   const trainCarsRef = useRef<TransitLandmark[]>([]);
@@ -392,6 +404,10 @@ export function MacauMap({
           data: { type: "FeatureCollection", features: [] },
         });
         map.addSource("bus-stop-displays", {
+          type: "geojson",
+          data: { type: "FeatureCollection", features: [] },
+        });
+        map.addSource("journey", {
           type: "geojson",
           data: { type: "FeatureCollection", features: [] },
         });
@@ -848,6 +864,50 @@ export function MacauMap({
           });
         }
 
+        map.addLayer({
+          id: "journey-bus-casing", type: "line", source: "journey",
+          filter: ["==", ["get", "kind"], "bus"],
+          layout: { visibility: "none", "line-cap": "round", "line-join": "round" },
+          paint: { "line-color": "#ffffff", "line-width": 9, "line-opacity": .95 },
+        });
+        map.addLayer({
+          id: "journey-bus-lines", type: "line", source: "journey",
+          filter: ["==", ["get", "kind"], "bus"],
+          layout: { visibility: "none", "line-cap": "round", "line-join": "round" },
+          paint: { "line-color": ["get", "color"], "line-width": 5 },
+        });
+        map.addLayer({
+          id: "journey-walk-lines", type: "line", source: "journey",
+          filter: ["==", ["get", "kind"], "walk"],
+          layout: { visibility: "none" },
+          paint: { "line-color": "#637e8c", "line-width": 2.5, "line-dasharray": [2, 2] },
+        });
+        map.addLayer({
+          id: "journey-markers", type: "circle", source: "journey",
+          filter: ["==", ["get", "kind"], "marker"],
+          layout: { visibility: "none" },
+          paint: { "circle-color": ["get", "color"], "circle-radius": 8, "circle-stroke-width": 3, "circle-stroke-color": "#ffffff" },
+        });
+        if (map.getStyle().glyphs) {
+          map.addLayer({
+            id: "journey-marker-labels", type: "symbol", source: "journey",
+            filter: ["==", ["get", "kind"], "marker"],
+            layout: {
+              visibility: "none", "text-field": ["get", "label"], "text-font": ["Noto Sans Regular"], "text-size": 12,
+              "text-offset": ["match", ["get", "role"], ["alight", "destination"], ["literal", [0, 1.5]], ["literal", [0, -1.5]]],
+              "text-anchor": ["match", ["get", "role"], ["alight", "destination"], "top", "bottom"],
+              "text-max-width": 14, "text-allow-overlap": true,
+            },
+            paint: { "text-color": "#183d50", "text-halo-color": "#ffffff", "text-halo-width": 2 },
+          });
+          map.addLayer({
+            id: "journey-walk-labels", type: "symbol", source: "journey",
+            filter: ["==", ["get", "kind"], "walk-label"],
+            layout: { visibility: "none", "text-field": ["get", "label"], "text-font": ["Noto Sans Regular"], "text-size": 10, "text-offset": [0, 1.2], "text-max-width": 13 },
+            paint: { "text-color": "#415f70", "text-halo-color": "#ffffff", "text-halo-width": 2 },
+          });
+        }
+
         if (hasBaseSource) {
           map.addLayer({
             id: "buildings-3d",
@@ -954,7 +1014,7 @@ export function MacauMap({
 
   useEffect(() => {
     const stopPoses = busRoute ? busStopDisplayPoses(busRoute) : [];
-    const landmarks: TransitLandmark[] = busRoute ? stopPoses.map((stop) => ({ id: `stop:${stop.id}`, coordinates: stop.coordinates, bearing: stop.bearing, model: "bus-stop" as const, selected: stop.id === selectedStopKey }))
+    const landmarks: TransitLandmark[] = journeyActive ? [] : busRoute ? stopPoses.map((stop) => ({ id: `stop:${stop.id}`, coordinates: stop.coordinates, bearing: stop.bearing, model: "bus-stop" as const, selected: stop.id === selectedStopKey }))
       : lrt && (lrtFocus || ((mapFocus === "overview" || mapFocus === "assistant") && visibleLayers.lrt)) ? lrt.stations.filter((station) => !selectedLrtLine || station.lines.includes(selectedLrtLine)).map((station) => {
         const line = lrt.lines.features.find((item) => item.properties.ref === (selectedLrtLine ?? station.lines[0]));
         const path = line?.geometry.coordinates as Array<[number, number]> | undefined;
@@ -978,7 +1038,7 @@ export function MacauMap({
       source.setData(data);
       stopDisplayDataRef.current = encoded;
     }
-  }, [busRoute, lrt, lrtFocus, mapFocus, selectedLrtLine, visibleLayers.lrt, transitLayerReady, selectedStopKey, selectedLrtStation, mapReady]);
+  }, [busRoute, lrt, lrtFocus, mapFocus, selectedLrtLine, visibleLayers.lrt, transitLayerReady, selectedStopKey, selectedLrtStation, mapReady, journeyActive]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -1259,6 +1319,7 @@ export function MacauMap({
         "buildings-3d",
         "visibility",
         view3d &&
+          !journeyActive &&
           !busHasRoute &&
           !lrtFocus &&
           (mapFocus === "overview" || mapFocus === "assistant")
@@ -1275,7 +1336,7 @@ export function MacauMap({
     if (Math.abs(map.getPitch() - pitch) > .1 || Math.abs(map.getBearing() - bearing) > .1) {
       map.easeTo({ pitch, bearing, duration: 700 });
     }
-  }, [view3d, busHasRoute, lrtFocus, mapFocus, mapReady]);
+  }, [view3d, busHasRoute, lrtFocus, mapFocus, mapReady, journeyActive]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -1422,15 +1483,36 @@ export function MacauMap({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
+    const source = map.getSource("journey") as GeoJSONSource | undefined;
+    source?.setData(journeyGeometry?.collection ?? { type: "FeatureCollection", features: [] });
+    if (!journey || !journeyGeometry) {
+      fittedJourneyRef.current = null;
+      return;
+    }
+    const key = `${journey.id}:${journeyGeometry.missingLegs.join(",")}`;
+    if (!mapVisible || !containerRef.current?.clientWidth || !containerRef.current?.clientHeight || key === fittedJourneyRef.current) return;
+    fittedJourneyRef.current = key;
+    const coordinates = journeyGeometry.bounds;
+    const horizontalPadding = Math.max(96, containerRef.current.clientWidth * .23);
+    const verticalScale = Math.min(1, containerRef.current.clientHeight / 320);
+    map.fitBounds([
+      [Math.min(...coordinates.map((point) => point[0])), Math.min(...coordinates.map((point) => point[1]))],
+      [Math.max(...coordinates.map((point) => point[0])), Math.max(...coordinates.map((point) => point[1]))],
+    ], { padding: { top: 100 * verticalScale, right: horizontalPadding, bottom: 120 * verticalScale, left: horizontalPadding }, maxZoom: 16, duration: 650 });
+  }, [journey, journeyGeometry, mapReady, mapVisible]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
     const busFocus = Boolean(busRoute);
     const lrtOnly = lrtFocus && !busFocus;
-    const parkingFocus = mapFocus === "parking" && !busFocus;
-    const camerasFocus = mapFocus === "cameras" && !busFocus;
-    const noticesFocus = mapFocus === "notices" && !busFocus;
+    const parkingFocus = !journeyActive && mapFocus === "parking" && !busFocus;
+    const camerasFocus = !journeyActive && mapFocus === "cameras" && !busFocus;
+    const noticesFocus = !journeyActive && mapFocus === "notices" && !busFocus;
     // Each tab shows its own subject. Overview and the assistant keep the
     // general map; every other tab narrows the map to that module.
     const baseFocus =
-      (mapFocus === "overview" || mapFocus === "assistant") && !busFocus && !lrtOnly;
+      !journeyActive && (mapFocus === "overview" || mapFocus === "assistant") && !busFocus && !lrtOnly;
     const showTrain =
       !busFocus &&
       (lrtOnly
@@ -1464,6 +1546,7 @@ export function MacauMap({
       ["bus-vehicle-points", busFocus],
       ["bus-station-labels", busFocus],
       ["bus-labels", busFocus],
+      ...["journey-bus-casing", "journey-bus-lines", "journey-walk-lines", "journey-markers", "journey-marker-labels", "journey-walk-labels"].map((id): [string, boolean] => [id, journeyActive]),
     ];
 
     entries.forEach(([id, visible]) => {
@@ -1484,6 +1567,7 @@ export function MacauMap({
     view3d,
     transitLayerReady,
     readyBusModels,
+    journeyActive,
   ]);
 
   return (

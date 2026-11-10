@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { planBusJourneys, searchBusStops, type BusNetwork, type BusJourneyRoute, type BusJourneyStop } from "@/lib/bus-journey";
+import { busNetworkSchema } from "@/server/sources/bus-network";
+import verifiedSnapshot from "../data/bus-network.json";
 
 const stop = (stationCode: string, stationName = stationCode, longitude = 113.54): BusJourneyStop => ({
   stationCode, stationName, coordinates: [longitude, 22.19],
@@ -24,6 +26,7 @@ describe("local bus journey search", () => {
       legs: [{ routeName: "3", direction: 0, from: { stationCode: "A" }, to: { stationCode: "C" }, stopCount: 2 }],
     });
     expect(planBusJourneys(data, endpoint("C"), endpoint("A"))).toEqual([]);
+    expect(planBusJourneys(data, endpoint("A"), endpoint("B"))[0]?.legs[0].terminalName).toBe("C");
   });
 
   it("uses later repeated stops on a circular route without continuing through the terminal", () => {
@@ -66,15 +69,51 @@ describe("local bus journey search", () => {
     expect(planBusJourneys(data, { coordinates: [113.50, 22.19] }, endpoint("D"))).toEqual([]);
   });
 
-  it("orders fewer transfers before stop count and deduplicates repeated boarding occurrences", () => {
+  it("orders fewer ridden stops before transfer count and deduplicates repeated boarding occurrences", () => {
     const data = network([
       route("3", [stop("A"), stop("A"), stop("B"), stop("C"), stop("D")]),
       route("8", [stop("A"), stop("T")]), route("9", [stop("T"), stop("D")]),
     ]);
     const result = planBusJourneys(data, endpoint("A"), endpoint("D"));
-    expect(result[0]?.legs).toHaveLength(1);
-    expect(result[0]?.totalStops).toBe(3);
+    expect(result[0]?.legs).toHaveLength(2);
+    expect(result[0]?.totalStops).toBe(2);
     expect(result.filter((journey) => journey.legs.length === 1)).toHaveLength(1);
+  });
+
+  it("does not prefer a 35-stop circular detour over a two-stop transfer", () => {
+    const detour = Array.from({ length: 34 }, (_, index) => stop(`S${index}`));
+    const data = network([
+      route("3", [stop("A"), ...detour, stop("D")], 0, true),
+      route("8", [stop("A"), stop("T")]), route("9", [stop("T"), stop("D")]),
+    ]);
+    const result = planBusJourneys(data, endpoint("A"), endpoint("D"));
+    expect(result[0]?.totalStops).toBe(2);
+    expect(result[0]?.legs.map((item) => item.routeName)).toEqual(["8", "9"]);
+    expect(result.find((item) => item.legs.length === 1)?.totalStops).toBe(35);
+  });
+
+  it("ranks the verified 9-stop transfer ahead of the 30-stop 3A loop from M138 to M263", () => {
+    const result = planBusJourneys(busNetworkSchema.parse(verifiedSnapshot), endpoint("M138"), endpoint("M263"));
+    expect(result[0]?.totalStops).toBe(9);
+    expect(result[0]?.legs.map((item) => [item.routeName, item.fromSequence, item.toSequence])).toEqual([
+      ["3A", 0, 5], ["MT5", 8, 12],
+    ]);
+    expect(result[0]?.legs[0].to.stationCode).toBe("M69/2");
+  });
+
+  it("searches nearby boarding and alighting platforms only when explicitly requested", () => {
+    const data = network([route("3", [
+      stop("A", "原定上車站", 113.54), stop("A2", "鄰近上車站", 113.541),
+      stop("D", "鄰近下車站", 113.56), stop("D2", "原定目的站", 113.561),
+    ])]);
+    expect(planBusJourneys(data, endpoint("A"), endpoint("D2"))[0]?.totalStops).toBe(3);
+    const nearby = planBusJourneys(data, endpoint("A"), endpoint("D2"), { includeNearbyStops: true });
+    expect(nearby).toHaveLength(1);
+    expect(nearby[0].legs[0]).toMatchObject({ from: { stationCode: "A2" }, to: { stationCode: "D" }, stopCount: 1 });
+    expect(nearby[0].accessMeters).toBeGreaterThan(100);
+    expect(nearby[0].egressMeters).toBeGreaterThan(100);
+    expect(nearby[0].accessMeters).toBeLessThan(110);
+    expect(nearby[0].egressMeters).toBeLessThan(110);
   });
 
   it("keeps distinct bus combinations instead of filling results with equivalent transfer stations", () => {

@@ -1,0 +1,32 @@
+{
+  "observedOn": "2026-11-10",
+  "endpoint": "https://bis.dsat.gov.mo:37812/macauweb/routestation/location",
+  "scope": "Three explicit direction-0 reads; no all-network refresh",
+  "checks": [
+    { "routeCode": "0003A", "direction": 0, "httpStatus": 200, "publisherHeader": "000", "publishedStopCount": 36, "snapshotStopCount": 36, "stationCodeOrderIdentical": true },
+    { "routeCode": "00MT5", "direction": 0, "httpStatus": 200, "publisherHeader": "000", "publishedStopCount": 20, "snapshotStopCount": 20, "stationCodeOrderIdentical": true },
+    { "routeCode": "00025", "direction": 0, "httpStatus": 200, "publisherHeader": "000", "publishedStopCount": 50, "snapshotStopCount": 50, "stationCodeOrderIdentical": true }
+  ],
+  "counterexample": {
+    "origin": "M138 司打口總站",
+    "destination": "M263 仙德麗街",
+    "oldFirstOption": { "routes": ["3A"], "riddenStopEdges": 30 },
+    "newFirstOptionWithExactStationEndpoints": {
+      "routes": ["3A", "MT5"],
+      "transferStation": "M69/2 葡京酒店",
+      "legs": [
+        { "route": "3A", "fromIndex": 0, "toIndex": 5, "riddenStopEdges": 5 },
+        { "route": "MT5", "fromIndex": 8, "toIndex": 12, "riddenStopEdges": 4 }
+      ],
+      "riddenStopEdges": 9
+    }
+  },
+  "ranking": ["Ridden stop edges", "Straight-line access plus egress distance", "Transfer count", "Deterministic journey id"],
+  "limitations": [
+    "Stop count is not travel time or a fastest-route guarantee",
+    "Snapshot topology does not verify current service hours, operation or diversions",
+    "Nearby origin/destination platforms require explicit includeNearbyStops; distances are straight-line measurements",
+    "Transfers still require the identical station code; no unverified walking connection is introduced",
+    "Night and seasonal service hours remain unverified; results must not claim a route is operating now"
+  ]
+}

@@ -23,11 +23,14 @@ export interface BusNetwork {
 }
 
 export type BusJourneyEndpoint = { stationCode: string } | { coordinates: Coordinates };
+export interface BusJourneyOptions { includeNearbyStops?: boolean }
 
 export interface BusJourneyLeg {
   routeCode: string;
   routeName: string;
   direction: 0 | 1;
+  terminalName: string;
+  circular: boolean;
   from: BusJourneyStop;
   to: BusJourneyStop;
   // Indices in this dated stop list. A refreshed live list can have changed.
@@ -64,10 +67,13 @@ export function searchBusStops(network: BusNetwork, query: string): BusJourneySt
   ).sort((a, b) => Number(b.stationCode === needle) - Number(a.stationCode === needle) || a.stationCode.localeCompare(b.stationCode, "en", { numeric: true })).slice(0, 30);
 }
 
-function endpointStops(network: BusNetwork, endpoint: BusJourneyEndpoint): Map<string, number> {
-  if ("stationCode" in endpoint) return new Map([[endpoint.stationCode.trim().toUpperCase(), 0]]);
-  return new Map(uniqueStops(network)
-    .map((stop) => ({ stop, distance: distanceMeters(endpoint.coordinates, stop.coordinates) }))
+function endpointStops(network: BusNetwork, endpoint: BusJourneyEndpoint, includeNearbyStops: boolean): Map<string, number> {
+  if ("stationCode" in endpoint && !includeNearbyStops) return new Map([[endpoint.stationCode.trim().toUpperCase(), 0]]);
+  const stops = uniqueStops(network);
+  const coordinates = "coordinates" in endpoint ? endpoint.coordinates : stops.find((stop) => stop.stationCode === endpoint.stationCode.trim().toUpperCase())?.coordinates;
+  if (!coordinates) return new Map();
+  return new Map(stops
+    .map((stop) => ({ stop, distance: distanceMeters(coordinates, stop.coordinates) }))
     .filter(({ distance }) => distance <= BUS_JOURNEY_ACCESS_METERS)
     .sort((a, b) => a.distance - b.distance)
     .map(({ stop, distance }) => [stop.stationCode, Math.round(distance)]));
@@ -76,15 +82,17 @@ function endpointStops(network: BusNetwork, endpoint: BusJourneyEndpoint): Map<s
 function leg(route: BusJourneyRoute, from: number, to: number): BusJourneyLeg {
   return {
     routeCode: route.routeCode, routeName: route.routeName, direction: route.direction,
+    terminalName: route.stops.at(-1)!.stationName,
+    circular: route.circular,
     from: route.stops[from], to: route.stops[to], fromSequence: from, toSequence: to,
     stopCount: to - from,
   };
 }
 
 /** Published stop order only: no inferred service hours, walking paths or times. */
-export function planBusJourneys(network: BusNetwork, origin: BusJourneyEndpoint, destination: BusJourneyEndpoint): BusJourney[] {
-  const starts = endpointStops(network, origin);
-  const ends = endpointStops(network, destination);
+export function planBusJourneys(network: BusNetwork, origin: BusJourneyEndpoint, destination: BusJourneyEndpoint, options: BusJourneyOptions = {}): BusJourney[] {
+  const starts = endpointStops(network, origin, options.includeNearbyStops ?? false);
+  const ends = endpointStops(network, destination, options.includeNearbyStops ?? false);
   const firstLegs = new Map<string, Array<{ leg: BusJourneyLeg; access: number }>>();
   const secondLegs = new Map<string, Array<{ leg: BusJourneyLeg; egress: number }>>();
   const plans: BusJourney[] = [];
@@ -123,13 +131,13 @@ export function planBusJourneys(network: BusNetwork, origin: BusJourneyEndpoint,
       add([arrival.leg, departure.leg], arrival.access, departure.egress);
     }
   }
-  plans.sort((a, b) => a.legs.length - b.legs.length ||
+  plans.sort((a, b) => a.totalStops - b.totalStops ||
     (a.accessMeters + a.egressMeters) - (b.accessMeters + b.egressMeters) ||
-    a.totalStops - b.totalStops || a.id.localeCompare(b.id, "en", { numeric: true }));
+    a.legs.length - b.legs.length || a.id.localeCompare(b.id, "en", { numeric: true }));
   const seen = new Set<string>();
   return plans.filter((plan) => {
     const buses = plan.legs.map((item) => `${item.routeCode}:${item.direction}`).join("|");
-    const key = `${buses}:${plan.legs[0].from.stationCode}-${plan.legs.at(-1)!.to.stationCode}`;
+    const key = buses;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;

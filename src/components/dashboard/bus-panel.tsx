@@ -20,6 +20,7 @@ export function BusPanel({
   onSelect,
   onDirectionChange,
   onBack,
+  backLabel,
   onMap,
   isSaved,
   onSave,
@@ -33,6 +34,7 @@ export function BusPanel({
   onSelect: (route: BusRoute) => void;
   onDirectionChange: (direction: 0 | 1) => void;
   onBack: () => void;
+  backLabel?: string;
   onMap: () => void;
   isSaved: (favorite: Favorite) => boolean;
   onSave: (favorite: Favorite) => void;
@@ -120,7 +122,7 @@ export function BusPanel({
       <section className="panel-section bus-route-header" tabIndex={-1}>
         <button type="button" className="text-action" onClick={onBack}>
           <ArrowLeft size={17} />
-          {c.allRoutes}
+          {backLabel ?? c.allRoutes}
         </button>
         <div className="route-detail-head">
           <span className="route-badge">{selected.routeName}</span>
