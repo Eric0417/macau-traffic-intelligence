@@ -1,36 +1,36 @@
 {
   "base": "http://localhost:3100",
-  "checkedAt": "2026-11-14T09:28:03.142Z",
+  "checkedAt": "2026-11-14T09:33:31.145Z",
   "checks": [
     {
       "name": "single destination requests location",
       "kind": "location",
-      "milliseconds": 995
+      "milliseconds": 1700
     },
     {
       "name": "single destination plans from public landmark",
       "kind": "plans",
-      "milliseconds": 2337
+      "milliseconds": 7767
     },
     {
       "name": "ordered school stadium temple",
       "kind": "itineraries",
-      "milliseconds": 948
+      "milliseconds": 1608
     },
     {
       "name": "day trip asks before recommending",
       "kind": "trip-details",
-      "milliseconds": 851
+      "milliseconds": 861
     },
     {
       "name": "complete cultural alternatives",
       "kind": "itineraries",
-      "milliseconds": 3841
+      "milliseconds": 3934
     },
     {
       "name": "natural-language edit retains day constraints",
       "kind": "itineraries",
-      "milliseconds": 1649
+      "milliseconds": 1935
     }
   ],
   "summary": {

@@ -7,6 +7,7 @@ All notable user-visible and architectural changes are recorded here.
 - Use the assistant for one destination, ordered destinations or a themed day trip. Multi-stop journeys retain the requested order and return visits, with separate transport choices and map guidance for each connection.
 - Ask for date, start/end time, endpoints and preferences before generating day trips. Compare complete alternatives drawn from seven reviewed cultural places, with official visitor links, opening rules and editable suggested stays. Visit targets are not predicted arrival times.
 - Keep place choices and manual-location recovery across the whole itinerary. Edit, remove, add or reorder destinations and recalculate connections. Failed connections remain visible without dropping destinations.
+- Update Next.js and its ESLint configuration to 16.4.6 and Zod to 4.6.6 after the pre-release dependency audit.
 
 ## Stable journey vehicle status - 2026-11-13
 

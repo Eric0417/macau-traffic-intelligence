@@ -18,4 +18,3 @@ export function placeById(id: string, bus: BusNetwork, walking: WalkingNetwork):
   const p = walking.places.find(p => p.id === id);
   return p && { id: p.id, name: p.name, coordinates: p.coordinates };
 }
-

@@ -13,15 +13,15 @@ Date: 2026-11-14. Branch: `codex/multi-stop-itineraries`.
 ## Local results
 
 - TypeScript and ESLint passed.
-- 168 unit/parser tests passed before the dependency update.
-- Full browser suite: 107 passed, one desktop-only touch test skipped.
-- Production build passed before the dependency update.
+- 168 unit/parser tests passed on Next.js 16.4.6 and Zod 4.6.6.
+- Full browser suite on Next.js 16.4.6: 107 passed, one desktop-only touch test skipped.
+- Production build passed on Next.js 16.4.6.
 - `local-live.json` records six deliberate live-provider checks: single destination, location continuation, school → stadium → A-Ma Temple, day-trip clarification, three cultural alternatives, and a natural-language stay edit. Public landmark coordinates were used, with no user location.
 - Screenshots: `desktop-ordered.png`, `mobile-ordered.png`, `desktop-day-trip.png`, `mobile-day-trip.png`.
 
 ## Release checks
 
-Dependency audit found pre-existing Next.js and Zod advisories. Dependency updates and final checks are in progress. Render deployment and post-deploy verification are pending.
+The pre-release audit found existing Next.js and Zod advisories. Next.js and its ESLint configuration were updated to 16.4.6 and Zod to 4.6.6. The runtime audit now reports zero critical/high/moderate findings and one low-severity `fast-xml-parser` finding. Render deployment and post-deploy verification are pending.
 
 The rollback target is Render deployment `dep-dbrt8pe7bikc73eebflg`, commit `675d75f39e5d30e9a2a2561301b5ab0be1c3d4ca`. There is no data migration.
 
