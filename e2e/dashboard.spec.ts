@@ -30,6 +30,7 @@ test("one workspace renders five navigation items and a usable mobile list", asy
 
 test("primary navigation supports keyboard arrows and Home", async ({ page }) => {
   const home = page.getByRole("tab", { name: "出行", exact: true });
+  await expect(page.getByRole("tablist")).toHaveAttribute("aria-orientation", "horizontal");
   await home.focus();
   await page.keyboard.press("ArrowRight");
   await expect(page.getByRole("tab", { name: "巴士", exact: true })).toBeFocused();
@@ -43,10 +44,25 @@ test("route selection opens stop-first details without a long catalog above them
   await openRoute(page);
   await expect(page.locator(".route-grid")).toHaveCount(0);
   await expect(page.locator(".vehicle-details")).not.toHaveAttribute("open");
+  await page.locator("#workspace-content").evaluate((element) => {
+    const scope = element as Element & {
+      startViewTransition?: (update: () => void) => ViewTransition;
+    };
+    const start = scope.startViewTransition;
+    if (start) {
+      scope.startViewTransition = (update) => {
+        scope.setAttribute("data-stop-snapshot", "");
+        return start.call(scope, update);
+      };
+    }
+  });
   await page.locator(".stop-row").click();
   await expect(page.locator(".waiting-card")).toBeInViewport();
+  await expect(page.locator(".waiting-card")).toBeFocused();
   await expect(page.locator(".waiting-card")).toContainText("關閘總站");
   await expect(page.locator(".waiting-card")).toContainText("即將進站");
+  await expect(page.locator(".stop-row")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#workspace-content[data-stop-snapshot]")).toHaveCount(0);
 });
 
 test("route search states its scope and gives an empty result", async ({ page }) => {
@@ -184,7 +200,7 @@ test("camera viewer opens and closes with the keyboard", async ({ page }) => {
 
 test("AI answer stays available when navigating to another module", async ({ page }) => {
   await openMore(page, "AI 助手");
-  await page.locator(".assistant-suggestions button").first().click();
+  await page.locator(".assistant-suggestions button").nth(1).click();
   await expect(page.locator(".assistant-answer")).toContainText("友誼大橋");
   await page.getByRole("tab", { name: "泊車", exact: true }).click();
   await openMore(page, "AI 助手");
@@ -232,6 +248,7 @@ test("layout fits narrow phones, tablets and desktop widths", async ({ page }) =
       const box = await button.boundingBox();
       expect(box!.width).toBeGreaterThanOrEqual(44);
       expect(box!.height).toBeGreaterThanOrEqual(44);
+      expect(box!.y + box!.height).toBeLessThanOrEqual(900);
     }
   }
 });
@@ -266,4 +283,22 @@ test("hidden historical LRT faults are collapsed instead of shown as current ser
   await expect(page.getByText("2024 舊故障消息", { exact: true })).not.toBeVisible();
   await page.locator(".historical-notices summary").click();
   await expect(page.getByText("2024 舊故障消息", { exact: true })).toBeVisible();
+});
+
+
+test("announcement lists check again within the one-minute polling window", async ({ page }) => {
+  await page.clock.install();
+  let requests = 0;
+  page.on("request", (request) => { if (request.url().includes("/api/v1/traffic/news")) requests++; });
+  await page.reload();
+  await expect.poll(() => requests).toBeGreaterThan(0);
+  await page.getByRole("button", { name: "更多", exact: true }).click();
+  await page.getByRole("button", { name: "交通公告", exact: true }).click();
+  await expect(page.getByText("頁面開啟時約每分鐘檢查一次。", { exact: false })).toBeVisible();
+  const initial = requests;
+  await page.clock.fastForward(70_000);
+  await expect.poll(() => requests).toBeGreaterThan(initial);
+  const polled = requests;
+  await page.getByRole("button", { name: "重新取得", exact: true }).click();
+  await expect.poll(() => requests).toBeGreaterThan(polled);
 });

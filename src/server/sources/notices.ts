@@ -182,9 +182,7 @@ export async function loadNotices() {
   if (results.every((result) => result.status === "rejected")) {
     throw new Error("DSAT notice lists unavailable");
   }
-  const incidents = notices.filter((notice) => notice.category === "incident").sort(byDateDesc);
-  const rest = notices.filter((notice) => notice.category !== "incident").sort(byDateDesc);
-  return [...incidents, ...rest].slice(0, 60);
+  return notices.sort(byDateDesc).slice(0, 60);
 }
 
 export const noticesSource: SourceDefinition<Awaited<ReturnType<typeof loadNotices>>> = {
@@ -193,7 +191,7 @@ export const noticesSource: SourceDefinition<Awaited<ReturnType<typeof loadNotic
   url: "https://www.dsat.gov.mo/dsat/emergency.aspx",
   attribution: "交通事務局已發布的交通安排與改道公告；並非完整即時事故流",
   envKey: "SOURCE_NOTICES_ENABLED",
-  ttlSeconds: 300,
+  ttlSeconds: 60,
   staleTtlSeconds: 86_400,
   schema: trafficNoticeSchema.array(),
   load: loadNotices,

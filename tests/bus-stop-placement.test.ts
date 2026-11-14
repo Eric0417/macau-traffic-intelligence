@@ -9,9 +9,9 @@ import {
 import { TRANSIT_DISPLAY_SCALE } from "@/components/dashboard/transit-display";
 import {
   bearingBetween,
+  buildRoutePath,
+  busPoseAtDistance,
   metersBetween,
-  pathLengths,
-  pointAtDistance,
 } from "@/components/dashboard/bus-motion";
 import type { BusEta } from "@/lib/types";
 
@@ -85,17 +85,15 @@ describe("schematic bus stop placement", () => {
       expect(sign).toBeDefined();
       expect(sign.anchor).toEqual(anchor);
       expect(metersBetween(sign.coordinates, anchor)).toBeGreaterThan(10);
-      for (const segment of input.routeSegments) {
-        const lengths = pathLengths(segment.coordinates);
-        for (let distance = 0; distance <= lengths.at(-1)!; distance += 1) {
-          const bus = pointAtDistance(segment.coordinates, lengths, distance);
-          expectClearOfBus(sign.coordinates, bus.coordinates, bus.bearing);
-          expectClearOfBus(
-            sign.coordinates,
-            bus.coordinates,
-            (bus.bearing + 180) % 360,
-          );
-        }
+      const routePath = buildRoutePath(input.routeSegments);
+      for (let distance = 0; distance <= routePath.total; distance += 1) {
+        const bus = busPoseAtDistance(routePath, distance);
+        expectClearOfBus(sign.coordinates, bus.coordinates, bus.bearing);
+        expectClearOfBus(
+          sign.coordinates,
+          bus.coordinates,
+          (bus.bearing + 180) % 360,
+        );
       }
       expect(input).toEqual(original);
     });

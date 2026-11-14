@@ -1,16 +1,20 @@
-import type { BusJourneyLeg, BusJourneyStop } from "@/lib/bus-journey";
+import type { BusJourney, BusJourneyLeg, BusJourneyStop } from "@/lib/bus-journey";
 import { distanceMeters, type Coordinates } from "@/lib/resident-tools";
 import type { BusEta, BusRouteSegment, Locale } from "@/lib/types";
+import { walkingPathBetween, type WalkingPath } from "@/lib/walking-network";
 
 export interface JourneyMapInput {
   id: string;
-  legs: Array<{ leg: BusJourneyLeg; eta: BusEta | null }>;
+  legs: Array<{ leg: BusJourneyLeg; eta: BusEta | null; positionsFresh?: boolean }>;
   origin: Coordinates;
   destination: Coordinates;
+  destinationName?: string;
+  walking?: BusJourney["walking"];
 }
 export interface JourneyMapGeometry {
   collection: GeoJSON.FeatureCollection;
   missingLegs: number[];
+  uncertainTransfers: number[];
   bounds: Coordinates[];
 }
 export const JOURNEY_COLORS = ["#176a96", "#bc572b"] as const;
@@ -75,44 +79,31 @@ function legSegments(
     leg.stopCount <= 0
   )
     return null;
-  const candidates = new Map<string, BusRouteSegment[]>();
-  for (
-    let start = 0;
-    start <= eta.routeSegments.length - leg.stopCount;
-    start += 1
-  ) {
-    const chain = eta.routeSegments.slice(start, start + leg.stopCount);
-    if (
-      chain[0].fromStationCode !== leg.from.stationCode ||
-      chain.at(-1)!.toStationCode !== leg.to.stationCode
-    )
-      continue;
-    if (
-      chain.some(
-        (segment, index) =>
-          segment.coordinates.length < 2 ||
-          (index > 0 &&
-            (chain[index - 1].toStationCode !== segment.fromStationCode ||
-              distanceMeters(
-                chain[index - 1].coordinates.at(-1)!,
-                segment.coordinates[0],
-              ) > 3)),
-      )
-    )
-      continue;
-    const from = currentStop(leg.from, leg, eta).coordinates;
-    const to = currentStop(leg.to, leg, eta).coordinates;
-    if (
-      distanceMeters(chain[0].coordinates[0], from) > 25 ||
-      distanceMeters(chain.at(-1)!.coordinates.at(-1)!, to) > 25
-    )
-      continue;
-    candidates.set(
-      JSON.stringify(chain.map((segment) => segment.coordinates)),
-      chain,
-    );
+  const exact = new Map<string, BusRouteSegment[]>();
+  const updated = new Map<string, BusRouteSegment[]>();
+  const from = currentStop(leg.from, leg, eta).coordinates;
+  const to = currentStop(leg.to, leg, eta).coordinates;
+  const segments = eta.routeSegments;
+  for (let start = 0; start < segments.length; start += 1) {
+    const first = segments[start];
+    if (first.fromStationCode !== leg.from.stationCode ||
+        !first.coordinates[0] || distanceMeters(first.coordinates[0], from) > 25) continue;
+    for (let end = start; end < segments.length; end += 1) {
+      const segment = segments[end];
+      const previous = end > start ? segments[end - 1] : null;
+      if (segment.coordinates.length < 2 ||
+          (previous && (previous.toStationCode !== segment.fromStationCode ||
+            distanceMeters(previous.coordinates.at(-1)!, segment.coordinates[0]) > 25))) break;
+      if (segment.toStationCode !== leg.to.stationCode ||
+          distanceMeters(segment.coordinates.at(-1)!, to) > 25) continue;
+      const chain = segments.slice(start, end + 1);
+      const candidates = chain.length === leg.stopCount ? exact : updated;
+      candidates.set(JSON.stringify(chain.map((item) => item.coordinates)), chain);
+    }
   }
-  // Dated occurrence indices cannot resolve distinct repeated live alignments.
+  // A stop can be added or skipped since the snapshot. A changed chain is
+  // usable when there is only one matching alignment in the current feed.
+  const candidates = exact.size ? exact : updated;
   return candidates.size === 1 ? [...candidates.values()][0] : null;
 }
 
@@ -123,6 +114,7 @@ export function buildJourneyMap(
   const c = labels[locale];
   const features: GeoJSON.Feature[] = [];
   const missingLegs: number[] = [];
+  const uncertainTransfers: number[] = [];
   const bounds: Coordinates[] = [journey.origin, journey.destination];
   const stops = journey.legs.map(({ leg, eta }) => ({
     from: currentStop(leg.from, leg, eta),
@@ -163,7 +155,7 @@ export function buildJourneyMap(
       label: `${prefix} ${routeLabel}\n${stop.stationName} ${stop.stationCode}${stop.snapshot ? `\n(${c.snapshot})` : ""}`,
     });
   };
-  const connection = (from: Coordinates, to: Coordinates) => {
+  const straightLink = (from: Coordinates, to: Coordinates) => {
     if (distanceMeters(from, to) <= 1) return;
     features.push({
       type: "Feature",
@@ -174,6 +166,21 @@ export function buildJourneyMap(
       kind: "walk-label",
       label: c.walk,
     });
+  };
+  const connection = (from: Coordinates, to: Coordinates, planned?: WalkingPath) => {
+    const path = walkingPathBetween(planned, from, to);
+    if (!path) {
+      straightLink(from, to);
+      return;
+    }
+    features.push({
+      type: "Feature",
+      properties: { kind: "walking-path" },
+      geometry: { type: "LineString", coordinates: path.coordinates },
+    });
+    for (const coordinate of path.coordinates) bounds.push(coordinate);
+    straightLink(from, path.coordinates[0]);
+    straightLink(path.coordinates.at(-1)!, to);
   };
   const first = stops[0],
     last = stops.at(-1);
@@ -189,7 +196,7 @@ export function buildJourneyMap(
       label: c.origin,
     });
   if (first) {
-    connection(journey.origin, first.from.coordinates);
+    connection(journey.origin, first.from.coordinates, journey.walking?.access);
     marker(
       "board",
       0,
@@ -198,14 +205,7 @@ export function buildJourneyMap(
     );
   }
   journey.legs.forEach(({ leg, eta }, index) => {
-    const transferDisagrees =
-      index > 0 &&
-      journey.legs[index - 1].leg.to.stationCode === leg.from.stationCode &&
-      distanceMeters(
-        stops[index - 1].to.coordinates,
-        stops[index].from.coordinates,
-      ) > 3;
-    const chain = transferDisagrees ? null : legSegments(leg, eta);
+    const chain = legSegments(leg, eta);
     if (!chain) missingLegs.push(index);
     else
       for (const segment of chain) {
@@ -217,14 +217,17 @@ export function buildJourneyMap(
             kind: "bus",
             legIndex: index,
             color: JOURNEY_COLORS[index % JOURNEY_COLORS.length],
+            width: journey.legs.length > 1 && index === 0 ? 9 : 5,
             route: leg.routeName,
           },
           geometry: { type: "LineString", coordinates: segment.coordinates },
         });
         bounds.push(...segment.coordinates);
       }
-    const transfer =
+    const sameStop =
       journey.legs[index + 1]?.leg.from.stationCode === leg.to.stationCode;
+    const transfer = sameStop && distanceMeters(stops[index].to.coordinates, stops[index + 1].from.coordinates) <= 3;
+    if (sameStop && !transfer) uncertainTransfers.push(index + 1);
     marker(
       transfer ? "transfer" : "alight",
       index,
@@ -235,18 +238,36 @@ export function buildJourneyMap(
     );
     if (stops[index + 1] && !transfer)
       marker("board", index + 1, stops[index + 1].from);
+    if (eta?.routeCode === leg.routeCode && eta.direction === leg.direction && journey.legs[index].positionsFresh) {
+      for (const vehicle of eta.vehicles) {
+        if (vehicle.positionSource !== "feed" || !vehicle.coordinates) continue;
+        // Vehicle locations do not pull the camera away from the planned ride.
+        features.push({
+          type: "Feature",
+          properties: {
+            kind: "vehicle",
+            legIndex: index,
+            color: JOURNEY_COLORS[index % JOURNEY_COLORS.length],
+            label: [leg.routeName, vehicle.plate].filter(Boolean).join(" · "),
+          },
+          geometry: { type: "Point", coordinates: vehicle.coordinates },
+        });
+      }
+    }
   });
-  if (last) connection(last.to.coordinates, journey.destination);
+  if (last) connection(last.to.coordinates, journey.destination, journey.walking?.egress);
+  if (journey.walking?.direct) connection(journey.origin, journey.destination, journey.walking.direct);
   if (!destinationAtAlight)
     point(journey.destination, {
       kind: "marker",
       role: "destination",
       color: "#233c4e",
-      label: c.destination,
+      label: journey.destinationName ? `${c.destination}\n${journey.destinationName}` : c.destination,
     });
   return {
     collection: { type: "FeatureCollection", features },
     missingLegs,
+    uncertainTransfers,
     bounds,
   };
 }

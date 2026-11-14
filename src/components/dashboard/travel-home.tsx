@@ -94,15 +94,66 @@ export function TravelHome({
         <h2>{c.today}</h2>
         <p>{c.intro}</p>
       </section>
+      <section className="home-ai">
+        <div className="home-ai-title">
+          <span className="ai-glyph">
+            <Sparkles size={21} />
+          </span>
+          <div>
+            <h2>{t("assistant")}</h2>
+            <p>{c.aiPrompt}</p>
+          </div>
+        </div>
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (question.trim()) onAsk(question.trim());
+          }}
+        >
+          <label className="sr-only" htmlFor="home-question">
+            {t("assistantPlaceholder")}
+          </label>
+          <input
+            id="home-question"
+            type="text"
+            maxLength={500}
+            value={question}
+            onChange={(event) => setQuestion(event.target.value)}
+            placeholder={c.aiExample}
+          />
+          <button
+            type="submit"
+            aria-label={t("assistantSend")}
+            disabled={!question.trim()}
+          >
+            <Send size={18} />
+          </button>
+        </form>
+        <div className="home-ai-examples">
+          {[locale === "en" ? "I want to go to Senado Square" : locale === "zh-Hans" ? "我想去议事亭前地" : "我想去議事亭前地", t("assistantQ1")].map((item) => (
+            <button type="button" key={item} onClick={() => onAsk(item)}>
+              {item}
+              <ArrowUpRight size={13} />
+            </button>
+          ))}
+        </div>
+        <p className="home-ai-note">{c.aiEvidence}</p>
+      </section>
       <div className="travel-shortcuts">
         <button type="button" onClick={onBus} className="mode-tile mode-bus">
           <span className="mode-model" aria-hidden="true" />
-          <span>{c.startBus}</span>
+          <span className="mode-label">
+            <strong>{c.startBus}</strong>
+            <small>{c.busHint}</small>
+          </span>
           <ArrowUpRight size={16} />
         </button>
         <button type="button" onClick={onLrt} className="mode-tile mode-lrt">
           <span className="mode-model" aria-hidden="true" />
-          <span>{t("lrt")}</span>
+          <span className="mode-label">
+            <strong>{t("lrt")}</strong>
+            <small>{c.lrtHint}</small>
+          </span>
           <ArrowUpRight size={16} />
         </button>
         <button
@@ -113,7 +164,10 @@ export function TravelHome({
           <span className="parking-object" aria-hidden="true">
             P
           </span>
-          <span>{c.startParking}</span>
+          <span className="mode-label">
+            <strong>{c.startParking}</strong>
+            <small>{c.parkingHint}</small>
+          </span>
           <ArrowUpRight size={16} />
         </button>
       </div>
@@ -214,51 +268,7 @@ export function TravelHome({
           </div>
         )}
       </section>
-      <section className="home-ai">
-        <div className="home-ai-title">
-          <span className="ai-glyph">
-            <Sparkles size={21} />
-          </span>
-          <div>
-            <h2>{t("assistant")}</h2>
-            <p>{c.aiPrompt}</p>
-          </div>
-        </div>
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (question.trim()) onAsk(question.trim());
-          }}
-        >
-          <label className="sr-only" htmlFor="home-question">
-            {t("assistantPlaceholder")}
-          </label>
-          <input
-            id="home-question"
-            type="text"
-            maxLength={500}
-            value={question}
-            onChange={(event) => setQuestion(event.target.value)}
-            placeholder={c.aiExample}
-          />
-          <button
-            type="submit"
-            aria-label={t("assistantSend")}
-            disabled={!question.trim()}
-          >
-            <Send size={18} />
-          </button>
-        </form>
-        <div className="home-ai-examples">
-          {[t("assistantQ1"), t("assistantQ2")].map((item) => (
-            <button type="button" key={item} onClick={() => onAsk(item)}>
-              {item}
-              <ArrowUpRight size={13} />
-            </button>
-          ))}
-        </div>
-        <p className="home-ai-note">{c.aiEvidence}</p>
-      </section>
+
       <section className="panel-section home-weather">
         <div className="section-heading">
           <h2>{t("weather")}</h2>

@@ -137,7 +137,7 @@ describe("journey map geometry", () => {
     expect(board.geometry).toEqual({ type: "Point", coordinates: a });
   });
 
-  it("does not imply a zero-distance transfer when two live payloads disagree about the same stop", () => {
+  it("keeps both lines and shows separate markers when the transfer coordinates disagree", () => {
     const shifted = [113.543, 22.19] as [number, number];
     const second = eta([segment("B", "C", [shifted, c])], "00008");
     second.stops[1].coordinates = shifted;
@@ -147,13 +147,35 @@ describe("journey map geometry", () => {
         { leg: leg(B, C, 1, "00008"), eta: second },
       ]),
     );
-    expect(result.missingLegs).toEqual([1]);
-    expect(buses(result)).toHaveLength(1);
-    expect(
-      markers(result).filter(
-        (feature) => feature.properties?.role === "transfer",
-      ),
-    ).toHaveLength(1);
+    expect(result.missingLegs).toEqual([]);
+    expect(result.uncertainTransfers).toEqual([1]);
+    expect(buses(result)).toHaveLength(2);
+    expect(markers(result).filter((feature) => feature.properties?.stationCode === "B")
+      .map((feature) => feature.properties?.role)).toEqual(["alight", "board"]);
+  });
+
+  it("retains a uniquely matched official leg when a stop was added after the snapshot", () => {
+    const result = buildJourneyMap(journey([{ leg: leg(A, C, 1), eta: eta() }]));
+    expect(result.missingLegs).toEqual([]);
+    expect(buses(result)).toHaveLength(2);
+  });
+
+  it("shows only fresh feed estimates, without changing the journey extent", () => {
+    const data = eta();
+    const outside: [number, number] = [113.59, 22.2];
+    const vehicle: BusEta["vehicles"][number] = {
+      id: "first", plate: "AB1234", stationCode: "A", stationName: "站A",
+      stationSequence: 0, segmentIndex: 0, coordinates: outside, positionSource: "feed",
+      bearing: null, speedKph: null, status: "1", lowFloor: false, busType: "", estimated: true,
+    };
+    data.vehicles = [vehicle, { ...vehicle, id: "fallback", positionSource: "stop", coordinates: a }];
+    const result = buildJourneyMap(journey([{ leg: leg(), eta: data, positionsFresh: true }]));
+    const positions = result.collection.features.filter((feature) => feature.properties?.kind === "vehicle");
+    expect(positions).toHaveLength(1);
+    expect(positions[0].geometry).toEqual({ type: "Point", coordinates: outside });
+    expect(result.bounds).not.toContainEqual(outside);
+    expect(buildJourneyMap(journey([{ leg: leg(), eta: data, positionsFresh: false }]))
+      .collection.features.some((feature) => feature.properties?.kind === "vehicle")).toBe(false);
   });
 
   it("does not bridge a missing middle segment or an inconsistent coordinate join", () => {

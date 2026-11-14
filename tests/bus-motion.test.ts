@@ -96,6 +96,27 @@ describe("bus motion", () => {
     expect(route.closed).toBe(true);
   });
 
+  it("keeps the bus aligned with the road through a short sideways kink", () => {
+    const bend: [number, number] = [113.55, 22.19];
+    const tip: [number, number] = [113.55002, 22.19];
+    const before: [number, number] = [bend[0], 22.1895];
+    const after: [number, number] = [tip[0], 22.1905];
+
+    for (const [coordinates, direction] of [
+      [[before, bend, tip, after], 0],
+      [[after, tip, bend, before], 180],
+    ] as const) {
+      const route = buildRoutePath([{ ...segmentA, coordinates: [...coordinates] }]);
+      const bus = vehicle({ coordinates: [113.55001, 22.19] });
+      const motion = createBusMotion(bus, route, "00003-0", "tcm", 0)!;
+      const pose = advanceBusMotion(motion, 0);
+
+      expect(metersBetween(pose.coordinates, bus.coordinates!)).toBeLessThan(0.01);
+      const headingError = Math.abs(((pose.bearing - direction + 540) % 360) - 180);
+      expect(headingError).toBeLessThan(6);
+    }
+  });
+
   it("uses the declared segment index instead of guessing from a repeated stop code", () => {
     const route = buildRoutePath([segmentA, segmentB, segmentC]);
     // Stop A is both the first from-station and the last to-station. The feed

@@ -7,6 +7,7 @@ type ScopedElement = HTMLElement & {
   startViewTransition?: (update: () => void) => ViewTransition;
 };
 type MotionOptions = {
+  animate?: boolean;
   direction?: "forward" | "back";
   from?: string;
   to?: string;
@@ -41,9 +42,9 @@ export function useWorkspaceMotion(rootRef: RefObject<HTMLDivElement | null>) {
         update();
         return;
       }
-      const reduced = window.matchMedia(
-        "(prefers-reduced-motion: reduce)",
-      ).matches;
+      const animate =
+        options.animate !== false &&
+        !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       const direction = options.direction ?? "forward";
       scope.dataset.motionDirection = direction;
       const oldCard = options.from
@@ -60,7 +61,7 @@ export function useWorkspaceMotion(rootRef: RefObject<HTMLDivElement | null>) {
         if (newCard) newCard.style.viewTransitionName = newName;
         if (id === sequence.current) active.current = null;
       };
-      if (oldCard && !reduced)
+      if (oldCard && animate)
         oldCard.style.viewTransitionName = "workspace-card";
       const commit = () => {
         if (id !== sequence.current) return;
@@ -72,14 +73,14 @@ export function useWorkspaceMotion(rootRef: RefObject<HTMLDivElement | null>) {
           ? scope.querySelector<HTMLElement>(options.to)
           : null;
         newName = newCard?.style.viewTransitionName ?? "";
-        if (newCard && !reduced)
+        if (newCard && animate)
           newCard.style.viewTransitionName = "workspace-card";
         if (options.focus)
           scope
             .querySelector<HTMLElement>(options.focus)
             ?.focus({ preventScroll: true });
       };
-      if (!reduced && scope.startViewTransition) {
+      if (animate && scope.startViewTransition) {
         const transition = scope.startViewTransition(commit);
         active.current = { transition, cleanup };
         // A second interaction can skip the previous snapshot before it is ready.
@@ -88,7 +89,7 @@ export function useWorkspaceMotion(rootRef: RefObject<HTMLDivElement | null>) {
       } else {
         commit();
         cleanup();
-        if (!reduced) {
+        if (animate) {
           const animation = scope.animate(
             [
               {

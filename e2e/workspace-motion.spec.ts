@@ -56,10 +56,18 @@ test("a route card becomes its detail within the content scope, with a reversibl
   });
   await page.goto("/");
   await page.getByRole("tab", { name: "巴士", exact: true }).click();
+  await page.locator(".workspace-scroll").evaluate(async (element) => {
+    await Promise.all(element.getAnimations({ subtree: true }).map((animation) => animation.finished.catch(() => {})));
+  });
   const route = page.locator(".route-grid button").first();
   const routeCode = await route.getAttribute("data-route-code");
   await route.click();
   await expect(page.locator(".bus-route-header")).toBeFocused();
+  // Let the forward snapshot become ready before testing the reverse animation.
+  // Rapid cancellation is covered separately below.
+  await expect.poll(() => page.evaluate(() =>
+    (window as unknown as { motionObservations: { sharedCards: number } }).motionObservations.sharedCards,
+  )).toBeGreaterThanOrEqual(1);
   await page.locator(".bus-route-header .text-action").first().click();
   await expect(page.locator(".route-grid button").first()).toBeFocused();
   await expect(page.locator(".route-grid button").first()).toHaveAttribute(

@@ -25,9 +25,13 @@ export function NoticesPanel({
   const rows = category === "news" ? news.data?.items : notices.data;
   const state = category === "news" ? news : notices;
   return (
-    <div className="panel-stack">
+    <div className="panel-stack notices-panel">
       <section className="panel-section">
-        <h2>{c.news}</h2>
+        <div className="section-heading">
+          <h2>{c.news}</h2>
+          <button type="button" className="text-action" onClick={state.refresh}>{c.refresh}</button>
+        </div>
+        <p className="quiet-copy">{locale === "en" ? "Checks about every minute while this page is open. Publication dates come from the publisher." : locale === "zh-Hans" ? "页面开启时约每分钟检查一次。发布日期由官方提供。" : "頁面開啟時約每分鐘檢查一次。發布日期由官方提供。"}</p>
         <p className="notice-explanation">{c.newsIntro}</p>
         <div className="segmented">
           <button
@@ -92,7 +96,7 @@ export function NoticesPanel({
               <div className="eyebrow">
                 {notice.id.startsWith("gcs:") ? "GCS" : "DSAT"} ·{" "}
                 {notice.publishedAt
-                  ? `${c.published} ${new Date(notice.publishedAt).toLocaleString(locale === "en" ? "en-GB" : "zh-MO", { timeZone: "Asia/Macau", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}`
+                  ? `${c.published} ${new Date(notice.publishedAt).toLocaleString(locale === "en" ? "en-GB" : "zh-MO", { timeZone: "Asia/Macau", month: "short", day: "numeric", ...(category === "news" ? { hour: "2-digit", minute: "2-digit" } as const : {}) })}`
                   : c.unknownTime}
               </div>
               <h3>{notice.title}</h3>

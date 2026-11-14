@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  loadNotices,
   parseBusCroadHtml,
   parseCroadHtml,
   parseEmergencyHtml,
@@ -94,4 +95,14 @@ describe("notice parsers", () => {
       publishedAt: null,
     });
   });
+});
+
+
+afterEach(() => vi.unstubAllGlobals());
+it("puts newer published arrangements before older incident-labelled items", async () => {
+  const newer = busCroadHtml.replaceAll("09-10-2026", "11-11-2026");
+  vi.stubGlobal("fetch", vi.fn(async (url: string) => new Response(url.includes("bus_croad") ? newer : url.includes("emergency") ? emergencyHtml : croadHtml)));
+  const rows = await loadNotices();
+  expect(rows[0].title).toBe("煙花活動臨時交管");
+  expect(rows[0].publishedAt).toBe("2026-11-10T16:00:00.000Z");
 });

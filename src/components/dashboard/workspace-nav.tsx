@@ -18,7 +18,7 @@ export function WorkspaceNav({
   children: ReactNode;
 }) {
   const ref = useRef<HTMLElement>(null);
-  const [indicator, setIndicator] = useState({ x: 0, width: 0 });
+  const [indicator, setIndicator] = useState({ x: 0, y: 0, width: 0, height: 0 });
   useLayoutEffect(() => {
     const nav = ref.current;
     if (!nav) return;
@@ -26,7 +26,9 @@ export function WorkspaceNav({
       const button = nav.querySelector<HTMLElement>('[aria-selected="true"]');
       setIndicator({
         x: button?.offsetLeft ?? 0,
+        y: button?.offsetTop ?? 0,
         width: button?.offsetWidth ?? 0,
+        height: button?.offsetHeight ?? 0,
       });
     };
     measure();
@@ -41,11 +43,14 @@ export function WorkspaceNav({
       className="workspace-nav"
       role="tablist"
       aria-label={label}
+      aria-orientation="horizontal"
       ref={ref}
       style={
         {
           "--nav-x": `${indicator.x}px`,
+          "--nav-y": `${indicator.y}px`,
           "--nav-width": `${indicator.width}px`,
+          "--nav-height": `${indicator.height}px`,
         } as CSSProperties
       }
     >

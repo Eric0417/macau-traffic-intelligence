@@ -1,5 +1,6 @@
 import type { BusCompany } from "@/lib/types";
 import { distanceMeters, type Coordinates } from "./resident-tools";
+import type { WalkingPath } from "./walking-network";
 
 export interface BusJourneyStop {
   stationCode: string;
@@ -14,6 +15,8 @@ export interface BusJourneyRoute {
   circular: boolean;
   company: BusCompany;
   stops: BusJourneyStop[];
+  /** Reviewed first and last departure minutes at the terminus, Macau time. */
+  serviceWindows?: Array<[number, number]>;
 }
 
 export interface BusNetwork {
@@ -23,7 +26,14 @@ export interface BusNetwork {
 }
 
 export type BusJourneyEndpoint = { stationCode: string } | { coordinates: Coordinates };
-export interface BusJourneyOptions { includeNearbyStops?: boolean }
+export interface BusJourneyOptions {
+  includeNearbyStops?: boolean;
+  departureMinute?: number;
+  walking?: {
+    access?: (coordinates: Coordinates) => WalkingPath | null;
+    egress?: (coordinates: Coordinates) => WalkingPath | null;
+  };
+}
 
 export interface BusJourneyLeg {
   routeCode: string;
@@ -37,6 +47,7 @@ export interface BusJourneyLeg {
   fromSequence: number;
   toSequence: number;
   stopCount: number;
+  serviceWindows?: BusJourneyRoute["serviceWindows"];
 }
 
 export interface BusJourney {
@@ -46,10 +57,17 @@ export interface BusJourney {
   egressMeters: number;
   transferMeters: number;
   totalStops: number;
+  walking?: { access?: WalkingPath; egress?: WalkingPath; direct?: WalkingPath };
 }
 
 export const BUS_JOURNEY_ACCESS_METERS = 500;
 const MAX_JOURNEYS = 6;
+
+function coversDeparture(windows: NonNullable<BusJourneyRoute["serviceWindows"]>, minute: number): boolean {
+  return windows.some(([start, end]) =>
+    start <= end ? minute >= start && minute <= end : minute >= start || minute <= end,
+  );
+}
 
 function uniqueStops(network: BusNetwork): BusJourneyStop[] {
   const stops = new Map<string, BusJourneyStop>();
@@ -67,16 +85,33 @@ export function searchBusStops(network: BusNetwork, query: string): BusJourneySt
   ).sort((a, b) => Number(b.stationCode === needle) - Number(a.stationCode === needle) || a.stationCode.localeCompare(b.stationCode, "en", { numeric: true })).slice(0, 30);
 }
 
-function endpointStops(network: BusNetwork, endpoint: BusJourneyEndpoint, includeNearbyStops: boolean): Map<string, number> {
-  if ("stationCode" in endpoint && !includeNearbyStops) return new Map([[endpoint.stationCode.trim().toUpperCase(), 0]]);
+function endpointStops(
+  network: BusNetwork,
+  endpoint: BusJourneyEndpoint,
+  includeNearbyStops: boolean,
+  walk?: (coordinates: Coordinates) => WalkingPath | null,
+) {
+  const paths = new Map<string, WalkingPath>();
+  if ("stationCode" in endpoint && !includeNearbyStops) {
+    return { distances: new Map([[endpoint.stationCode.trim().toUpperCase(), 0]]), paths };
+  }
   const stops = uniqueStops(network);
   const coordinates = "coordinates" in endpoint ? endpoint.coordinates : stops.find((stop) => stop.stationCode === endpoint.stationCode.trim().toUpperCase())?.coordinates;
-  if (!coordinates) return new Map();
-  return new Map(stops
-    .map((stop) => ({ stop, distance: distanceMeters(coordinates, stop.coordinates) }))
-    .filter(({ distance }) => distance <= BUS_JOURNEY_ACCESS_METERS)
-    .sort((a, b) => a.distance - b.distance)
-    .map(({ stop, distance }) => [stop.stationCode, Math.round(distance)]));
+  const distances = new Map<string, number>();
+  if (!coordinates) return { distances, paths };
+  for (const stop of stops) {
+    const distance = distanceMeters(coordinates, stop.coordinates);
+    if (distance > BUS_JOURNEY_ACCESS_METERS) continue;
+    if (!walk || distance <= 1) {
+      distances.set(stop.stationCode, Math.round(distance));
+      continue;
+    }
+    const path = walk(stop.coordinates);
+    if (!path || path.meters > 1_000) continue;
+    distances.set(stop.stationCode, path.meters);
+    paths.set(stop.stationCode, path);
+  }
+  return { distances, paths };
 }
 
 function leg(route: BusJourneyRoute, from: number, to: number): BusJourneyLeg {
@@ -86,13 +121,14 @@ function leg(route: BusJourneyRoute, from: number, to: number): BusJourneyLeg {
     circular: route.circular,
     from: route.stops[from], to: route.stops[to], fromSequence: from, toSequence: to,
     stopCount: to - from,
+    serviceWindows: route.serviceWindows,
   };
 }
 
-/** Published stop order only: no inferred service hours, walking paths or times. */
+/** Published bus stop order with optional mapped access and egress paths. */
 export function planBusJourneys(network: BusNetwork, origin: BusJourneyEndpoint, destination: BusJourneyEndpoint, options: BusJourneyOptions = {}): BusJourney[] {
-  const starts = endpointStops(network, origin, options.includeNearbyStops ?? false);
-  const ends = endpointStops(network, destination, options.includeNearbyStops ?? false);
+  const { distances: starts, paths: accessPaths } = endpointStops(network, origin, options.includeNearbyStops ?? false, options.walking?.access);
+  const { distances: ends, paths: egressPaths } = endpointStops(network, destination, options.includeNearbyStops ?? false, options.walking?.egress);
   const firstLegs = new Map<string, Array<{ leg: BusJourneyLeg; access: number }>>();
   const secondLegs = new Map<string, Array<{ leg: BusJourneyLeg; egress: number }>>();
   const plans: BusJourney[] = [];
@@ -104,6 +140,8 @@ export function planBusJourneys(network: BusNetwork, origin: BusJourneyEndpoint,
     });
   };
   for (const route of network.routes) {
+    if (options.departureMinute !== undefined && route.serviceWindows &&
+        !coversDeparture(route.serviceWindows, options.departureMinute)) continue;
     for (let from = 0; from < route.stops.length - 1; from += 1) {
       const access = starts.get(route.stops[from].stationCode);
       for (let to = from + 1; to < route.stops.length; to += 1) {
@@ -131,7 +169,10 @@ export function planBusJourneys(network: BusNetwork, origin: BusJourneyEndpoint,
       add([arrival.leg, departure.leg], arrival.access, departure.egress);
     }
   }
-  plans.sort((a, b) => a.totalStops - b.totalStops ||
+  const hasHours = (plan: BusJourney) => plan.legs.every((item) => item.serviceWindows);
+  plans.sort((a, b) =>
+    (options.departureMinute === undefined ? 0 : Number(hasHours(b)) - Number(hasHours(a))) ||
+    a.totalStops - b.totalStops ||
     (a.accessMeters + a.egressMeters) - (b.accessMeters + b.egressMeters) ||
     a.legs.length - b.legs.length || a.id.localeCompare(b.id, "en", { numeric: true }));
   const seen = new Set<string>();
@@ -141,5 +182,10 @@ export function planBusJourneys(network: BusNetwork, origin: BusJourneyEndpoint,
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
-  }).slice(0, MAX_JOURNEYS);
+  }).slice(0, MAX_JOURNEYS).map((plan) => {
+    if (!options.walking) return plan;
+    const access = accessPaths.get(plan.legs[0].from.stationCode);
+    const egress = egressPaths.get(plan.legs.at(-1)!.to.stationCode);
+    return { ...plan, walking: { access, egress } };
+  });
 }

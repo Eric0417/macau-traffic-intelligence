@@ -16,6 +16,7 @@ async function main() {
     "cameras",
     "bus-routes",
     "bus-network",
+    "walking-network",
     "parking",
     "weather",
     "notices",

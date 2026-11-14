@@ -500,6 +500,7 @@ export async function buildLearningSnapshot(
   const refreshes: Array<() => Promise<void>> = [];
   const question = options.question ?? "";
   const focus = options.focus;
+  const needsLrtNetwork = /輕軌|轻轨|列車|列车|地鐵|地铁|氹仔[線线]|石排[灣湾][線线]|[橫横]琴[線线]|\b(?:lrt|light rail|train|metro|taipa line|seac pai van line|hengqin line)\b/i.test(question);
 
   const [
     roads,
@@ -519,7 +520,7 @@ export async function buildLearningSnapshot(
     readSource(sources.borders),
     readSource(sources.notices),
     readSource(sources.lrtNotices),
-    readSource(sources.lrtNetwork),
+    needsLrtNetwork ? readSource(sources.lrtNetwork) : Promise.resolve(null),
     readSource(sources.officialNews),
   ]);
 
@@ -663,6 +664,10 @@ const localeName: Record<Locale, string> = {
   en: "English",
 };
 
+function assistantLocalTime(value: string | null): string | null {
+  return value ? new Date(Date.parse(value) + 8 * 3_600_000).toISOString().replace("Z", "+08:00") : null;
+}
+
 export function buildAssistantMessages(
   question: string,
   locale: Locale,
@@ -673,7 +678,8 @@ export function buildAssistantMessages(
     `Answer in ${localeName[locale]}.`,
     "Use the LIVE DATA SNAPSHOT in the user message as the only source of current traffic, weather, and transport facts. Never invent numbers, road names, bus routes, or events. If the snapshot does not contain what is needed, say what is missing and point to the relevant tab of the app (Overview, Bus, LRT, Parking, Notices, Cameras).",
     `When you quote a live value, mention that it comes from the snapshot taken at ${snapshot.generatedAt}.`,
-    "Explain, do not just answer: give a short direct answer first, then one or two sentences on how to read or compare the data. When the request is practical, end with what to check next in the app. When the user is likely learning, or the question is about the data itself, end with one small follow-up question or observation task instead.",
+    "Give a short practical answer, followed by the next action in the app. Use numbered steps for travel guidance. Do not end with a quiz, observation task or follow-up question unless the user explicitly asks for a learning exercise.",
+    "Display all dates and times in Asia/Macau (UTC+08:00), including publication dates near UTC midnight. Never truncate a UTC timestamp to obtain a Macau calendar date.",
     "Do not repeat or restate the user's question at the start of the reply.",
     "Before stating which item is highest or lowest, list the values you are comparing so the comparison can be checked.",
     "When the snapshot cannot explain why something happens, say which extra data or field observation would be needed instead of guessing a cause.",
@@ -700,7 +706,11 @@ export function buildAssistantMessages(
     question,
     "",
     "LIVE DATA SNAPSHOT (JSON):",
-    JSON.stringify(snapshot),
+    JSON.stringify({
+      ...snapshot,
+      notices: snapshot.notices?.map((notice) => ({ ...notice, publishedAt: assistantLocalTime(notice.publishedAt)?.slice(0, 10) ?? null })) ?? null,
+      officialNews: snapshot.officialNews?.map((notice) => ({ ...notice, publishedAt: assistantLocalTime(notice.publishedAt) })) ?? null,
+    }),
   ].join("\n");
 
   return [
@@ -734,6 +744,7 @@ export function assistantConfigured(): boolean {
 
 export async function callAssistantProvider(
   messages: Array<{ role: "system" | "user"; content: string }>,
+  json = false,
 ): Promise<string> {
   const apiKey = process.env.ASSISTANT_API_KEY;
   if (!apiKey) throw new Error("assistant_unconfigured");
@@ -753,7 +764,8 @@ export async function callAssistantProvider(
       model: assistantModelName(),
       messages,
       temperature: 0.3,
-      max_tokens: 800,
+      max_tokens: json ? 1800 : 800,
+      ...(json ? { response_format: { type: "json_object" } } : {}),
       stream: false,
     }),
     signal: AbortSignal.timeout(Number.isFinite(timeoutMs) ? timeoutMs : 25_000),

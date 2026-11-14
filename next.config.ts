@@ -31,7 +31,7 @@ const nextConfig: NextConfig = {
   // this entry Next 16 blocks dev assets for that hostname and the map never
   // initializes.
   allowedDevOrigins: ["127.0.0.1"],
-  serverExternalPackages: ["ioredis"],
+  serverExternalPackages: ["ioredis", "undici"],
   async headers() {
     return [
       {

@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import * as cache from "@/server/cache";
 import { POST } from "@/app/api/v1/assistant/route";
 import {
   buildAssistantMessages,
+  buildLearningSnapshot,
   callAssistantProvider,
   extractPlaceQuery,
   findMentionedSegments,
@@ -14,6 +16,7 @@ import {
 import type { BusRoute, LrtNetwork, RoadCollection } from "@/lib/types";
 
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
 });
@@ -276,4 +279,28 @@ describe("assistant route", () => {
 
     expect(response.status).toBe(400);
   });
+});
+
+
+it("gives the provider Macau publication dates and practical next steps", () => {
+  const messages = buildAssistantMessages("最新公告？", "zh-Hant", {
+    ...snapshot, notices: [{ title: "恢復通車", category: "general", publishedAt: "2026-11-10T16:00:00.000Z" }],
+  });
+  expect(messages[1].content).toContain('"publishedAt":"2026-11-11"');
+  expect(messages[0].content).toContain("Do not end with a quiz");
+});
+
+
+it("does not wait on the remote LRT network for a news question", async () => {
+  const read = vi.spyOn(cache, "readSource").mockResolvedValue(null);
+  const { snapshot: result } = await buildLearningSnapshot("zh-Hant", { question: "最新交通公告何時發布？" });
+  expect(read.mock.calls.some(([source]) => source.id === "lrt-network")).toBe(false);
+  expect(read.mock.calls.some(([source]) => source.id === "official-news")).toBe(true);
+  expect(result.lrt).toBeNull();
+});
+
+it("still reads the LRT network when a rider asks about a line", async () => {
+  const read = vi.spyOn(cache, "readSource").mockResolvedValue(null);
+  await buildLearningSnapshot("zh-Hant", { question: "石排灣線有幾多個站？" });
+  expect(read.mock.calls.some(([source]) => source.id === "lrt-network")).toBe(true);
 });

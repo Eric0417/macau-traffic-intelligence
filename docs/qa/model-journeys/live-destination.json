@@ -1,0 +1,25 @@
+{
+  "data": {
+    "kind": "location",
+    "destination": {
+      "id": "a217542274",
+      "name": "澳門東亞運動會體育館",
+      "coordinates": [
+        113.5697271,
+        22.1390285
+      ]
+    }
+  },
+  "meta": {
+    "generatedAt": "2026-11-13T05:48:39.792Z",
+    "updatedAt": "2026-11-13T05:48:39.792Z",
+    "stale": false,
+    "ttlSeconds": 0,
+    "source": {
+      "id": "assistant",
+      "name": "AI assistant (deepseek-chat)",
+      "url": "https://api.deepseek.com",
+      "text": "Model-ranked journeys grounded in dated transport data"
+    }
+  }
+}

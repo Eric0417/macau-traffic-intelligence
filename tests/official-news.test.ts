@@ -16,6 +16,12 @@ describe("official news", () => {
     expect(rows[0]).toMatchObject({ category: "general", content: "11月16至21日航班暫停。", publishedAt: "2026-11-10T08:16:00.000Z" });
   });
 
+  it("reads DSAT descriptions with the live RSS type attribute", () => {
+    const rows = parseOfficialNewsRss(`<rss><channel><item><title>恢復通車</title><link>https://www.dsat.gov.mo/dsat/news_detail.aspx?a_id=test</link><description type="html">&lt;p&gt;相關巴士服務恢復原有站點。&lt;/p&gt;</description><pubDate>Wed, 11 Nov 2026 09:16:19 GMT</pubDate></item></channel></rss>`, "dsat");
+    expect(rows[0].content).toBe("相關巴士服務恢復原有站點。");
+    expect(rows[0].publishedAt).toBe("2026-11-11T09:16:19.000Z");
+  });
+
   it("rejects an HTML challenge or a malformed feed instead of reporting zero news", () => {
     expect(() => parseOfficialNewsRss("<html>blocked</html>", "gcs")).toThrow();
   });

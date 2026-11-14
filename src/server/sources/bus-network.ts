@@ -1,6 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import snapshot from "../../../data/bus-network.json";
+import serviceHours from "../../../data/bus-service-hours.json";
 import type { BusJourneyRoute, BusNetwork } from "@/lib/bus-journey";
 import type { BusRoute } from "@/lib/types";
 import { createDsatToken } from "@/server/dsat-token";
@@ -9,12 +10,16 @@ import type { SourceDefinition } from "@/server/source";
 
 const coordinatesSchema = z.tuple([z.number().min(113.4).max(113.7), z.number().min(22).max(22.3)]);
 const stopSchema = z.object({ stationCode: z.string().min(1), stationName: z.string().min(1), coordinates: coordinatesSchema });
+const minuteSchema = z.number().int().min(0).max(1439);
+const serviceWindowsSchema = z.array(z.tuple([minuteSchema, minuteSchema])).min(1);
+const reviewedHours = z.record(z.string(), serviceWindowsSchema).parse(serviceHours);
 export const busNetworkSchema = z.object({
   fetchedAt: z.iso.datetime(),
   routes: z.array(z.object({
     routeCode: z.string().min(1), routeName: z.string().min(1), direction: z.union([z.literal(0), z.literal(1)]),
     circular: z.boolean(), company: z.object({ id: z.string(), name: z.string(), color: z.enum(["blue", "orange"]) }),
     stops: z.array(stopSchema).min(2),
+    serviceWindows: serviceWindowsSchema.optional(),
   })).min(1),
   coverage: z.object({ catalogRoutes: z.number().int().positive(), loadedRoutes: z.number().int().nonnegative(), missingRoutes: z.array(z.string()) }),
 });
@@ -76,5 +81,11 @@ export const busNetworkSource: SourceDefinition<BusNetwork> = {
   url: "https://bis.dsat.gov.mo:37812/macauweb/",
   attribution: "交通事務局官方路線及站序；日期見 fetchedAt，並非目前營運或班次保證",
   envKey: "SOURCE_BUS_ENABLED", ttlSeconds: 21_600, staleTtlSeconds: 2_592_000,
-  schema: busNetworkSchema, load: async () => busNetworkSchema.parse(snapshot),
+  schema: busNetworkSchema, load: async () => busNetworkSchema.parse({
+    ...snapshot,
+    routes: snapshot.routes.map((route) => ({
+      ...route,
+      serviceWindows: reviewedHours[`${route.routeName}:${route.direction}`] ?? reviewedHours[route.routeName],
+    })),
+  }),
 };

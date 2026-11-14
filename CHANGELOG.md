@@ -2,6 +2,43 @@
 
 All notable user-visible and architectural changes are recorded here.
 
+## Stable journey vehicle status - 2026-11-13
+
+- Keep vehicle details and map markers visible through normal background cache refreshes. The status no longer alternates between available and unavailable every two seconds, and expanded vehicle lists stay open. Read errors and data older than the existing freshness window still show unavailable status.
+
+## Model journey plans and announcement layout - 2026-11-13
+
+- Send natural-language destinations to the model, resolve place choices, obtain current location automatically and ask the model to compare verified journey candidates. Validate its JSON before rendering multiple options linked to the map and step guidance. Manual origin entry handles denied or unavailable location; invalid model responses stay visible failures.
+- Disclose that AI journey requests send current location and destination to the configured provider. Manual bus planning and nearby parking still calculate in the browser.
+- Keep announcement cards inside the list column and wrap long publisher URLs so headings, text and source buttons are not clipped beside the map.
+
+## Guided journeys and announcement refresh - 2026-11-13
+
+- Connect common natural-language destination requests to the local journey planner. Resolve unique places, request missing endpoints and show walking/boarding/transfer guidance beside the map. Traffic answers appear as a current brief instead of a growing chat thread, with practical next actions and Macau-local publication dates. Unrelated questions no longer wait on cold LRT network reads.
+- Rearrange desktop navigation horizontally and put trip input first, with white/navy surfaces, orange controls and compact transport rows. Mobile keeps separate list/map views and a scrollable guidance area below the map.
+- Restore DSAT news and arrangement reads by completing the source's TLS chain without disabling verification. Check announcements about every minute, expose refresh, parse attributed RSS descriptions correctly and sort arrangements by publication date.
+
+## Travel cards and leave-now journeys - 2026-11-12
+
+- Always plan bus journeys from the current Macau time. Removed the departure-time picker; searching again checks service hours against the new search time.
+- Redesigned the workspace with a desktop navigation rail, separate rounded content cards, a wide bus entry, smaller LRT/parking entries and a separate map. Added teal controls and coordinated day/night colours.
+- Preserved mobile list/map switching, bottom navigation and scoped card transitions. The desktop navigation rail also accepts Up/Down keys.
+
+## Bus heading and time-aware journeys - 2026-11-11
+
+- Align 3D buses using the route under their front and rear axles so short bends do not turn the entire model sideways.
+- Draw verified transfer legs independently, with both colours visible on overlapping roads. Show each leg's latest official vehicle estimates when available.
+- Filter known service hours by the selected Macau departure time. Reviewed hours cover all six night routes and five other routes.
+
+## Bus stop selection crash - 2026-11-11
+
+- Show the waiting card immediately when a stop is selected. Skipping the stop-list transition snapshot prevents the reproduced Chrome renderer crash and preserves focus and map selection.
+
+## Place search and walking journeys - 2026-11-11
+
+- Search for a Macau place, street or bus stop in either journey field. Named places automatically use reachable nearby platforms for direct and one-transfer bus options.
+- Compare a full walking route with bus options and view mapped walking segments in green. OSM place search and routing stay in the browser. The data date and approximate endpoint links are displayed.
+
 ## Journey clarity and route map - 2026-11-10
 
 - Removed the white inset shine from dark navigation while retaining visible keyboard focus.

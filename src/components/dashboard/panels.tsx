@@ -1,5 +1,9 @@
 "use client";
 
+import { createPortal } from "react-dom";
+import type { AssistantJourneyPlans, AssistantJourneyRequest, AssistantJourneyResult } from "@/lib/assistant-journey";
+import type { BusJourney } from "@/lib/bus-journey";
+import type { SelectedJourney } from "./journey-map-detail";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
@@ -334,12 +338,12 @@ export function LrtPanel({
 }
 
 export function AssistantPanel({
-  route,
-  direction,
-  onAction,
-  onOpenTab,
-  request,
+  route, direction, onAction, onOpenTab, request, guideTarget, onShowGuide, onStart, onJourney,
 }: {
+  guideTarget?: HTMLElement | null;
+  onShowGuide?: () => void;
+  onStart: () => void;
+  onJourney: (journey: SelectedJourney) => void;
   route: BusRoute | null;
   direction: 0 | 1;
   onAction?: (action: LearningAssistantAction | null) => void;
@@ -347,59 +351,77 @@ export function AssistantPanel({
   request?: { id: number; question: string } | null;
 }) {
   const { t, locale } = useLanguage();
+  const label = (hant: string, hans: string, en: string) => locale === "en" ? en : locale === "zh-Hans" ? hans : hant;
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
-  const [entries, setEntries] = useState<
-    Array<{
-      id: number;
-      question: string;
-      answer?: LearningAssistantAnswer;
-      failed?: boolean;
-      unconfigured?: boolean;
-    }>
-  >([]);
-  const nextId = useRef(0);
+  const [locating, setLocating] = useState(false);
+  const [locationFailed, setLocationFailed] = useState(false);
+  const [originDraft, setOriginDraft] = useState("");
+  const [pending, setPending] = useState<AssistantJourneyRequest | null>(null);
+  const [result, setResult] = useState<AssistantJourneyResult | null>(null);
+  const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [entry, setEntry] = useState<{ question: string; answer?: LearningAssistantAnswer; failed?: boolean; unconfigured?: boolean } | null>(null);
   const requestedId = useRef<number | null>(null);
+  const inFlight = useRef(false);
 
-  const ask = useCallback(async (value: string) => {
+  const showOption = useCallback((plans: AssistantJourneyPlans, journey: BusJourney) => {
+    setSelectedOption(journey.id);
+    onJourney({ journey, origin: plans.origin.coordinates, destination: plans.destination.coordinates,
+      destinationName: plans.destination.name, networkFetchedAt: plans.networkFetchedAt, walkingMappedAt: plans.walkingMappedAt });
+  }, [onJourney]);
+
+  const ask = useCallback(async (value: string, continuation?: AssistantJourneyRequest) => {
     const question = value.trim();
-    if (!question || busy) return;
-
-    const id = (nextId.current += 1);
-    setBusy(true);
-    setDraft("");
-    setEntries((current) => [...current, { id, question }]);
-
-    try {
-      const response = await fetch("/api/v1/assistant", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          question,
-          locale,
-          ...(route ? { focus: { routeCode: route.routeCode, direction } } : {}),
-        }),
+    if (question.length < 2 || inFlight.current) return;
+    inFlight.current = true;
+    setBusy(true); setLocationFailed(false); setDraft(""); setResult(null); setSelectedOption(null);
+    setEntry({ question }); onStart();
+    let payload: AssistantJourneyRequest = continuation ?? { question, locale };
+    setPending(payload);
+    async function sendJourney() {
+      const response = await fetch("/api/v1/assistant/journeys", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
       });
-      const body = (await response.json()) as
-        | ApiEnvelope<LearningAssistantAnswer>
-        | { message?: string; error?: string };
-      if (!response.ok || !("data" in body)) {
-        throw new Error("error" in body ? body.error : `HTTP ${response.status}`);
-      }
-      setEntries((current) =>
-        current.map((entry) =>
-          entry.id === id ? { ...entry, answer: body.data } : entry,
-        ),
-      );
-      onAction?.(body.data.action ?? null);
-    } catch (error) {
-      setEntries((current) =>
-        current.map((entry) => (entry.id === id ? { ...entry, failed: true, unconfigured: error instanceof Error && error.message === "assistant_unconfigured" } : entry)),
-      );
-    } finally {
-      setBusy(false);
+      const body = await response.json();
+      if (!response.ok || !body.data) throw new Error(body.error ?? "assistant_unavailable");
+      return body.data as AssistantJourneyResult;
     }
-  }, [busy, locale, route, direction, onAction]);
+    try {
+      let data = await sendJourney();
+      if (data.kind === "traffic") {
+        const response = await fetch("/api/v1/assistant", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question, locale, ...(route ? { focus: { routeCode: route.routeCode, direction } } : {}) }),
+        });
+        const body = await response.json();
+        if (!response.ok || !body.data) throw new Error(body.error ?? "assistant_unavailable");
+        setEntry({ question, answer: body.data }); onShowGuide?.(); onAction?.(body.data.action ?? null);
+        return;
+      }
+      if (data.kind === "location") {
+        payload = { ...payload, destinationId: data.destination.id };
+        setPending(payload); setResult(data); setLocating(true);
+        try {
+          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+            if (!navigator.geolocation) { reject(new Error("location_unavailable")); return; }
+            navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: false, timeout: 10_000, maximumAge: 60_000 });
+          });
+          payload = { ...payload, origin: [position.coords.longitude, position.coords.latitude] };
+        } catch {
+          setLocationFailed(true);
+          return;
+        } finally { setLocating(false); }
+        setPending(payload);
+        data = await sendJourney();
+      }
+      setResult(data);
+      if (data.kind === "choose") setPending({ ...payload, ...(data.destination ? { destinationId: data.destination.id } : {}), ...(data.originQuery ? { originQuery: data.originQuery } : {}) });
+      if (data.kind === "plans") showOption(data, data.options[0].journey);
+    } catch (error) {
+      setEntry({ question, failed: true, unconfigured: error instanceof Error && error.message === "assistant_unconfigured" });
+      onShowGuide?.();
+    } finally { setBusy(false); inFlight.current = false; }
+  }, [locale, route, direction, onAction, onShowGuide, onStart, showOption]);
 
   useEffect(() => {
     if (!request || busy || requestedId.current === request.id) return;
@@ -408,105 +430,52 @@ export function AssistantPanel({
   }, [request, busy, ask]);
 
   return (
-    <div className="panel-stack">
+    <div className="panel-stack assistant-planning">
       <section className="panel-section">
-        <div className="section-heading">
-          <h2>{t("assistant")}</h2>
-          <Sparkles size={18} aria-hidden="true" />
-        </div>
+        <div className="section-heading"><h2>{t("assistant")}</h2><Sparkles size={18} aria-hidden="true" /></div>
         <p className="quiet-copy">{t("assistantIntro")}</p>
-        {route ? (
-          <p className="assistant-focus">
-            {t("bus")} {route.routeName} ·{" "}
-            {direction === 0 ? t("outbound") : t("return")}
-          </p>
-        ) : null}
-
-        {entries.length ? (
-          <div className="assistant-thread">
-            {entries.map((entry) => (
-              <article className="assistant-entry" key={entry.id}>
-                <p className="assistant-question">{entry.question}</p>
-                {entry.answer ? (
-                  <>
-                    <p className="assistant-answer">{entry.answer.answer}</p>
-                    <p className="assistant-note">
-                      {t("assistantBasedOn")}{" "}
-                      {new Date(entry.answer.snapshotAt).toLocaleTimeString(
-                        locale === "en" ? "en-GB" : "zh-MO",
-                        { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Macau" },
-                      )}
-                    </p>
-                    <ul className="assistant-context">
-                      {entry.answer.contextSummary.map((item) => (
-                        <li key={item}>{item}</li>
-                      ))}
-                    </ul>
-                    {entry.answer.action && onOpenTab ? (
-                      <button
-                        type="button"
-                        className="assistant-action"
-                        onClick={() => {
-                          const action = entry.answer?.action;
-                          if (action) onOpenTab(action);
-                        }}
-                      >
-                        {entry.answer.action.kind === "bus"
-                          ? t("assistantOpenBus")
-                          : t("assistantOpenLrt")}
-                      </button>
-                    ) : null}
-                  </>
-                ) : entry.failed ? (
-                  <p className="error-copy">{entry.unconfigured ? residentCopy[locale].aiNotEnabled : t("assistantUnavailable")}</p>
-                ) : (
-                  <p className="quiet-copy">{t("assistantThinking")}</p>
-                )}
-              </article>
-            ))}
-          </div>
-        ) : (
-          <div className="assistant-suggestions">
-            <p className="quiet-copy">{t("assistantSuggested")}</p>
-            {[t("assistantQ1"), t("assistantQ2"), t("assistantQ3")].map(
-              (suggestion) => (
-                <button
-                  type="button"
-                  key={suggestion}
-                  disabled={busy}
-                  onClick={() => void ask(suggestion)}
-                >
-                  {suggestion}
-                </button>
-              ),
-            )}
-          </div>
-        )}
-
-        <form
-          className="assistant-form"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void ask(draft);
-          }}
-        >
-          <label>
-            <span className="sr-only">{t("assistantPlaceholder")}</span>
-            <textarea
-              value={draft}
-              rows={2}
-              maxLength={500}
-              placeholder={t("assistantPlaceholder")}
-              onChange={(event) => setDraft(event.target.value)}
-            />
-          </label>
-          <button type="submit" disabled={busy || !draft.trim()}>
-            <Send size={15} aria-hidden="true" />
-            <span>{t("assistantSend")}</span>
-          </button>
+        <form className="assistant-form" onSubmit={event => { event.preventDefault(); void ask(draft); }}>
+          <label><span className="sr-only">{t("assistantPlaceholder")}</span><textarea value={draft} rows={2} maxLength={500} placeholder={t("assistantPlaceholder")} onChange={event => setDraft(event.target.value)} /></label>
+          <button type="submit" disabled={busy || draft.trim().length < 2}><Send size={15} aria-hidden="true" /><span>{t("assistantSend")}</span></button>
         </form>
         <p className="assistant-privacy">{t("assistantPrivacy")}</p>
+        {busy ? <p className="assistant-progress" role="status">{locating ? label("正在取得目前位置…", "正在获取当前位置…", "Getting your location…") : label("AI 正在理解目的地及比較行程…", "AI 正在理解目的地并比较行程…", "AI is resolving your destination and comparing options…")}</p> : null}
+        {!entry ? <div className="assistant-suggestions">{[label("我想去澳門體育館", "我想去澳门体育馆", "I want to go to Macau East Asian Games Dome"), t("assistantQ1")].map(suggestion => <button type="button" key={suggestion} disabled={busy} onClick={() => void ask(suggestion)}>{suggestion}</button>)}</div> : null}
+        {result?.kind === "choose" && pending ? <div className="assistant-place-choices">
+          <p>{result.field === "origin" ? label("請揀出發地點", "请选择出发地点", "Choose your origin") : label("你想去邊一個地點？", "你想去哪个地点？", "Which destination do you mean?")}</p>
+          {result.choices.map(place => <button type="button" key={place.id} disabled={busy} onClick={() => void ask(pending.question, { ...pending, [result.field === "origin" ? "originId" : "destinationId"]: place.id })}>{place.name}</button>)}
+        </div> : null}
+        {result?.kind === "clarify" ? <p className="data-warning" role="status">{result.message}</p> : null}
+        {(locationFailed || (result?.kind === "clarify" && pending?.destinationId)) && pending ? <div className="assistant-location-fallback">
+          {locationFailed ? <p role="status">{label("未能取得位置。可以重試，或者輸入出發地點。", "未能获取位置。可以重试，或者输入出发地点。", "Location unavailable. Retry or enter your starting point.")}</p> : null}
+          {locationFailed ? <button className="text-action" type="button" disabled={busy} onClick={() => void ask(pending.question, { question: pending.question, locale, destinationId: pending.destinationId })}>{label("重試定位", "重试定位", "Retry location")}</button> : null}
+          <form onSubmit={event => { event.preventDefault(); void ask(pending.question, { question: pending.question, locale, destinationId: pending.destinationId, originQuery: originDraft }); }}>
+            <label>{label("出發地點", "出发地点", "Starting point")}<input value={originDraft} maxLength={150} onChange={event => setOriginDraft(event.target.value)} /></label>
+            <button className="primary-action" type="submit" disabled={busy || !originDraft.trim()}>{label("由呢度出發", "从这里出发", "Start here")}</button>
+          </form>
+        </div> : null}
+        {entry?.failed ? <p className="error-copy" role="alert">{entry.unconfigured ? residentCopy[locale].aiNotEnabled : t("assistantUnavailable")}</p> : null}
+        {entry?.answer ? <button type="button" className="text-action" onClick={onShowGuide}>{label("查看指引", "查看指引", "View guidance")}</button> : null}
       </section>
+      {result?.kind === "plans" ? <section className="panel-section assistant-options" aria-label={label("AI 行程方案", "AI 行程方案", "AI journey options")}>
+        <p className="eyebrow">{result.origin.name} → {result.destination.name}</p>
+        <h2>{label("AI 幫你比較咗以下方案", "AI 帮你比较了以下方案", "Your AI journey options")}</h2>
+        <p>{result.summary}</p>
+        <p className="quiet-copy">{label("即時出發", "即刻出发", "Leave now")} · {new Date(result.generatedAt).toLocaleTimeString(locale === "en" ? "en-GB" : "zh-MO", { timeZone: "Asia/Macau", hour: "2-digit", minute: "2-digit" })}</p>
+        {result.options.map(({ journey, title, reason }, index) => <button type="button" className="assistant-option" key={journey.id} aria-pressed={selectedOption === journey.id} onClick={() => showOption(result, journey)}>
+          <span className="eyebrow">{index === 0 ? label("AI 推薦", "AI 推荐", "AI recommendation") : label("另一方案", "另一方案", "Alternative")} {index + 1}</span>
+          <strong>{title}</strong><span>{journey.legs.length ? journey.legs.map(l => `${l.routeName} → ${l.to.stationName}`).join(" · ") : label("全程步行", "全程步行", "Walk all the way")}</span>
+          <span>{reason}</span>
+          <small>{label("接駁距離約", "接驳距离约", "Access distance about")} {journey.accessMeters + journey.egressMeters + journey.transferMeters} m{journey.legs.length ? ` · ${journey.totalStops} ${label("個站", "个站", "stops")}` : ""} · {label("查看地圖及步驟", "查看地图及步骤", "Map & steps")}</small>
+        </button>)}
+        {result.warnings.map(w => <p className="quiet-copy" key={w}>{w}</p>)}
+        <p className="quiet-copy">{label("路線資料", "路线资料", "Route data")} {result.networkFetchedAt.slice(0, 10)} · {label("步行資料", "步行资料", "Walking data")} {result.walkingMappedAt.slice(0, 10)}</p>
+      </section> : null}
+      {guideTarget && entry && (entry.answer || entry.failed) ? createPortal(<div className="assistant-brief" aria-live="polite"><article className="assistant-entry">
+        <p className="assistant-question">{entry.question}</p>
+        {entry.answer ? <><p className="assistant-answer">{entry.answer.answer}</p><p className="assistant-note">{t("assistantBasedOn")} {new Date(entry.answer.snapshotAt).toLocaleTimeString(locale === "en" ? "en-GB" : "zh-MO", { timeZone: "Asia/Macau", hour: "2-digit", minute: "2-digit" })}</p><ul className="assistant-context">{entry.answer.contextSummary.map(item => <li key={item}>{item}</li>)}</ul>
+          {entry.answer.action && onOpenTab ? <button type="button" className="assistant-action" onClick={() => onOpenTab(entry.answer!.action!)}>{entry.answer.action.kind === "bus" ? t("assistantOpenBus") : t("assistantOpenLrt")}</button> : null}</> : <p className="error-copy">{entry.unconfigured ? residentCopy[locale].aiNotEnabled : t("assistantUnavailable")}</p>}
+      </article></div>, guideTarget) : null}
     </div>
   );
 }

@@ -267,7 +267,7 @@ export const busRoutesSource: SourceDefinition<Awaited<ReturnType<typeof loadBus
 
 // The route list flag marks 50 of 97 routes, so a diversion badge only counts when
 // the message feed actually reports suspended stops.
-function busDiversionSource(routeName: string): SourceDefinition<string[]> {
+export function busDiversionSource(routeName: string): SourceDefinition<string[]> {
   return {
     id: `bus-diversion-${routeName}`,
     name: `巴士 ${routeName} 改道`,
@@ -625,6 +625,7 @@ export async function loadBusEta(routeCodeValue: string, direction: 0 | 1) {
         stationSequence: stop?.sequence ?? 0,
         segmentIndex: segment && mappedIndex !== undefined ? mappedIndex : null,
         coordinates,
+        positionSource: official ? "feed" : "stop",
         bearing:
           segment && coordinates ? bearingAtPoint(segment.coordinates, coordinates) : null,
         estimated: true,

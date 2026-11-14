@@ -1,4 +1,5 @@
 import "server-only";
+import { dsatDispatcherFor } from "@/server/sources/dsat-tls";
 
 export class UpstreamError extends Error {
   constructor(
@@ -31,6 +32,7 @@ function sleep(ms: number): Promise<void> {
 
 export async function fetchText(url: string, options: FetchOptions = {}): Promise<string> {
   const retries = options.retries ?? 1;
+  const dispatcher = dsatDispatcherFor(url);
 
   for (let attempt = 0; attempt <= retries; attempt += 1) {
     const controller = new AbortController();
@@ -45,8 +47,9 @@ export async function fetchText(url: string, options: FetchOptions = {}): Promis
         },
         body: options.body,
         cache: "no-store",
-        redirect: "follow",
+        redirect: dispatcher ? "error" : "follow",
         signal: controller.signal,
+        ...{ dispatcher },
       });
 
       if (!response.ok) {

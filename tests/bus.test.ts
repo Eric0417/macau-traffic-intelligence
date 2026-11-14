@@ -278,6 +278,7 @@ describe("bus sources", () => {
         stationSequence: 2,
         segmentIndex: 1,
         coordinates: [113.5471, 22.2096],
+        positionSource: "feed",
         bearing: expect.closeTo(
           207.0414504734597,
           5,
@@ -413,6 +414,7 @@ describe("bus sources", () => {
     const eta = await loadBusEta("00003", 0);
 
     expect(eta.vehicles).toHaveLength(2);
+    expect(eta.vehicles.map((vehicle) => vehicle.positionSource)).toEqual(["feed", "feed"]);
     expect(eta.vehicles.map((vehicle) => vehicle.coordinates)).toEqual([
       [113.5471, 22.2096],
       [113.548, 22.2115],
@@ -433,6 +435,7 @@ describe("bus sources", () => {
     expect(eta.vehicles[0]).toMatchObject({
       plate: "AD2767",
       coordinates: [113.54549, 22.206627],
+      positionSource: "stop",
       speedKph: 18,
     });
   });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { planBusJourneys, searchBusStops, type BusNetwork, type BusJourneyRoute, type BusJourneyStop } from "@/lib/bus-journey";
-import { busNetworkSchema } from "@/server/sources/bus-network";
+import { busNetworkSchema, busNetworkSource } from "@/server/sources/bus-network";
 import verifiedSnapshot from "../data/bus-network.json";
 
 const stop = (stationCode: string, stationName = stationCode, longitude = 113.54): BusJourneyStop => ({
@@ -17,6 +17,23 @@ const network = (routes: BusJourneyRoute[]): BusNetwork => ({
 const endpoint = (stationCode: string) => ({ stationCode });
 
 describe("local bus journey search", () => {
+  it("filters both legs using the Macau departure time and ranks reviewed hours ahead of unknown hours", () => {
+    const night = { ...route("N2", [stop("T"), stop("D")]), serviceWindows: [[0, 360]] as [number, number][] };
+    const late = { ...route("101", [stop("A"), stop("T")]), serviceWindows: [[360, 120]] as [number, number][] };
+    const unknown = route("3", [stop("A"), stop("D")]);
+    const data = network([night, late, unknown]);
+    expect(planBusJourneys(data, endpoint("A"), endpoint("D"), { departureMinute: 60 })
+      .map((plan) => plan.legs.map((item) => item.routeName))).toEqual([["101", "N2"], ["3"]]);
+    expect(planBusJourneys(data, endpoint("A"), endpoint("D"), { departureMinute: 540 })
+      .map((plan) => plan.legs.map((item) => item.routeName))).toEqual([["3"]]);
+  });
+
+  it("serves the reviewed DSAT hours for all six night buses in the network snapshot", async () => {
+    const data = await busNetworkSource.load();
+    const night = data.routes.filter((item) => /^N[0-9]/.test(item.routeName));
+    expect([...new Set(night.map((item) => item.routeName))]).toEqual(["N1A", "N1B", "N2", "N3", "N5", "N6"]);
+    expect(night.every((item) => item.serviceWindows?.some(([start, end]) => start === 0 && end === 360))).toBe(true);
+  });
   it("finds the published direction and counts stop edges without inventing travel minutes", () => {
     const data = network([route("3", [stop("A"), stop("B"), stop("C")])]);
     const result = planBusJourneys(data, endpoint("A"), endpoint("C"));

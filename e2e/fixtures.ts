@@ -63,6 +63,13 @@ const cameras = [
 ];
 
 const responses: Record<string, unknown> = {
+  "/api/v1/assistant/journeys": { kind: "traffic" },
+  "/api/v1/journeys/walking-network": {
+    mappedAt: "2026-11-09T21:22:17Z",
+    places: [{ id: "n1", name: "路環測試公園", aliases: [], context: "", coordinates: [113.56, 22.12] }],
+    nodes: [[113.56, 22.12], [113.561, 22.12]],
+    edges: [[0, 1, 0, true]],
+  },
   "/api/v1/bus/network": {
     fetchedAt: "2026-11-10T10:00:00.000Z", coverage: { catalogRoutes: 2, loadedRoutes: 2, missingRoutes: [] },
     routes: [

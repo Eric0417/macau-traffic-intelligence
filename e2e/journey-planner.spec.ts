@@ -15,7 +15,7 @@ test.beforeEach(async ({ page }) => {
 test("a directed journey opens its live boarding stop and survives returning to the planner", async ({ page }) => {
   await chooseStop(page, "起點", "M1/9", "關閘總站 M1/9");
   await chooseStop(page, "終點", "M2", "測試轉乘站 M2");
-  await page.getByRole("button", { name: "尋找巴士方案" }).click();
+  await page.getByRole("button", { name: "尋找行程方案" }).click();
   await expect(page.locator(".journey-option")).toContainText("直達");
   await expect(page.locator(".journey-option")).toContainText("1 站");
   await page.getByRole("button", { name: "查看到站與停站狀態" }).click();
@@ -31,9 +31,9 @@ test("location-based one-transfer search keeps coordinates off API requests", as
   const requests: string[] = [];
   page.on("request", (request) => { if (request.url().includes("/api/")) requests.push(`${request.url()} ${request.postData() ?? ""}`); });
   await page.getByRole("button", { name: "使用目前位置", exact: true }).click();
-  await expect(page.getByRole("button", { name: "尋找巴士方案" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "尋找行程方案" })).toBeEnabled();
   await chooseStop(page, "終點", "M3", "測試終點站 M3");
-  await page.getByRole("button", { name: "尋找巴士方案" }).click();
+  await page.getByRole("button", { name: "尋找行程方案" }).click();
   await expect(page.locator(".journey-option")).toContainText("轉乘一次");
   await expect(page.locator(".journey-option .journey-leg")).toHaveCount(2);
   await expect(page.locator(".journey-option")).toContainText("到上車站直線距離");
@@ -43,10 +43,10 @@ test("location-based one-transfer search keeps coordinates off API requests", as
 test("reverse travel does not fabricate an unavailable journey and unknown places require a selected stop", async ({ page }) => {
   await chooseStop(page, "起點", "M2", "測試轉乘站 M2");
   await chooseStop(page, "終點", "M1/9", "關閘總站 M1/9");
-  await page.getByRole("button", { name: "尋找巴士方案" }).click();
+  await page.getByRole("button", { name: "尋找行程方案" }).click();
   await expect(page.locator(".journey-results")).toContainText("未找到符合條件");
   await page.getByRole("searchbox", { name: "終點", exact: true }).fill("未核實地址");
-  await page.getByRole("button", { name: "尋找巴士方案" }).click();
+  await page.getByRole("button", { name: "尋找行程方案" }).click();
   await expect(page.locator(".journey-planner [role=status]")).toContainText("請從建議清單選擇");
   await expect(page.locator(".journey-results")).toHaveCount(0);
 });
@@ -72,7 +72,7 @@ test("newer navigation cancels a boarding selection while arrivals are pending",
   });
   await chooseStop(page, "起點", "M1/9", "關閘總站 M1/9");
   await chooseStop(page, "終點", "M2", "測試轉乘站 M2");
-  await page.getByRole("button", { name: "尋找巴士方案" }).click();
+  await page.getByRole("button", { name: "尋找行程方案" }).click();
   await page.getByRole("button", { name: "查看到站與停站狀態" }).click();
   await expect(page.locator(".bus-route-header")).toBeVisible();
   await page.getByRole("tab", { name: "出行", exact: true }).click();
@@ -92,7 +92,7 @@ test("a changed route with repeated stop codes leaves boarding selection to the 
   });
   await chooseStop(page, "起點", "M1/9", "關閘總站 M1/9");
   await chooseStop(page, "終點", "M2", "測試轉乘站 M2");
-  await page.getByRole("button", { name: "尋找巴士方案" }).click();
+  await page.getByRole("button", { name: "尋找行程方案" }).click();
   await page.getByRole("button", { name: "查看到站與停站狀態" }).click();
   await expect(page.locator(".stop-row")).toHaveCount(2);
   await expect(page.locator(".waiting-card")).toHaveCount(0);

@@ -24,11 +24,13 @@ export function parseOfficialNewsRss(xml: string, publisher: "gcs" | "dsat"): Tr
     let url: URL;
     try { url = new URL(String(item.link ?? "")); } catch { return []; }
     if (url.protocol !== "https:" || url.hostname !== definition.host) return [];
+    const description = item.description && typeof item.description === "object"
+      ? (item.description as Record<string, unknown>)["#text"] : item.description;
     const published = Date.parse(String(item.pubDate ?? item["dc:date"] ?? ""));
     return [{
       id: `${publisher}:${url.pathname}${url.search}`,
       title,
-      content: cheerio.load(String(item.description ?? "")).text().replace(/\s+/g, " ").trim().slice(0, 240),
+      content: cheerio.load(String(description ?? "")).text().replace(/\s+/g, " ").trim().slice(0, 240),
       publishedAt: Number.isFinite(published) ? new Date(published).toISOString() : null,
       category: "general" as const,
       url: url.toString(),
@@ -53,6 +55,6 @@ export async function loadOfficialNews() {
 export const officialNewsSource: SourceDefinition<Awaited<ReturnType<typeof loadOfficialNews>>> = {
   id: "official-news", name: "政府交通新聞 RSS", url: "https://www.gov.mo/zh-hant/directory/rss-feeds/",
   attribution: "新聞局及交通事務局官方 RSS；發布消息，並非完整即時事故流",
-  envKey: "SOURCE_OFFICIAL_NEWS_ENABLED", ttlSeconds: 180, staleTtlSeconds: 3_600,
+  envKey: "SOURCE_OFFICIAL_NEWS_ENABLED", ttlSeconds: 60, staleTtlSeconds: 3_600,
   schema: officialNewsSchema, load: loadOfficialNews,
 };

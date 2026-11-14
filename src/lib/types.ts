@@ -107,6 +107,7 @@ export interface BusVehicle {
   segmentIndex: number | null;
   coordinates: [number, number] | null;
   bearing: number | null;
+  positionSource?: "feed" | "stop";
   estimated: boolean;
 }
 

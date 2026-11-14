@@ -91,6 +91,7 @@ export const busVehicleSchema = z.object({
   segmentIndex: z.number().int().nonnegative().nullable(),
   coordinates: z.tuple([z.number(), z.number()]).nullable(),
   bearing: z.number().nullable(),
+  positionSource: z.enum(["feed", "stop"]).optional(),
   estimated: z.boolean(),
 });
 
@@ -218,3 +219,12 @@ export const contractBySource = {
   notices: z.array(trafficNoticeSchema),
   lrtNotices: z.array(lrtNoticeSchema),
 } as const;
+
+export const assistantJourneyRequestSchema = z.object({
+  question: z.string().trim().min(2).max(500),
+  locale: z.enum(["zh-Hant", "zh-Hans", "en"]).default("zh-Hant"),
+  destinationId: z.string().min(1).max(120).optional(),
+  origin: z.tuple([z.number().min(-180).max(180), z.number().min(-90).max(90)]).optional(),
+  originQuery: z.string().trim().min(1).max(150).optional(),
+  originId: z.string().min(1).max(120).optional(),
+});

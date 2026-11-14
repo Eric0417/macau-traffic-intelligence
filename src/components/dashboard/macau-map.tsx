@@ -868,13 +868,19 @@ export function MacauMap({
           id: "journey-bus-casing", type: "line", source: "journey",
           filter: ["==", ["get", "kind"], "bus"],
           layout: { visibility: "none", "line-cap": "round", "line-join": "round" },
-          paint: { "line-color": "#ffffff", "line-width": 9, "line-opacity": .95 },
+          paint: { "line-color": "#ffffff", "line-width": ["+", ["number", ["get", "width"]], 4], "line-opacity": .95 },
         });
         map.addLayer({
           id: "journey-bus-lines", type: "line", source: "journey",
           filter: ["==", ["get", "kind"], "bus"],
+          layout: { visibility: "none", "line-cap": "round", "line-join": "round", "line-sort-key": ["get", "legIndex"] },
+          paint: { "line-color": ["get", "color"], "line-width": ["get", "width"] },
+        });
+        map.addLayer({
+          id: "journey-walking-paths", type: "line", source: "journey",
+          filter: ["==", ["get", "kind"], "walking-path"],
           layout: { visibility: "none", "line-cap": "round", "line-join": "round" },
-          paint: { "line-color": ["get", "color"], "line-width": 5 },
+          paint: { "line-color": "#21885f", "line-width": 4 },
         });
         map.addLayer({
           id: "journey-walk-lines", type: "line", source: "journey",
@@ -888,6 +894,12 @@ export function MacauMap({
           layout: { visibility: "none" },
           paint: { "circle-color": ["get", "color"], "circle-radius": 8, "circle-stroke-width": 3, "circle-stroke-color": "#ffffff" },
         });
+        map.addLayer({
+          id: "journey-vehicles", type: "circle", source: "journey",
+          filter: ["==", ["get", "kind"], "vehicle"],
+          layout: { visibility: "none" },
+          paint: { "circle-color": "#ffffff", "circle-radius": 6, "circle-stroke-width": 3, "circle-stroke-color": ["get", "color"] },
+        });
         if (map.getStyle().glyphs) {
           map.addLayer({
             id: "journey-marker-labels", type: "symbol", source: "journey",
@@ -899,6 +911,12 @@ export function MacauMap({
               "text-max-width": 14, "text-allow-overlap": true,
             },
             paint: { "text-color": "#183d50", "text-halo-color": "#ffffff", "text-halo-width": 2 },
+          });
+          map.addLayer({
+            id: "journey-vehicle-labels", type: "symbol", source: "journey",
+            filter: ["==", ["get", "kind"], "vehicle"],
+            layout: { visibility: "none", "text-field": ["get", "label"], "text-font": ["Noto Sans Regular"], "text-size": 11, "text-offset": [0, 1.1], "text-anchor": "top" },
+            paint: { "text-color": ["get", "color"], "text-halo-color": "#ffffff", "text-halo-width": 2 },
           });
           map.addLayer({
             id: "journey-walk-labels", type: "symbol", source: "journey",
@@ -1546,7 +1564,7 @@ export function MacauMap({
       ["bus-vehicle-points", busFocus],
       ["bus-station-labels", busFocus],
       ["bus-labels", busFocus],
-      ...["journey-bus-casing", "journey-bus-lines", "journey-walk-lines", "journey-markers", "journey-marker-labels", "journey-walk-labels"].map((id): [string, boolean] => [id, journeyActive]),
+      ...["journey-bus-casing", "journey-bus-lines", "journey-walking-paths", "journey-walk-lines", "journey-markers", "journey-marker-labels", "journey-vehicles", "journey-vehicle-labels", "journey-walk-labels"].map((id): [string, boolean] => [id, journeyActive]),
     ];
 
     entries.forEach(([id, visible]) => {

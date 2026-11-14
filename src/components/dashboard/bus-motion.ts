@@ -1,5 +1,6 @@
 import type { BusRouteSegment, BusVehicle } from "@/lib/types";
 import type { BusLivery } from "@/components/dashboard/bus-3d-layer";
+import { TRANSIT_DISPLAY_SCALE } from "./transit-display";
 
 export type LngLat = [number, number];
 
@@ -31,8 +32,10 @@ export function pathLengths(path: LngLat[]): number[] {
 }
 
 export function bearingBetween(a: LngLat, b: LngLat): number {
+  const latitude = ((a[1] + b[1]) / 2) * (Math.PI / 180);
+  const east = (b[0] - a[0]) * Math.cos(latitude);
   return (
-    ((Math.atan2(b[0] - a[0], b[1] - a[1]) * 180) / Math.PI + 360) % 360
+    ((Math.atan2(east, b[1] - a[1]) * 180) / Math.PI + 360) % 360
   );
 }
 
@@ -378,7 +381,7 @@ export function createBusMotion(
 export function advanceBusMotion(motion: BusMotion, now: number): BusMotionState {
   const state = pursue(motion, now);
   const distance = resolvedDistance(motion.route, state.distance);
-  const point = pointAtDistance(motion.route.path, motion.route.lengths, distance);
+  const point = busPoseAtDistance(motion.route, distance);
   return {
     id: motion.id,
     plate: motion.plate,
@@ -388,4 +391,24 @@ export function advanceBusMotion(motion: BusMotion, now: number): BusMotionState
     coordinates: point.coordinates,
     bearing: point.bearing,
   };
+}
+
+// Both GLB buses have a roughly 7 m wheelbase before display scaling.
+const BUS_HALF_WHEELBASE = (7 * TRANSIT_DISPLAY_SCALE) / 2;
+
+export function busPoseAtDistance(route: RoutePath, distance: number): PathPoint {
+  const { path, lengths, total } = route;
+  const pose = pointAtDistance(path, lengths, distance);
+  const first = path[0];
+  const last = path.at(-1);
+  // Motion can roll over at nearby terminals. Only sample across the seam
+  // when the actual polyline closes there.
+  const joinsAtSeam = route.closed && first && last && metersBetween(first, last) < 0.01;
+  const half = Math.min(BUS_HALF_WHEELBASE, total / 4);
+  const rearDistance = distance - half;
+  const frontDistance = distance + half;
+  const rear = pointAtDistance(path, lengths, joinsAtSeam && rearDistance < 0 ? rearDistance + total : rearDistance);
+  const front = pointAtDistance(path, lengths, joinsAtSeam && frontDistance > total ? frontDistance - total : frontDistance);
+  if (metersBetween(rear.coordinates, front.coordinates) < 0.01) return pose;
+  return { coordinates: pose.coordinates, bearing: bearingBetween(rear.coordinates, front.coordinates) };
 }
