@@ -23,7 +23,7 @@ External data never enters a client component directly. Public contracts are def
 
 ## Product Decisions
 
-- At 768–1100px, the desktop header centers its five tabs in a second row sized to fit them. A browser regression checks that no tab extends beyond the bar at and around those widths.
+- At 768–1100px, the desktop header centers its five tabs in a second row sized to fit them. A browser regression checks five widths from 768 to 1280px. Render deployment `dep-dbs87qmq1p3s73eguln0` is live with `9355f76`. A 1024px Chrome check confirmed the bar was centered and the highlight matched the selected tab. See [production screenshot](qa/desktop-nav-layout/render-desktop-nav.jpg).
 
 - The phone interface prioritizes AI trip input and bus lookup. Its four bottom items are Travel, Bus, AI Assistant and More. LRT and parking are in More; appearance/language are inside expandable settings. Detailed weather remains in the traffic overview and nearby parking in the parking panel. Existing saved items remain on the home screen, while empty saved-state instructions are hidden on phones. Home question input survives menu visits. Desktop navigation remains complete. See `docs/qa/mobile-visual-polish/VERIFICATION.md` for checks and deployment status.
 
