@@ -401,7 +401,6 @@
   .workspace-header { gap: 10px; padding: 0 16px; }
   .workspace-header-actions { gap: 4px; }
   .workspace-body { grid-template-columns: minmax(340px, 380px) minmax(0, 1fr); gap: 14px; padding-left: 104px; }
-  .workspace-nav { left: 12px; width: 76px; }
 }
 
 .workspace-map-top .quick-3d[aria-pressed="true"] { background: var(--tint); color: var(--surface); border-color: var(--tint); }
@@ -590,9 +589,9 @@
   .travel-shortcuts .mode-tile { transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease, transform 180ms ease; }
 }
 @media (min-width: 768px) and (max-width: 1100px) {
-  .resident-app { grid-template-rows: 132px minmax(0, 1fr); }
+  .resident-app { grid-template-rows: auto minmax(0, 1fr); }
   .workspace-header { display: grid; grid-template-columns: 1fr auto; padding: 10px 18px; gap: 6px; }
-  .workspace-nav { grid-column: 1 / -1; grid-row: 2; justify-content: center; }
+  .workspace-nav { grid-column: 1 / -1; grid-row: 2; justify-self: center; }
   .workspace-header-actions { grid-column: 2; grid-row: 1; }
 }
 

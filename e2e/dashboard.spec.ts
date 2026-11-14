@@ -26,6 +26,29 @@ test("one workspace renders the primary navigation and a usable mobile list", as
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
+test("desktop navigation contains all five tabs on narrow windows", async ({ page, isMobile }) => {
+  test.skip(isMobile, "Desktop header layout");
+  const nav = page.getByRole("tablist");
+  for (const width of [768, 1024, 1100, 1101, 1280]) {
+    await page.setViewportSize({ width, height: 800 });
+    await expect(nav.getByRole("tab")).toHaveCount(5);
+    const header = await page.locator(".workspace-header").boundingBox();
+    const bar = await nav.boundingBox();
+    expect(bar!.y + bar!.height, `Navigation bottom at ${width}px`).toBeLessThan(header!.y + header!.height);
+    const outside = await nav.evaluate((element) => {
+      const bar = element.getBoundingClientRect();
+      return [...element.querySelectorAll('[role="tab"]')]
+        .filter((tab) => tab.getClientRects().length > 0)
+        .filter((tab) => {
+          const rect = tab.getBoundingClientRect();
+          return rect.left < bar.left || rect.right > bar.right;
+        })
+        .map((tab) => tab.textContent);
+    });
+    expect(outside, `Tabs outside the navigation at ${width}px`).toEqual([]);
+  }
+});
+
 test("primary navigation supports keyboard arrows and Home", async ({ page }) => {
   const home = page.getByRole("tab", { name: "出行", exact: true });
   await expect(page.getByRole("tablist")).toHaveAttribute("aria-orientation", "horizontal");

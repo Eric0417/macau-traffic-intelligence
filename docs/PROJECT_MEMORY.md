@@ -23,6 +23,8 @@ External data never enters a client component directly. Public contracts are def
 
 ## Product Decisions
 
+- At 768–1100px, the desktop header centers its five tabs in a second row sized to fit them. A browser regression checks that no tab extends beyond the bar at and around those widths.
+
 - The phone interface prioritizes AI trip input and bus lookup. Its four bottom items are Travel, Bus, AI Assistant and More. LRT and parking are in More; appearance/language are inside expandable settings. Detailed weather remains in the traffic overview and nearby parking in the parking panel. Existing saved items remain on the home screen, while empty saved-state instructions are hidden on phones. Home question input survives menu visits. Desktop navigation remains complete. See `docs/qa/mobile-visual-polish/VERIFICATION.md` for checks and deployment status.
 
 - The phone-layout follow-up on `codex/mobile-layout` fixes WebKit's oversized implicit grid column and keeps the homepage submit button visible. Phone cards have tighter padding, question suggestions use separate rows and assistant input stacks above its button. Day-trip fields use 16px text, with time fields stacked below 360px. WebKit and mobile Chromium regressions cover 320/390/430px, three languages, primary tabs and form controls. Render deployed `414b9f4` as `dep-dbs4mc68bjmc73e49ht0` on 2026-11-14. Production mobile-width checks and a real day-trip request passed. Physical iPhone keyboard/browser-chrome behaviour remains unverified. See `docs/qa/mobile-layout/VERIFICATION.md`.

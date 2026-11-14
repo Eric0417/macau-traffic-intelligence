@@ -2,6 +2,10 @@
 
 All notable user-visible and architectural changes are recorded here.
 
+## Desktop navigation layout - 2026-11-14
+
+- Keep all five tabs inside the centered navigation bar on narrow desktop windows.
+
 ## Simple phone navigation and larger controls - 2026-11-14
 
 - Prioritize AI trip input and bus lookup on the phone home screen. Use four mobile navigation items: Travel, Bus, AI Assistant and More. LRT, parking and other services move into More; appearance and language sit inside its expandable settings.
