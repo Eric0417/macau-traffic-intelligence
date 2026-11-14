@@ -1,0 +1,1 @@
+{"status":"ok","service":"Macau Traffic Intelligence","cache":"redis","failures":{"roads":0,"bridges":0,"cameras":0,"bus-routes":0,"bus-network":0,"walking-network":0,"parking":0,"weather":0,"notices":0,"official-news":0,"lrt-network":0,"lrt-notices":0,"lrt-service":0,"borders":0},"time":"2026-11-14T12:17:58.148Z"}

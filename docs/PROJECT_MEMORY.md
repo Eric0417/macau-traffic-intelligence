@@ -2,7 +2,7 @@
 
 ## Current State
 
-Version `0.1.0` is a standalone Next.js 16 application with Traditional Chinese, Simplified Chinese and English. The trip workspace has horizontal desktop navigation, a left input/option panel, a wide map and collapsible guidance, plus mobile list/map switching and bottom navigation. Ordered journeys and cultural day trips were deployed as `5ec14f6` on 2026-11-14. The follow-up for map space and mistyped place names is live as `0928d2c`, Render deployment `dep-dbs335ijnfac73bqfpv0`. See `docs/qa/itineraries/VERIFICATION.md` and `docs/qa/map-guide-place-intent/VERIFICATION.md` for local and production checks.
+Version `0.1.0` is a standalone Next.js 16 application with Traditional Chinese, Simplified Chinese and English. The trip workspace has horizontal desktop navigation, a left input/option panel, a wide map and collapsible guidance, plus mobile list/map switching and bottom navigation. Ordered journeys and cultural day trips were deployed as `5ec14f6` on 2026-11-14. Map space and mistyped place names were revised in `0928d2c`, and phone card sizing in `414b9f4`. The simplified phone navigation and larger controls are live as `23c379b`, Render deployment `dep-dbs51req1p3s73ed98gg`. See `docs/qa/mobile-visual-polish/VERIFICATION.md` for the latest checks, and the itinerary/map-guide QA folders for the earlier revisions.
 
 The existing deployment is recorded on Render as project `Macau Traffic Intelligence`, environment `production`, at https://macau-traffic-intelligence.onrender.com. The service runs two instances in Singapore with a private Render Key Value instance for cache, locks, circuit state, and rate limiting; autoscaling remains declarative until the workspace is on a Pro plan.
 

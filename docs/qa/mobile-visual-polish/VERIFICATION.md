@@ -23,4 +23,10 @@ All automated browser APIs and map styles use fixtures. Phone checks use browser
 
 ## Deployment
 
-Pending. Rollback target: code `414b9f494be13953cc2df77d87e0a91395ddd69f`, Render deployment `dep-dbs4mc68bjmc73e49ht0`. No source contract or data migration changes.
+Render deployment `dep-dbs51req1p3s73ed98gg` went live at 2026-11-14 12:16:51 UTC with code `23c379b355cbfec29f665c3d9be3a76be2acdaf6`.
+
+The production page was checked in Chrome at 390 × 760. Document width was 390px, the question button was 48px high and the four intended tabs were visible. Both themes were inspected, LRT/parking opened from More, the bus page loaded its route list, and a real home question opened the cultural day-trip details form. Home text survived menu/theme changes. After resetting the viewport, desktop showed its five primary tabs and header settings. No browser console errors were recorded during this check. Browser language/theme were restored after verification.
+
+Health returned `status: ok`, `cache: redis` at 12:17:58 UTC. Production images are `render-home-light.jpg`, `render-home-dark.jpg` and `render-more.jpg`.
+
+Rollback target: code `414b9f494be13953cc2df77d87e0a91395ddd69f`, Render deployment `dep-dbs4mc68bjmc73e49ht0`. No source contract or data migration changes.
