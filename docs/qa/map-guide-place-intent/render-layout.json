@@ -1,0 +1,14 @@
+{
+  "idle": {
+    "guide": 76,
+    "stage": 859
+  },
+  "expanded": {
+    "guide": 280,
+    "stage": 859
+  },
+  "collapsed": {
+    "guide": 48,
+    "stage": 859
+  }
+}

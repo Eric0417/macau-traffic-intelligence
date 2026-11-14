@@ -1,0 +1,26 @@
+{
+  "base": "https://macau-traffic-intelligence.onrender.com",
+  "checkedAt": "2026-11-14T10:03:24.076Z",
+  "checks": [
+    {
+      "name": "natural-language temple typo",
+      "kind": "location",
+      "milliseconds": 1667
+    },
+    {
+      "name": "correct typed origin and ordered destination",
+      "kind": "trip-choice",
+      "milliseconds": 2259
+    },
+    {
+      "name": "continue with chosen real place",
+      "kind": "itineraries",
+      "milliseconds": 2732
+    }
+  ],
+  "resolvedStops": [
+    "澳門培正中學",
+    "媽閣廟",
+    "澳門運動場"
+  ]
+}
