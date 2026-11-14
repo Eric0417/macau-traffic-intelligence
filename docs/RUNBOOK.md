@@ -75,8 +75,14 @@ Use the Render dashboard, `render deploys` plus the rollback action, or push a r
 
 ## Resident revision release notes
 
-The `codex/resident-workspace` revision is local and not deployed. Before releasing it, verify Node certificate validation for DSAT parking, legacy notices and DSAT RSS, and set the existing DeepSeek `ASSISTANT_API_KEY` on the server. The local checkout currently has no assistant key; a real provider response has not been validated. Do not put keys in client configuration or commits.
+The resident workspace and original model journey flow were deployed as `675d75f` on 2026-11-14. The itinerary release uses the existing server-side provider configuration. Local live-provider checks now cover single destinations, ordered journeys, day-trip clarification, full alternatives and follow-up edits. No keys belong in client configuration or commits.
 
 After an approved release, invalidate only the affected cached source records (`borders`, `parking`, `notices`, `lrt-network`, `lrt-notices`) or wait for their TTLs. The old cache can contain generated border minutes, misparsed timestamps or the old LRT geometry. Keep the source ids and API v1 unchanged. Do not flush user or unrelated application data. Restarting this local development server clears its process-memory cache.
 
 `official-news` is enabled by default and controlled by `SOURCE_OFFICIAL_NEWS_ENABLED`. Inspect `data.feeds[].available` as well as envelope stale state. A successful GCS feed does not make DSAT RSS available. None of these feeds provides a complete ongoing-incident list.
+
+## Itinerary checks
+
+Run `ITINERARY_BASE_URL=https://macau-traffic-intelligence.onrender.com node scripts/smoke-itineraries.mjs` for a deliberate live-provider check. This uses public landmark coordinates and makes six assistant requests. Optional `ITINERARY_REPORT_PATH` writes a compact report without location or question payloads. It does not record any user's position.
+
+For this release, the prior live deployment is `dep-dbrt8pe7bikc73eebflg` at commit `675d75f39e5d30e9a2a2561301b5ab0be1c3d4ca`. Record the new deployment ID and post-release checks in `docs/qa/itineraries/VERIFICATION.md`. No database migration or cache flush is needed; `cultural-places` uses a new source ID. To disable new cultural recommendations independently, set `SOURCE_CULTURAL_PLACES_ENABLED=false`; point-to-point and ordered transport continue.

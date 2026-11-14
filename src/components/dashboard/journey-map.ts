@@ -9,6 +9,7 @@ export interface JourneyMapInput {
   origin: Coordinates;
   destination: Coordinates;
   destinationName?: string;
+  itineraryStops?: Array<{ name: string; coordinates: Coordinates }>;
   walking?: BusJourney["walking"];
 }
 export interface JourneyMapGeometry {
@@ -264,6 +265,9 @@ export function buildJourneyMap(
       color: "#233c4e",
       label: journey.destinationName ? `${c.destination}\n${journey.destinationName}` : c.destination,
     });
+  journey.itineraryStops?.forEach((stop, index) => {
+    point(stop.coordinates, { kind: "marker", role: "itinerary-stop", color: "#bc572b", label: `${index === 0 ? c.origin : index}. ${stop.name}` });
+  });
   return {
     collection: { type: "FeatureCollection", features },
     missingLegs,

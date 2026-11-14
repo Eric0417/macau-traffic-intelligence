@@ -2,7 +2,7 @@
 
 ## Current State
 
-Version `0.1.0` is a standalone Next.js 16 application with Traditional Chinese, Simplified Chinese and English. The local `codex/resident-workspace` revision (2026-11-13) has a trip workspace: horizontal desktop navigation, a left input/option panel, a wide map and a right-side guidance area, plus mobile list/map switching and bottom navigation. This revision has not been deployed. See `tasks/plan.md` and `docs/qa/resident-workspace/VERIFICATION.md`.
+Version `0.1.0` is a standalone Next.js 16 application with Traditional Chinese, Simplified Chinese and English. The `codex/resident-workspace` revision (2026-11-13) has a trip workspace: horizontal desktop navigation, a left input/option panel, a wide map and a right-side guidance area, plus mobile list/map switching and bottom navigation. That workspace was deployed as `675d75f` on 2026-11-14. The new itinerary revision is on `codex/multi-stop-itineraries`, pending deployment. See `tasks/plan.md` and `docs/qa/resident-workspace/VERIFICATION.md`.
 
 The existing deployment is recorded on Render as project `Macau Traffic Intelligence`, environment `production`, at https://macau-traffic-intelligence.onrender.com. The service runs two instances in Singapore with a private Render Key Value instance for cache, locks, circuit state, and rate limiting; autoscaling remains declarative until the workspace is on a Pro plan.
 
@@ -22,6 +22,9 @@ The `competition/` folder holds the 2026 competition submission package: English
 External data never enters a client component directly. Public contracts are defined in `src/lib/contracts.ts`.
 
 ## Product Decisions
+
+- The assistant now covers one destination, user-ordered destinations and themed cultural day trips. Multi-stop journeys preserve order and return visits. Day trips first collect date, start/end time, endpoints and preferences, then offer two or three complete alternatives. The selected itinerary supports follow-up text and editable stops/stays. See ADR 0018 and `docs/qa/itineraries/VERIFICATION.md`.
+- Cultural recommendations use seven reviewed heritage places and official opening links. Date/time checks and user stay lengths survive edits. Visit targets allocate the user's time, without predicting travel duration. Day-trip transport checks reviewed terminal hours at planned departure targets; live bus data only describes lookup time. Unknown connections remain explicit. Weekly closures are conservatively excluded without public-holiday exceptions.
 
 - AI trip requests now go through the model: extract destination, resolve catalogue choices, obtain current browser location, send origin/destination and verified candidates to the provider, then validate and render its ranked JSON options. Denied location supports manual origin; ambiguous destinations require a choice. General traffic questions keep the existing snapshot answer. See ADR 0017 and `docs/qa/model-journeys/VERIFICATION.md`.
 - Journey vehicle status and map markers use the same age-based freshness check as source notes. The normal two-second cache revalidation no longer removes vehicle details or resets an expanded list. Read errors and genuinely delayed data still hide current positions.

@@ -563,3 +563,28 @@
 .assistant-option strong { font-size: 16px; }
 .assistant-option[aria-pressed="true"] { border-color: var(--tint); background: var(--tint-soft); box-shadow: inset 3px 0 var(--tint); }
 .assistant-option small { color: var(--muted); }
+
+.trip-form { display: grid; gap: 16px; margin-top: 20px; }
+.trip-form label { display: grid; gap: 7px; min-width: 0; font-size: 13px; }
+.trip-form input, .trip-form textarea { min-width: 0; width: 100%; min-height: 44px; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; color: var(--ink); background: var(--surface-2); font: inherit; }
+.trip-form textarea { resize: vertical; }
+.trip-form textarea:focus-visible { outline: 2px solid var(--tint); outline-offset: 3px; }
+.trip-time-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.trip-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 14px 0; }
+.trip-actions button { min-height: 44px; }
+.trip-edit-stop { padding: 14px; border: 1px solid var(--line); border-radius: 8px; display: grid; gap: 10px; }
+.trip-edit-stop .trip-actions { margin: 0; }
+.trip-edit-stop button { border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; background: var(--surface-2); color: var(--ink); }
+.trip-form button:disabled, .trip-actions button:disabled { opacity: .45; cursor: not-allowed; }
+.itinerary-stops { list-style: none; margin: 24px 0; padding: 0; }
+.itinerary-stops > li { padding: 8px 0 20px 14px; border-left: 2px solid var(--line); }
+.itinerary-stops > li:last-child { border-left-color: transparent; }
+.itinerary-stop-heading { display: flex; align-items: center; gap: 10px; }
+.itinerary-stop-heading h3 { margin: 0; font-size: 16px; line-height: 1.6; }
+.trip-stop-number { display: grid; place-items: center; flex: 0 0 28px; height: 28px; margin-left: -29px; border-radius: 50%; color: var(--tint-ink); background: var(--tint-soft); border: 1px solid var(--tint); font-size: 12px; }
+.itinerary-stops p, .itinerary-results > p, .trip-details > p { font-size: 13px; line-height: 1.8; margin: 8px 0; }
+.itinerary-connection { margin: 14px 0 0 8px; }
+.trip-connection-option { display: grid; gap: 6px; width: 100%; margin: 8px 0; padding: 12px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: var(--surface-2); text-align: left; font-size: 12px; line-height: 1.7; }
+.trip-connection-option:hover { border-color: var(--tint); }
+.trip-connection-option strong { font-size: 13px; }
+.itinerary-connection summary { min-height: 44px; padding: 12px 0; cursor: pointer; font-size: 12px; color: var(--muted); }

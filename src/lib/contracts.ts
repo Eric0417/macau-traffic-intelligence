@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { tripDraftSchema } from "./itinerary";
 
 const localizedTextSchema = z.object({
   "zh-Hant": z.string(),
@@ -227,4 +228,6 @@ export const assistantJourneyRequestSchema = z.object({
   origin: z.tuple([z.number().min(-180).max(180), z.number().min(-90).max(90)]).optional(),
   originQuery: z.string().trim().min(1).max(150).optional(),
   originId: z.string().min(1).max(120).optional(),
+  trip: tripDraftSchema.optional(),
+  previousTrip: tripDraftSchema.optional(),
 });

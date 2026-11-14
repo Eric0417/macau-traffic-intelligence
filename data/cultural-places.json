@@ -1,0 +1,113 @@
+[
+  {
+    "id": "culture:a384374666",
+    "placeId": "a384374666",
+    "name": "媽閣廟",
+    "nameEn": "A-Ma Temple",
+    "tags": [
+      "temple",
+      "traditional culture"
+    ],
+    "opens": 420,
+    "closes": 1080,
+    "closedDays": [],
+    "sourceUrl": "https://www.wh.gov.mo/cn/content/visitor/",
+    "checkedAt": "2026-11-14"
+  },
+  {
+    "id": "culture:a808471840",
+    "placeId": "a808471840",
+    "name": "鄭家大屋",
+    "nameEn": "Mandarin’s House",
+    "tags": [
+      "historic house",
+      "traditional culture"
+    ],
+    "opens": 600,
+    "closes": 1080,
+    "closedDays": [
+      3
+    ],
+    "sourceUrl": "https://www.wh.mo/mandarinhouse/cn/visitInformation/",
+    "checkedAt": "2026-11-14",
+    "lastAdmission": 1050
+  },
+  {
+    "id": "culture:a462691120",
+    "placeId": "a462691120",
+    "name": "亞婆井前地",
+    "nameEn": "Lilau Square",
+    "tags": [
+      "square",
+      "heritage"
+    ],
+    "opens": 0,
+    "closes": 1440,
+    "closedDays": [],
+    "sourceUrl": "https://www.wh.gov.mo/cn/content/visitor/",
+    "checkedAt": "2026-11-14"
+  },
+  {
+    "id": "culture:a385147368",
+    "placeId": "a385147368",
+    "name": "議事亭前地",
+    "nameEn": "Senado Square",
+    "tags": [
+      "square",
+      "heritage"
+    ],
+    "opens": 0,
+    "closes": 1440,
+    "closedDays": [],
+    "sourceUrl": "https://www.wh.gov.mo/cn/content/visitor/",
+    "checkedAt": "2026-11-14"
+  },
+  {
+    "id": "culture:a385147362",
+    "placeId": "a385147362",
+    "name": "盧家大屋",
+    "nameEn": "Lou Kau Mansion",
+    "tags": [
+      "historic house",
+      "traditional culture"
+    ],
+    "opens": 600,
+    "closes": 1080,
+    "closedDays": [
+      1
+    ],
+    "sourceUrl": "https://www.wh.gov.mo/cn/content/visitor/",
+    "checkedAt": "2026-11-14",
+    "lastAdmission": 1050
+  },
+  {
+    "id": "culture:a384366370",
+    "placeId": "a384366370",
+    "name": "大三巴牌坊（外觀及前地）",
+    "nameEn": "Ruins of St Paul’s (façade and square)",
+    "tags": [
+      "heritage",
+      "architecture"
+    ],
+    "opens": 0,
+    "closes": 1440,
+    "closedDays": [],
+    "sourceUrl": "https://www.wh.gov.mo/cn/content/visitor/",
+    "checkedAt": "2026-11-14"
+  },
+  {
+    "id": "culture:a1310277168",
+    "placeId": "a1310277168",
+    "name": "大三巴哪吒廟",
+    "nameEn": "Na Tcha Temple",
+    "tags": [
+      "temple",
+      "traditional culture"
+    ],
+    "opens": 480,
+    "closes": 1020,
+    "closedDays": [],
+    "sourceUrl": "https://www.wh.gov.mo/cn/content/visitor/",
+    "checkedAt": "2026-11-14"
+  }
+]

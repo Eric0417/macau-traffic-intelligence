@@ -192,6 +192,7 @@ export function TrafficDashboard() {
     origin: selectedJourney.origin,
     destination: selectedJourney.destination,
     destinationName: selectedJourney.destinationName,
+    itineraryStops: selectedJourney.itineraryStops,
     walking: selectedJourney.journey.walking,
     legs: selectedJourney.journey.legs.map((leg, index) => ({
       leg,

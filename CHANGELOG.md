@@ -2,6 +2,12 @@
 
 All notable user-visible and architectural changes are recorded here.
 
+## Ordered journeys and cultural day trips - 2026-11-14
+
+- Use the assistant for one destination, ordered destinations or a themed day trip. Multi-stop journeys retain the requested order and return visits, with separate transport choices and map guidance for each connection.
+- Ask for date, start/end time, endpoints and preferences before generating day trips. Compare complete alternatives drawn from seven reviewed cultural places, with official visitor links, opening rules and editable suggested stays. Visit targets are not predicted arrival times.
+- Keep place choices and manual-location recovery across the whole itinerary. Edit, remove, add or reorder destinations and recalculate connections. Failed connections remain visible without dropping destinations.
+
 ## Stable journey vehicle status - 2026-11-13
 
 - Keep vehicle details and map markers visible through normal background cache refreshes. The status no longer alternates between available and unavailable every two seconds, and expanded vehicle lists stay open. Read errors and data older than the existing freshness window still show unavailable status.

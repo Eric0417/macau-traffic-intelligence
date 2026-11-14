@@ -2,6 +2,8 @@
 
 import { createPortal } from "react-dom";
 import type { AssistantJourneyPlans, AssistantJourneyRequest, AssistantJourneyResult } from "@/lib/assistant-journey";
+import { itineraryDraft, ItineraryPanel } from "./itinerary-panel";
+import type { TripDraft } from "@/lib/itinerary";
 import type { BusJourney } from "@/lib/bus-journey";
 import type { SelectedJourney } from "./journey-map-detail";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -358,6 +360,7 @@ export function AssistantPanel({
   const [locationFailed, setLocationFailed] = useState(false);
   const [originDraft, setOriginDraft] = useState("");
   const [pending, setPending] = useState<AssistantJourneyRequest | null>(null);
+  const [activeTrip, setActiveTrip] = useState<TripDraft | undefined>();
   const [result, setResult] = useState<AssistantJourneyResult | null>(null);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [entry, setEntry] = useState<{ question: string; answer?: LearningAssistantAnswer; failed?: boolean; unconfigured?: boolean } | null>(null);
@@ -376,7 +379,7 @@ export function AssistantPanel({
     inFlight.current = true;
     setBusy(true); setLocationFailed(false); setDraft(""); setResult(null); setSelectedOption(null);
     setEntry({ question }); onStart();
-    let payload: AssistantJourneyRequest = continuation ?? { question, locale };
+    let payload: AssistantJourneyRequest = continuation ?? { question, locale, previousTrip: activeTrip };
     setPending(payload);
     async function sendJourney() {
       const response = await fetch("/api/v1/assistant/journeys", {
@@ -389,6 +392,7 @@ export function AssistantPanel({
     try {
       let data = await sendJourney();
       if (data.kind === "traffic") {
+        setActiveTrip(undefined);
         const response = await fetch("/api/v1/assistant", {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ question, locale, ...(route ? { focus: { routeCode: route.routeCode, direction } } : {}) }),
@@ -398,8 +402,9 @@ export function AssistantPanel({
         setEntry({ question, answer: body.data }); onShowGuide?.(); onAction?.(body.data.action ?? null);
         return;
       }
-      if (data.kind === "location") {
-        payload = { ...payload, destinationId: data.destination.id };
+      if (data.kind === "location" || data.kind === "trip-location") {
+        payload = data.kind === "location" ? { ...payload, destinationId: data.destination.id } : { ...payload, trip: data.draft };
+        if (data.kind === "trip-location") setActiveTrip(data.draft);
         setPending(payload); setResult(data); setLocating(true);
         try {
           const position = await new Promise<GeolocationPosition>((resolve, reject) => {
@@ -415,13 +420,15 @@ export function AssistantPanel({
         data = await sendJourney();
       }
       setResult(data);
+      if ("draft" in data) { setPending({ ...payload, trip: data.draft }); setActiveTrip(data.kind === "itineraries" ? itineraryDraft(data, data.options[0]) : data.draft); }
+      else setActiveTrip(undefined);
       if (data.kind === "choose") setPending({ ...payload, ...(data.destination ? { destinationId: data.destination.id } : {}), ...(data.originQuery ? { originQuery: data.originQuery } : {}) });
       if (data.kind === "plans") showOption(data, data.options[0].journey);
     } catch (error) {
       setEntry({ question, failed: true, unconfigured: error instanceof Error && error.message === "assistant_unconfigured" });
       onShowGuide?.();
     } finally { setBusy(false); inFlight.current = false; }
-  }, [locale, route, direction, onAction, onShowGuide, onStart, showOption]);
+  }, [locale, route, direction, onAction, onShowGuide, onStart, showOption, activeTrip]);
 
   useEffect(() => {
     if (!request || busy || requestedId.current === request.id) return;
@@ -439,8 +446,8 @@ export function AssistantPanel({
           <button type="submit" disabled={busy || draft.trim().length < 2}><Send size={15} aria-hidden="true" /><span>{t("assistantSend")}</span></button>
         </form>
         <p className="assistant-privacy">{t("assistantPrivacy")}</p>
-        {busy ? <p className="assistant-progress" role="status">{locating ? label("正在取得目前位置…", "正在获取当前位置…", "Getting your location…") : label("AI 正在理解目的地及比較行程…", "AI 正在理解目的地并比较行程…", "AI is resolving your destination and comparing options…")}</p> : null}
-        {!entry ? <div className="assistant-suggestions">{[label("我想去澳門體育館", "我想去澳门体育馆", "I want to go to Macau East Asian Games Dome"), t("assistantQ1")].map(suggestion => <button type="button" key={suggestion} disabled={busy} onClick={() => void ask(suggestion)}>{suggestion}</button>)}</div> : null}
+        {busy ? <p className="assistant-progress" role="status">{locating ? label("正在取得目前位置…", "正在获取当前位置…", "Getting your location…") : label("正在理解要求及連接各段交通…", "正在理解要求并连接各段交通…", "Resolving places and connecting your journey…")}</p> : null}
+        {!entry ? <div className="assistant-suggestions">{[label("我想去澳門運動場", "我想去澳门运动场", "I want to go to Macau Stadium"), label("由培正去澳門運動場，再去媽閣", "从培正去澳门运动场，再去妈阁", "From Pui Ching to Macau Stadium, then A-Ma Temple"), label("幫我安排傳統文化一日遊", "帮我安排传统文化一日游", "Plan a traditional culture day trip")].map(suggestion => <button type="button" key={suggestion} disabled={busy} onClick={() => void ask(suggestion)}>{suggestion}</button>)}</div> : null}
         {result?.kind === "choose" && pending ? <div className="assistant-place-choices">
           <p>{result.field === "origin" ? label("請揀出發地點", "请选择出发地点", "Choose your origin") : label("你想去邊一個地點？", "你想去哪个地点？", "Which destination do you mean?")}</p>
           {result.choices.map(place => <button type="button" key={place.id} disabled={busy} onClick={() => void ask(pending.question, { ...pending, [result.field === "origin" ? "originId" : "destinationId"]: place.id })}>{place.name}</button>)}
@@ -448,8 +455,8 @@ export function AssistantPanel({
         {result?.kind === "clarify" ? <p className="data-warning" role="status">{result.message}</p> : null}
         {(locationFailed || (result?.kind === "clarify" && pending?.destinationId)) && pending ? <div className="assistant-location-fallback">
           {locationFailed ? <p role="status">{label("未能取得位置。可以重試，或者輸入出發地點。", "未能获取位置。可以重试，或者输入出发地点。", "Location unavailable. Retry or enter your starting point.")}</p> : null}
-          {locationFailed ? <button className="text-action" type="button" disabled={busy} onClick={() => void ask(pending.question, { question: pending.question, locale, destinationId: pending.destinationId })}>{label("重試定位", "重试定位", "Retry location")}</button> : null}
-          <form onSubmit={event => { event.preventDefault(); void ask(pending.question, { question: pending.question, locale, destinationId: pending.destinationId, originQuery: originDraft }); }}>
+          {locationFailed ? <button className="text-action" type="button" disabled={busy} onClick={() => void ask(pending.question, { ...pending, origin: undefined, originQuery: undefined, originId: undefined, trip: pending.trip ? { ...pending.trip, originQuery: undefined, originId: undefined } : undefined })}>{label("重試定位", "重试定位", "Retry location")}</button> : null}
+          <form onSubmit={event => { event.preventDefault(); void ask(pending.question, { ...pending, origin: undefined, originQuery: originDraft, originId: undefined, trip: pending.trip ? { ...pending.trip, originQuery: originDraft, originId: undefined } : undefined }); }}>
             <label>{label("出發地點", "出发地点", "Starting point")}<input value={originDraft} maxLength={150} onChange={event => setOriginDraft(event.target.value)} /></label>
             <button className="primary-action" type="submit" disabled={busy || !originDraft.trim()}>{label("由呢度出發", "从这里出发", "Start here")}</button>
           </form>
@@ -457,6 +464,9 @@ export function AssistantPanel({
         {entry?.failed ? <p className="error-copy" role="alert">{entry.unconfigured ? residentCopy[locale].aiNotEnabled : t("assistantUnavailable")}</p> : null}
         {entry?.answer ? <button type="button" className="text-action" onClick={onShowGuide}>{label("查看指引", "查看指引", "View guidance")}</button> : null}
       </section>
+      {result && "draft" in result ? <ItineraryPanel key={result.kind === "itineraries" ? result.generatedAt : JSON.stringify(result.draft)} result={result} busy={busy}
+        onContinue={trip => { if (pending) void ask(pending.question, { ...pending, trip, previousTrip: undefined }); }}
+        onJourney={onJourney} onSelect={setActiveTrip} onClearMap={onStart} /> : null}
       {result?.kind === "plans" ? <section className="panel-section assistant-options" aria-label={label("AI 行程方案", "AI 行程方案", "AI journey options")}>
         <p className="eyebrow">{result.origin.name} → {result.destination.name}</p>
         <h2>{label("AI 幫你比較咗以下方案", "AI 帮你比较了以下方案", "Your AI journey options")}</h2>

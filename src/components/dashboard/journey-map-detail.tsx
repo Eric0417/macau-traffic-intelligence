@@ -20,6 +20,8 @@ export interface SelectedJourney {
   destinationName: string;
   networkFetchedAt: string;
   walkingMappedAt?: string;
+  itineraryStops?: Array<{ name: string; coordinates: Coordinates }>;
+  sectionLabel?: string;
 }
 
 const copy = {
@@ -66,6 +68,8 @@ export function JourneyMapDetail({ selected, states, missingLegs, uncertainTrans
   };
   return <section className="journey-map-detail" tabIndex={-1} aria-labelledby="journey-map-title">
     <button type="button" className="text-action" onClick={onBack}><ArrowLeft size={16} aria-hidden="true" />{c.back}</button>
+    {selected.sectionLabel ? <p className="eyebrow">{selected.sectionLabel}</p> : null}
+    {selected.sectionLabel ? <p className="quiet-copy">{locale === "en" ? "Vehicle information is current at lookup time, not a prediction for a later connection." : locale === "zh-Hans" ? "车辆信息是查询时的车况，不代表稍后接驳时的班次。" : "車輛資料係查詢當刻嘅車況，唔代表稍後接駁時嘅班次。"}</p> : null}
     <div className="section-heading"><h2 id="journey-map-title">{c.title}</h2><span>{first ? `${journey.legs.length} ${c.legs}` : walkOnly}</span></div>
     <button type="button" className="primary-action" onClick={onMap}>{c.map}</button>
     {first ? <p className="quiet-copy">{c.dated} · {new Date(selected.networkFetchedAt).toLocaleString(locale === "en" ? "en-GB" : "zh-MO", { timeZone: "Asia/Macau" })}</p> : null}
