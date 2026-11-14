@@ -20,6 +20,28 @@ const envelope = (data: unknown) => ({ data, meta: meta({ id: "assistant", name:
 
 test.beforeEach(async ({ page }) => { await mockDashboard(page); });
 
+test("desktop guidance leaves the map visible and can collapse without losing its route", async ({ page, isMobile }) => {
+  test.skip(isMobile, "Desktop guide proportions");
+  await page.route("**/api/v1/assistant/journeys", route => route.fulfill({ json: envelope(plans) }));
+  await page.goto("/");
+  await page.getByRole("tab", { name: "AI 助手", exact: true }).click();
+  const guide = page.getByRole("region", { name: "出行指引" });
+  expect((await guide.boundingBox())!.height).toBeLessThanOrEqual(90);
+  await page.screenshot({ path: "docs/qa/map-guide-place-intent/desktop-idle.png" });
+  await page.getByRole("textbox", { name: "輸入你的問題…", exact: true }).fill("去體育館");
+  await page.getByRole("button", { name: "發問", exact: true }).click();
+  await expect(guide).toContainText("同一站牌轉乘");
+  expect((await guide.boundingBox())!.height / (await page.locator(".workspace-map").boundingBox())!.height).toBeLessThanOrEqual(.36);
+  const expandedMapHeight = (await page.locator(".workspace-map > .absolute").boundingBox())!.height;
+  await guide.getByRole("button", { name: "收合指引", exact: true }).click();
+  expect((await guide.boundingBox())!.height).toBeLessThanOrEqual(52);
+  expect((await page.locator(".workspace-map > .absolute").boundingBox())!.height).toBeGreaterThan(expandedMapHeight);
+  await page.screenshot({ path: "docs/qa/map-guide-place-intent/desktop-collapsed.png" });
+  await expect(guide.getByRole("button", { name: "展開指引", exact: true })).toHaveAttribute("aria-expanded", "false");
+  await guide.getByRole("button", { name: "展開指引", exact: true }).press("Enter");
+  await expect(guide.getByText("同一站牌轉乘", { exact: false })).toBeVisible();
+});
+
 test("a destination automatically gets location, renders model alternatives and opens each on the map", async ({ page, context, isMobile }) => {
   await context.grantPermissions(["geolocation"]);
   await context.setGeolocation({ longitude: origin[0], latitude: origin[1] });

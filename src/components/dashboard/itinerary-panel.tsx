@@ -55,7 +55,7 @@ export function ItineraryPanel({ result, busy, onContinue, onJourney, onSelect, 
   if (result.kind === "trip-choice") return <section className="panel-section assistant-place-choices">
     <h2>{label("確認行程地點", "确认行程地点", "Confirm a place")}</h2>
     <p>{result.field === "origin" ? label("起點", "起点", "Start") : result.field === "end" ? label("終點", "终点", "End") : `${label("目的地", "目的地", "Destination")} ${result.field + 1}`} · {result.query}</p>
-    {!result.choices.length ? <p className="data-warning">{label("未搵到匹配地點，請提供完整地名或附近巴士站。", "没有找到匹配地点，请提供完整地名或附近公交站。", "No matching place. Enter its full name or a nearby bus stop.")}</p> : null}
+    {!result.choices.length ? <p className="data-warning">{label("暫時未能確定你指邊度，可以補充附近地標、區域或另一個叫法。", "暂时无法确定你指的地点，可以补充附近地标、区域或其他名称。", "I could not identify the intended place yet. Add a nearby landmark, area or another name.")}</p> : null}
     {result.choices.map(place => <button type="button" key={place.id} disabled={busy} onClick={() => {
       const draft = structuredClone(result.draft);
       if (result.field === "origin") { draft.originId = place.id; draft.originQuery = place.name; }

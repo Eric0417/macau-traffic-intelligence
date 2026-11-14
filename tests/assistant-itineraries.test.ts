@@ -72,6 +72,7 @@ it("rejects invented attraction IDs instead of substituting another itinerary", 
 
 it("retains unresolved sections instead of silently dropping destinations", async () => {
   sources();
+  vi.spyOn(assistant, "callAssistantProvider").mockResolvedValue(JSON.stringify({ corrections: [{ query: "missing", searchQueries: [] }] }));
   const trip = tripDraftSchema.parse({ mode: "ordered", originQuery: "地點0", stops: [{ query: "missing" }, { query: "地點2" }] });
   const { data } = await planAssistantJourney({ question: "順序去", locale: "zh-Hant", trip });
   expect(data).toMatchObject({ kind: "trip-choice", field: 0, query: "missing", choices: [], draft: { stops: trip.stops } });

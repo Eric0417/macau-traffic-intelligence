@@ -23,6 +23,8 @@ External data never enters a client component directly. Public contracts are def
 
 ## Product Decisions
 
+- The map guidance follow-up on `codex/map-guide-place-intent` reduces idle guidance to 76px and desktop route guidance to at most 34%/280px, with a 48px collapsed state. Unresolved place names now use one batched model interpretation followed by catalogue matching. It covers typed origins, ordered destinations and day-trip endpoints; known aliases and selected IDs avoid the extra call. Verification is in `docs/qa/map-guide-place-intent/VERIFICATION.md`; deployment is pending.
+
 - The assistant now covers one destination, user-ordered destinations and themed cultural day trips. Multi-stop journeys preserve order and return visits. Day trips first collect date, start/end time, endpoints and preferences, then offer two or three complete alternatives. The selected itinerary supports follow-up text and editable stops/stays. See ADR 0018 and `docs/qa/itineraries/VERIFICATION.md`.
 - Cultural recommendations use seven reviewed heritage places and official opening links. Date/time checks and user stay lengths survive edits. Visit targets allocate the user's time, without predicting travel duration. Day-trip transport checks reviewed terminal hours at planned departure targets; live bus data only describes lookup time. Unknown connections remain explicit. Weekly closures are conservatively excluded without public-holiday exceptions.
 

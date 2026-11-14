@@ -505,14 +505,20 @@
 .resident-app[data-theme="dark"] .home-ai { background: #223644; color: var(--ink); }
 .resident-app[data-theme="dark"] .home-ai .home-ai-title p, .resident-app[data-theme="dark"] .home-ai .home-ai-note { color: var(--muted); }
 .journey-planner, .journey-map-detail { border-radius: 12px; }
-.workspace-map.has-guide > .absolute { bottom: 46%; }
+.workspace-map.has-guide { --guide-height: 76px; }
+.workspace-map.has-guide.has-guide-content { --guide-height: min(280px, 34%); }
+.workspace-map.has-guide.guide-collapsed { --guide-height: 48px; }
+.workspace-map.has-guide > .absolute { bottom: var(--guide-height); }
 .workspace-map.has-guide .map-context { display: none; }
-.assistant-guide { position: absolute; z-index: 4; inset: 54% 0 0; overflow: auto; background: var(--surface); border-top: 1px solid var(--line); overscroll-behavior: contain; }
+.assistant-guide { position: absolute; z-index: 4; inset: auto 0 0; height: var(--guide-height); display: flex; flex-direction: column; overflow: hidden; background: var(--surface); border-top: 1px solid var(--line); }
 .assistant-guide[hidden] { display: none; }
+.assistant-guide-header { display: flex; flex: 0 0 47px; align-items: center; justify-content: space-between; gap: 12px; padding: 0 16px; border-bottom: 1px solid var(--line); font-size: 13px; }
+.assistant-guide-header button { min-height: 36px; padding: 6px 10px; color: var(--tint); border-radius: 6px; }
+.assistant-guide-body { min-height: 0; overflow: auto; overscroll-behavior: contain; }
+.assistant-guide-header[hidden], .assistant-guide-body[hidden] { display: none; }
 .assistant-guide .journey-map-detail { padding: 24px 28px; border: 0; border-radius: 0; }
-.guide-empty { padding: 28px 32px; max-width: 700px; }
-.guide-empty h2 { font-size: 27px; margin: 8px 0 18px; letter-spacing: -.04em; }
-.guide-empty ol { display: grid; gap: 14px; padding-left: 22px; color: var(--muted); line-height: 1.8; }
+.guide-empty { padding: 18px 24px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.guide-empty p { margin: 0; }
 
 .assistant-brief { padding: 28px 32px; }
 .assistant-brief .assistant-entry { background: transparent; border: 0; padding: 0; }
@@ -533,10 +539,8 @@
   .workspace-header { margin-bottom: 0; }
   .travel-shortcuts .mode-tile { min-height: 84px; border-radius: 0; }
   .resident-app .home-ai, .resident-app .panel-section { border-radius: 12px; }
-  .workspace-map.has-guide > .absolute { bottom: 54%; }
-  .assistant-guide { top: 46%; }
+  .workspace-map.has-guide.has-guide-content:not(.guide-collapsed) { --guide-height: 54%; }
   .guide-empty, .assistant-brief, .assistant-guide .journey-map-detail { padding: 20px; }
-  .guide-empty h2 { font-size: 23px; }
 }
 
 .resident-app[data-theme="dark"] .travel-shortcuts .mode-tile { background: var(--surface); }

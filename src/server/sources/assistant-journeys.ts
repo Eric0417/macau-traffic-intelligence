@@ -5,7 +5,7 @@ import { readSource } from "@/server/cache";
 import { sources } from "./index";
 import { assistantModelName, callAssistantProvider } from "./assistant";
 import { journeyCandidates } from "./journey-candidates";
-import { placesFor, placeById } from "./journey-places";
+import { placesFor, resolvePlaceQueries, placeById } from "./journey-places";
 import { tripDraftSchema } from "@/lib/itinerary";
 import { planItinerary } from "./assistant-itineraries";
 
@@ -49,18 +49,20 @@ If previousTrip is supplied, interpret follow-up answers/edits against it and re
   if (!busRead || !walkRead) throw new Error("journey_sources_unavailable");
   for (const read of [busRead, walkRead]) if (read.refresh) refreshes.push(read.refresh);
   const bus = busRead.result.data, walking = walkRead.result.data;
+  const literalDestination = queries.map(q => placesFor(q, bus, walking)).find(matches => matches.length) ?? [];
+  const resolved = await resolvePlaceQueries([...(literalDestination.length ? [] : queries), ...(!request.originId && originQuery ? [originQuery] : [])], bus, walking, request.question);
   let destination = request.destinationId ? placeById(request.destinationId, bus, walking) : undefined;
   if (!destination) {
-    const choices = queries.map(q => placesFor(q, bus, walking)).find(matches => matches.length) ?? [];
-    if (!choices.length) return result({ kind: "clarify", message: text("未搵到呢個目的地，請提供完整地名或附近巴士站。", "未找到这个目的地，请提供完整地名或附近巴士站。", "Destination not found. Enter its full name or a nearby bus stop.") });
+    const choices = literalDestination.length ? literalDestination : queries.map(q => resolved.get(q) ?? []).find(matches => matches.length) ?? [];
+    if (!choices.length) return result({ kind: "clarify", message: text("暫時未能確定你指邊個目的地，可以補充附近地標、區域或另一個叫法。", "暂时无法确定你指的目的地，可以补充附近地标、区域或其他名称。", "I could not identify the intended destination yet. Add a nearby landmark, area or another name.") });
     if (choices.length > 1) return result({ kind: "choose", field: "destination", choices, originQuery });
     destination = choices[0];
   }
   let origin = request.originId ? placeById(request.originId, bus, walking) : undefined;
   if (request.originId && !origin) return result({ kind: "clarify", message: text("起點已失效，請重新輸入。", "起点已失效，请重新输入。", "Origin is no longer available. Enter it again.") });
   if (!origin && originQuery) {
-    const choices = placesFor(originQuery, bus, walking);
-    if (!choices.length) return result({ kind: "clarify", message: text("未搵到起點，請提供完整地名或巴士站。", "未找到起点，请提供完整地名或巴士站。", "Origin not found. Enter its full name or bus stop.") });
+    const choices = resolved.get(originQuery) ?? [];
+    if (!choices.length) return result({ kind: "clarify", message: text("暫時未能確定起點，可以補充附近地標、區域或另一個叫法。", "暂时无法确定起点，可以补充附近地标、区域或其他名称。", "I could not identify the origin yet. Add a nearby landmark, area or another name.") });
     if (choices.length > 1) return result({ kind: "choose", field: "origin", choices, destination });
     origin = choices[0];
   }

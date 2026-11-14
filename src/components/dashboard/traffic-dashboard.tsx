@@ -124,6 +124,8 @@ export function TrafficDashboard() {
   const guideModeRef = useRef<"trip" | "brief">("trip");
   const [guideTarget, setGuideTarget] = useState<HTMLDivElement | null>(null);
   const [selectedJourney, setSelectedJourney] = useState<SelectedJourney | null>(null);
+  const [guideCollapsed, setGuideCollapsed] = useState(false);
+  const guideHasContent = Boolean(selectedJourney) || guideMode === "brief";
   const [selectedLrtLine, setSelectedLrtLine] = useState<string | null>(null);
   const [selectedLrtStation, setSelectedLrtStation] = useState<string | null>(
     null,
@@ -804,13 +806,15 @@ export function TrafficDashboard() {
               <AssistantPanel
                 request={assistantRequest}
                 guideTarget={guideTarget}
-                onShowGuide={() => { guideModeRef.current = "brief"; setGuideMode("brief"); setSelectedJourney(null); setView("map"); }}
+                onShowGuide={() => { guideModeRef.current = "brief"; setGuideMode("brief"); setGuideCollapsed(false); setSelectedJourney(null); setView("map"); }}
                 onStart={() => {
                   guideModeRef.current = "trip"; setGuideMode("trip");
+                  setGuideCollapsed(false);
                   setSelectedJourney(null); setAssistantFocus(null); setView("list");
                 }}
                 onJourney={(journey) => {
                   guideModeRef.current = "trip"; setGuideMode("trip");
+                  setGuideCollapsed(false);
                   setSelectedRoute(null); setAssistantFocus(null); setSelectedJourney(journey); setView("map");
                 }}
                 route={selectedRoute}
@@ -859,7 +863,7 @@ export function TrafficDashboard() {
           </div>
         </aside>
 
-        <div className={`workspace-map map-stage${tab === "assistant" ? " has-guide" : ""}`} ref={mapRef}>
+        <div className={`workspace-map map-stage${tab === "assistant" ? ` has-guide${guideHasContent ? " has-guide-content" : ""}${guideHasContent && guideCollapsed ? " guide-collapsed" : ""}` : ""}`} ref={mapRef}>
           <MacauMap
             journey={(tab === "bus" || tab === "assistant") && !selectedRoute ? journeyInput : null}
             theme={preferences.theme}
@@ -893,6 +897,13 @@ export function TrafficDashboard() {
             onLrtStationSelect={setSelectedLrtStation}
           />
           <section className="assistant-guide" hidden={tab !== "assistant"} aria-label={locale === "en" ? "Travel guidance" : "出行指引"}>
+            <header className="assistant-guide-header" hidden={!guideHasContent}>
+              <span>{locale === "en" ? "Travel guidance" : "出行指引"}</span>
+              <button type="button" aria-expanded={!guideCollapsed} aria-controls="assistant-guide-body" onClick={() => setGuideCollapsed(value => !value)}>
+                {guideCollapsed ? (locale === "en" ? "Expand guidance" : locale === "zh-Hans" ? "展开指引" : "展開指引") : (locale === "en" ? "Collapse guidance" : locale === "zh-Hans" ? "收合指引" : "收合指引")}
+              </button>
+            </header>
+            <div className="assistant-guide-body" id="assistant-guide-body" hidden={guideHasContent && guideCollapsed}>
             <div ref={setGuideTarget} hidden={guideMode !== "brief"} />
             {tab === "assistant" && selectedJourney ? <JourneyMapDetail
               selected={selectedJourney}
@@ -908,14 +919,9 @@ export function TrafficDashboard() {
                 setSelectedRoute(route); setBusDirection(leg.direction); setJourneyBoarding(leg); navigate("bus");
               }}
             /> : <div className="guide-empty" hidden={guideMode === "brief"}>
-              <span className="eyebrow">{locale === "en" ? "YOUR NEXT STEP" : "下一步"}</span>
-              <h2>{locale === "en" ? "A route you can follow." : locale === "zh-Hans" ? "由这里出发。" : "由呢度出發。"}</h2>
-              <ol>
-                <li>{locale === "en" ? "Enter a destination on the left. AI will request your location and compare options." : locale === "zh-Hans" ? "在左边输入目的地。AI 会获取目前位置并比较方案；同名地点请先选择。" : "喺左邊講低目的地。AI 會取得目前位置再比較方案；同名地點請先揀選。"}</li>
-                <li>{locale === "en" ? "Your walking, boarding and transfer steps will appear here." : locale === "zh-Hans" ? "这里会显示步行、上车、换乘及下车步骤。" : "呢度會顯示步行、上車、轉乘同落車步驟。"}</li>
-                <li>{locale === "en" ? "Check current arrivals and stop suspensions before boarding." : locale === "zh-Hans" ? "上车前查看最新到站及停站状态。" : "上車前查看最新到站同停站狀態。"}</li>
-              </ol>
+              <p>{locale === "en" ? "Select a journey to see walking, boarding and transfer steps here." : locale === "zh-Hans" ? "选择交通方案后，这里会显示步行、上车和换乘步骤。" : "揀選交通方案後，呢度會顯示步行、上車同轉乘步驟。"}</p>
             </div>}
+            </div>
           </section>
           <div className="workspace-map-top">
             <button

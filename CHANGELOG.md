@@ -2,6 +2,11 @@
 
 All notable user-visible and architectural changes are recorded here.
 
+## Compact map guidance and place-name understanding - 2026-11-14
+
+- Keep idle assistant guidance to a 76px strip. Desktop route guidance uses at most 34% of the map area, capped at 280px, and collapses to 48px without losing the selected route. The map resizes with the guide.
+- Ask the existing language model to interpret unresolved place names, including typos and Cantonese transcription errors. Batch unresolved names across an itinerary, then match its proposed names against the actual place/stop catalogue. Ambiguous matches remain choices; unknown places are not fabricated. Already-resolved aliases and selected place IDs avoid another model call.
+
 ## Ordered journeys and cultural day trips - 2026-11-14
 
 - Use the assistant for one destination, ordered destinations or a themed day trip. Multi-stop journeys retain the requested order and return visits, with separate transport choices and map guidance for each connection.

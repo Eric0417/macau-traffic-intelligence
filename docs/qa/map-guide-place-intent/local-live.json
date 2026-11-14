@@ -1,0 +1,26 @@
+{
+  "base": "http://localhost:3100",
+  "checkedAt": "2026-11-14T10:00:47.844Z",
+  "checks": [
+    {
+      "name": "natural-language temple typo",
+      "kind": "choose",
+      "milliseconds": 2371
+    },
+    {
+      "name": "correct typed origin and ordered destination",
+      "kind": "trip-choice",
+      "milliseconds": 1204
+    },
+    {
+      "name": "continue with chosen real place",
+      "kind": "itineraries",
+      "milliseconds": 450
+    }
+  ],
+  "resolvedStops": [
+    "澳門培正中學",
+    "媽閣廟",
+    "澳門運動場"
+  ]
+}

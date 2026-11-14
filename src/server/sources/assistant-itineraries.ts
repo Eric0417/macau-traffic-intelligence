@@ -7,7 +7,7 @@ import { distanceMeters } from "@/lib/resident-tools";
 import { readSource } from "@/server/cache";
 import { sources } from "./index";
 import { culturalPlacesSource } from "./cultural-places";
-import { placesFor, placeById } from "./journey-places";
+import { resolvePlaceQueries, placeById } from "./journey-places";
 import { journeyCandidates } from "./journey-candidates";
 import { callAssistantProvider } from "./assistant";
 
@@ -31,11 +31,17 @@ export async function planItinerary(request: AssistantJourneyRequest, input: Tri
   if (!busRead || !walkRead) throw new Error("journey_sources_unavailable");
   for (const read of [busRead, walkRead]) if (read.refresh) refreshes.push(read.refresh);
   const bus = busRead.result.data, walking = walkRead.result.data;
+  const namedPlaces = [
+    { query: draft.originQuery, id: draft.originId },
+    ...(draft.mode === "day" ? [{ query: draft.endQuery, id: draft.endId }] : []),
+    ...draft.stops.map(stop => ({ query: stop.query, id: stop.placeId })),
+  ];
+  const resolved = await resolvePlaceQueries(namedPlaces.filter(p => !p.id || !placeById(p.id, bus, walking)).map(p => p.query ?? ""), bus, walking, request.question);
   let choice: AssistantJourneyResult | undefined;
   function resolve(query: string, id: string | undefined, field: "origin" | "end" | number): AssistantPlace | undefined {
     const selected = id ? placeById(id, bus, walking) : undefined;
     if (selected) return selected;
-    const choices = placesFor(query, bus, walking);
+    const choices = resolved.get(query) ?? [];
     if (choices.length !== 1) { choice = { kind: "trip-choice", draft, field, query, choices }; return; }
     return choices[0];
   }
