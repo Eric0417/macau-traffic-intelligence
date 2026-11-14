@@ -1,3 +1,4 @@
+import { openSection, toggleTheme } from "./navigation";
 import { expect, test, type Page } from "@playwright/test";
 import { mockDashboard } from "./fixtures";
 
@@ -24,13 +25,16 @@ async function countCanvasColor(page: Page, rgb: [number, number, number]) {
 test.beforeEach(async ({ page, isMobile }) => {
   await mockDashboard(page);
   await page.goto("/");
-  if (isMobile) await page.locator(".view-switch").getByRole("button", { name: "地圖", exact: true }).click();
+  if (isMobile) {
+    await openSection(page, "路況摘要");
+    await page.locator(".view-switch").getByRole("button", { name: "地圖", exact: true }).click();
+  }
 });
 
 test("traffic colours survive night mode and disappear when the road layer is disabled", async ({ page }) => {
   const congested: [number, number, number] = [215, 71, 52];
   await expect.poll(() => countCanvasColor(page, congested)).toBeGreaterThan(0);
-  await page.getByRole("button", { name: "配色", exact: true }).click();
+  await toggleTheme(page);
   await expect.poll(() => countCanvasColor(page, [21, 35, 43])).toBeGreaterThan(1_000);
   await expect.poll(() => countCanvasColor(page, congested)).toBeGreaterThan(0);
   await page.getByRole("button", { name: "圖層", exact: true }).click();
@@ -42,7 +46,7 @@ test("LRT focus hides road traffic and loads a platform only in 3D", async ({ pa
   await expect.poll(() => countCanvasColor(page, [215, 71, 52])).toBeGreaterThan(0);
   const models: string[] = [];
   page.on("request", (request) => { if (request.url().endsWith(".glb")) models.push(request.url()); });
-  await page.getByRole("tab", { name: "輕軌", exact: true }).click();
+  await openSection(page, "輕軌");
   await page.locator(".lrt-lines button").first().click();
   await page.locator(".lrt-station-button").first().click();
   if (isMobile) await expect(page.locator(".workspace-map")).toBeVisible();

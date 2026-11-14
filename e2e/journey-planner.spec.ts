@@ -1,3 +1,4 @@
+import { openSection } from "./navigation";
 import { expect, test, type Page } from "@playwright/test";
 import { meta, mockDashboard } from "./fixtures";
 
@@ -10,6 +11,7 @@ test.beforeEach(async ({ page }) => {
   await mockDashboard(page);
   await page.goto("/");
   await page.getByRole("tab", { name: "巴士", exact: true }).click();
+  await expect(page.locator(".journey-planner")).toBeVisible();
 });
 
 test("a directed journey opens its live boarding stop and survives returning to the planner", async ({ page }) => {
@@ -52,7 +54,7 @@ test("reverse travel does not fabricate an unavailable journey and unknown place
 });
 
 test("LRT exposes official station timetable links with a scheduled-data label", async ({ page }) => {
-  await page.getByRole("tab", { name: "輕軌", exact: true }).click();
+  await openSection(page, "輕軌");
   await expect(page.locator(".lrt-service")).toContainText("未接通即時到站資料");
   await page.locator(".lrt-service summary").first().click();
   await expect(page.locator(".lrt-timetables a").first()).toHaveAttribute("href", "https://www.mlm.com.mo/images/stations/TimeTable/2026_09/TT_BAR_2026_09_V2.jpg");

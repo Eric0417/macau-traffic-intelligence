@@ -1,3 +1,4 @@
+import { openSection, setLanguage, toggleTheme } from "./navigation";
 import { expect, test, type Page } from "@playwright/test";
 import { mockDashboard, meta } from "./fixtures";
 
@@ -6,11 +7,8 @@ async function openRoute(page: Page) {
   await page.locator(".route-grid button").first().click();
   await expect(page.locator(".stop-row")).toHaveCount(1);
 }
-async function openMore(page: Page, label: string) {
-  if (label === "輕軌" || label === "AI 助手") { await page.getByRole("tab", { name: label, exact: true }).click(); return; }
-  await page.getByRole("button", { name: "更多", exact: true }).click();
-  await page.locator(".more-grid").getByRole("button", { name: label, exact: true }).click();
-}
+async function openMore(page: Page, label: string) { await openSection(page, label); }
+
 async function showMap(page: Page, isMobile: boolean) {
   if (isMobile) await page.locator(".view-switch").getByRole("button", { name: "地圖", exact: true }).click();
 }
@@ -20,8 +18,8 @@ test.beforeEach(async ({ page }) => {
   await page.goto("/");
 });
 
-test("one workspace renders five navigation items and a usable mobile list", async ({ page, isMobile }) => {
-  await expect(page.getByRole("tab")).toHaveCount(5);
+test("one workspace renders the primary navigation and a usable mobile list", async ({ page, isMobile }) => {
+  await expect(page.getByRole("tab")).toHaveCount(isMobile ? 4 : 5);
   await expect(page.locator("#workspace-content")).toHaveCount(1);
   await expect(page.getByRole("heading", { name: "今日點樣出發？" })).toBeVisible();
   await expect(page.locator(".workspace-map")).toBeVisible({ visible: !isMobile });
@@ -101,7 +99,7 @@ test("bus polling stops when parking is open and resumes on return", async ({ pa
   page.on("request", (request) => { if (/\/bus\/routes\/[^/]+\/eta\?/.test(request.url())) requests += 1; });
   await openRoute(page);
   await expect.poll(() => requests, { timeout: 6_000 }).toBeGreaterThan(1);
-  await page.getByRole("tab", { name: "泊車", exact: true }).click();
+  await openSection(page, "泊車");
   const before = requests;
   await page.waitForTimeout(4_500);
   expect(requests).toBe(before);
@@ -110,7 +108,7 @@ test("bus polling stops when parking is open and resumes on return", async ({ pa
 });
 
 test("parking switches vehicle type and displays its complete breakdown", async ({ page }) => {
-  await page.getByRole("tab", { name: "泊車", exact: true }).click();
+  await openSection(page, "泊車");
   await expect(page.locator(".parking-row")).toContainText("13");
   await page.getByLabel("車種", { exact: true }).selectOption("motorcycle");
   await expect(page.locator(".parking-count strong")).toHaveText("48");
@@ -125,7 +123,7 @@ test("parking switches vehicle type and displays its complete breakdown", async 
 test("switching sections exposes the search field at the top", async ({ page }) => {
   await openRoute(page);
   await page.locator(".vehicle-details").scrollIntoViewIfNeeded();
-  await page.getByRole("tab", { name: "泊車", exact: true }).click();
+  await openSection(page, "泊車");
   await expect(page.getByRole("searchbox", { name: "搜尋停車場" })).toBeInViewport();
 });
 
@@ -137,10 +135,11 @@ test("published news includes dates, availability and its incident-feed limitati
   await expect(page.locator(".published-list")).toContainText("發布");
 });
 
-test("unavailable weather is not rendered as no active warnings", async ({ page }) => {
+test("unavailable weather is not rendered as no active warnings", async ({ page, isMobile }) => {
   await page.route("**/api/v1/weather", (route) => route.fulfill({ status: 503, json: { message: "Unavailable" } }));
   await page.reload();
-  await expect(page.getByText("未取得天氣資料，無法判斷有否警告。")).toBeVisible();
+  if (isMobile) await openSection(page, "路況摘要");
+  await expect(page.getByText("未取得天氣資料，無法判斷有否警告。", { exact: true }).filter({ visible: true })).toBeVisible();
   await expect(page.getByText("現時沒有生效警告")).toHaveCount(0);
 });
 
@@ -153,10 +152,10 @@ test("source directory exposes failures and a retry", async ({ page }) => {
 });
 
 test("language and appearance remain usable", async ({ page }) => {
-  await page.getByRole("button", { name: "EN", exact: true }).click();
+  await setLanguage(page, "EN");
   await expect(page.getByRole("tab", { name: "Travel", exact: true })).toBeVisible();
   const before = await page.locator(".resident-app").getAttribute("data-theme");
-  await page.getByRole("button", { name: "Appearance", exact: true }).click();
+  await toggleTheme(page);
   await expect(page.locator(".resident-app")).toHaveAttribute("data-theme", before === "light" ? "dark" : "light");
   await page.reload();
   await expect(page.locator(".resident-app")).toHaveAttribute("data-theme", before === "light" ? "dark" : "light");
@@ -202,16 +201,17 @@ test("AI answer stays available when navigating to another module", async ({ pag
   await openMore(page, "AI 助手");
   await page.locator(".assistant-suggestions button").nth(1).click();
   await expect(page.locator(".assistant-answer")).toContainText("友誼大橋");
-  await page.getByRole("tab", { name: "泊車", exact: true }).click();
+  await openSection(page, "泊車");
   await openMore(page, "AI 助手");
   await expect(page.locator(".assistant-answer")).toContainText("友誼大橋");
 });
 
-test("nearby uses browser location without sending coordinates to the public API", async ({ page, context }) => {
+test("nearby uses browser location without sending coordinates to the public API", async ({ page, context, isMobile }) => {
   await context.grantPermissions(["geolocation"]);
   await context.setGeolocation({ longitude: 113.5345126, latitude: 22.1907894 });
   const outbound: string[] = [];
   page.on("request", (request) => { if (request.url().includes("/api/v1/")) outbound.push(`${request.url()} ${request.postData() ?? ""}`); });
+  if (isMobile) await openSection(page, "泊車");
   await page.getByRole("button", { name: "使用目前位置", exact: true }).click();
   await expect(page.locator(".nearby-row")).toContainText("直線距離");
   expect(outbound.every((request) => !request.includes("113.5345126") && !request.includes("22.1907894"))).toBe(true);
@@ -236,7 +236,7 @@ test("a real touch swipe scrolls the catalog without selecting a route", async (
   await session.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
   await expect.poll(() => page.locator(".workspace-scroll").evaluate((element) => element.scrollTop)).toBeGreaterThan(100);
   await expect(page.locator(".route-detail-head")).toHaveCount(0);
-  await page.getByRole("tab", { name: "泊車", exact: true }).tap();
+  await openSection(page, "泊車");
   await expect(page.getByRole("searchbox", { name: "搜尋停車場" })).toBeInViewport();
 });
 
@@ -244,7 +244,7 @@ test("layout fits narrow phones, tablets and desktop widths", async ({ page }) =
   for (const width of [320, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    for (const button of await page.locator(".workspace-nav button").all()) {
+    for (const button of await page.locator(".workspace-nav button:visible").all()) {
       const box = await button.boundingBox();
       expect(box!.width).toBeGreaterThanOrEqual(44);
       expect(box!.height).toBeGreaterThanOrEqual(44);
@@ -278,7 +278,7 @@ test("AI provider failure shows an unavailable answer", async ({ page }) => {
 test("hidden historical LRT faults are collapsed instead of shown as current service", async ({ page }) => {
   await page.route("**/api/v1/lrt/notices", (route) => route.fulfill({ json: { data: [{ id: "old", title: "2024 舊故障消息", content: "當時的服務安排", publishedAt: "2024-09-29T06:41:07.000Z", active: false }], meta: meta({ id: "lrt-notices", name: "Test source", url: "https://example.com" }) } }));
   await page.reload();
-  await page.getByRole("tab", { name: "輕軌", exact: true }).click();
+  await openSection(page, "輕軌");
   await expect(page.locator(".historical-notices")).not.toHaveAttribute("open");
   await expect(page.getByText("2024 舊故障消息", { exact: true })).not.toBeVisible();
   await page.locator(".historical-notices summary").click();
@@ -292,8 +292,7 @@ test("announcement lists check again within the one-minute polling window", asyn
   page.on("request", (request) => { if (request.url().includes("/api/v1/traffic/news")) requests++; });
   await page.reload();
   await expect.poll(() => requests).toBeGreaterThan(0);
-  await page.getByRole("button", { name: "更多", exact: true }).click();
-  await page.getByRole("button", { name: "交通公告", exact: true }).click();
+  await openSection(page, "交通公告");
   await expect(page.getByText("頁面開啟時約每分鐘檢查一次。", { exact: false })).toBeVisible();
   const initial = requests;
   await page.clock.fastForward(70_000);

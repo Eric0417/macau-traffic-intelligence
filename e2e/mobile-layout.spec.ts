@@ -1,3 +1,4 @@
+import { openSection, setLanguage, toggleTheme } from "./navigation";
 import { expect, test, type Page } from "@playwright/test";
 import { meta, mockDashboard } from "./fixtures";
 
@@ -27,12 +28,12 @@ test("phone navigation and scrollable content stay inside the visible area", asy
   for (const width of [320, 390, 430]) {
     await page.setViewportSize({ width, height: 680 });
     for (const name of ["出行", "巴士", "輕軌", "泊車", "AI 助手"]) {
-      await page.getByRole("tab", { name, exact: true }).click();
+      await openSection(page, name);
       await expectContentToFit(page, ".panel-stack, .panel-stack > *, .assistant-form, .assistant-form textarea, .assistant-form button");
       const panel = await page.locator(".workspace-panel").boundingBox();
       const nav = await page.locator(".workspace-nav").boundingBox();
       expect(panel!.y + panel!.height).toBeLessThanOrEqual(nav!.y + 1);
-      for (const button of await page.locator(".workspace-nav button").all()) {
+      for (const button of await page.locator(".workspace-nav button:visible").all()) {
         const box = await button.boundingBox();
         expect(box!.x).toBeGreaterThanOrEqual(0);
         expect(box!.x + box!.width).toBeLessThanOrEqual(width);
@@ -45,12 +46,12 @@ test("phone navigation and scrollable content stay inside the visible area", asy
   await page.getByRole("tab", { name: "出行", exact: true }).click();
   if (testInfo.project.name === "mobile-webkit") {
     await page.screenshot({ path: "docs/qa/mobile-layout/webkit-home-light.png" });
-    await page.locator(".appearance-toggle").click();
+    await toggleTheme(page);
     await expect(page.locator(".resident-app")).toHaveAttribute("data-theme", "dark");
     await page.screenshot({ path: "docs/qa/mobile-layout/webkit-home-dark.png" });
   }
   await page.locator(".workspace-scroll").evaluate((element) => { element.scrollTop = element.scrollHeight; });
-  const lastCard = await page.locator(".travel-home > :last-child").boundingBox();
+  const lastCard = await page.locator(".travel-home > :visible").last().boundingBox();
   const nav = await page.locator(".workspace-nav").boundingBox();
   expect(lastCard!.y + lastCard!.height).toBeLessThanOrEqual(nav!.y);
 });
@@ -64,6 +65,7 @@ test("day-trip date, time and text fields remain usable on phones", async ({ pag
   } }));
   // Include hydration in the WebKit check: locale date punctuation differs from Node.
   await page.goto("/");
+  await expect(page.locator(".travel-temperature")).toBeVisible();
   await page.locator("#home-question").fill("幫我安排傳統文化一日遊");
   await page.locator(".home-ai form").getByRole("button").click();
   await expect(page.getByRole("heading", { name: "先了解你嘅一日遊" })).toBeVisible();
@@ -97,11 +99,40 @@ test("home cards and submit controls fit narrow phones in every language", async
   for (const width of [320, 390, 430]) {
     await page.setViewportSize({ width, height: 760 });
     for (const language of ["繁", "简", "EN"]) {
-      await page.locator(".language-switch").getByRole("button", { name: language, exact: true }).click();
+      await setLanguage(page, language);
       await expectContentToFit(page, ".travel-home, .travel-home > *, .home-ai form, .home-ai-examples, .home-ai-examples button, .mode-tile, .home-ai form button");
       const button = await page.locator(".home-ai form button").boundingBox();
       expect(button!.width).toBeGreaterThanOrEqual(44);
       expect(button!.height).toBeGreaterThanOrEqual(44);
     }
   }
+});
+
+test("phone prioritizes AI and buses while secondary services and settings remain reachable", async ({ page }, testInfo) => {
+  await page.goto("/");
+  await expect(page.locator(".travel-temperature")).toBeVisible();
+  await expect(page.getByRole("tab")).toHaveText(["出行", "巴士", "AI 助手", "更多"]);
+  await expect(page.locator(".travel-shortcuts button:visible")).toHaveCount(1);
+  await expect(page.locator(".workspace-header-actions")).toBeHidden();
+  await page.locator("#home-question").fill("由媽閣去議事亭前地");
+  await openSection(page, "輕軌");
+  await expect(page.locator(".lrt-lines")).toBeVisible();
+  await expect(page.getByRole("tab", { name: "更多", exact: true })).toHaveAttribute("aria-selected", "true");
+  await page.getByRole("button", { name: "更多", exact: true }).click();
+  await expect(page.locator(".more-grid")).toBeVisible();
+  await expect(page.locator(".mobile-settings .appearance-toggle")).toBeHidden();
+  await page.locator(".mobile-settings summary").click();
+  await page.locator(".appearance-toggle:visible").click();
+  await expect(page.locator(".resident-app")).toHaveAttribute("data-theme", "dark");
+  await expect(page.locator(".resident-app")).toHaveCSS("background-color", "rgb(23, 30, 38)");
+  await expect(page.locator(".resident-app")).toHaveCSS("color", "rgb(224, 231, 237)");
+  if (testInfo.project.name === "mobile-webkit") await page.screenshot({ path: "docs/qa/mobile-visual-polish/webkit-more-settings.png" });
+  await page.locator(".language-switch:visible").getByRole("button", { name: "EN", exact: true }).click();
+  await page.getByRole("tab", { name: "Travel", exact: true }).click();
+  await expect(page.locator("#home-question")).toHaveValue("由媽閣去議事亭前地");
+  const send = await page.locator(".home-ai form button").boundingBox();
+  expect(send!.height).toBeGreaterThanOrEqual(48);
+  await expect(page.locator(".home-ai form button")).toBeEnabled();
+  await openSection(page, "Parking");
+  await expect(page.locator(".parking-row").first()).toBeVisible();
 });

@@ -70,6 +70,7 @@
 .resident-app button { cursor: pointer; }
 .resident-app button:disabled { cursor: default; opacity: .55; }
 .resident-app a { color: var(--tint-ink); }
+.resident-app .mobile-only { display: none; }
 .workspace-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 28px; background: var(--bg); border-bottom: 1px solid var(--line); margin-bottom: 16px; }
 .workspace-brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .workspace-brand > svg { box-sizing: content-box; color: var(--surface); flex-shrink: 0; padding: 9px; background: var(--ink); border-radius: 9px; }
@@ -539,23 +540,55 @@
   .workspace-body { grid-template-columns: 360px minmax(0, 1fr); padding: 0 16px 16px; gap: 16px; }
 }
 @media (max-width: 767px) {
+  .resident-app { --bg: #f4f5f6; --chrome: #f9fafb; --surface-2: #f1f3f5; --surface-3: #e6ebef; --ink: #283844; --muted: #586875; --faint: #63717d; --line: #dce2e7; }
+  .resident-app[data-theme="dark"] { --bg: #171e26; --chrome: #1d252e; --surface: #222c36; --surface-2: #283440; --surface-3: #34424f; --ink: #e0e7ed; --muted: #acbac7; --faint: #9aaab9; --line: #35434f; --tint: #eca580; --tint-ink: #f0b697; --tint-soft: #3d302c; }
   .workspace-header { margin-bottom: 0; }
-  .travel-shortcuts .mode-tile { min-height: 84px; padding: 16px 16px 16px 88px; border-radius: 0; }
+  .appearance-toggle, .more-toggle { width: 44px; height: 44px; background: transparent; border-color: transparent; }
+  .appearance-toggle svg, .more-toggle svg { width: 18px; height: 18px; }
+  .resident-app .language-switch { padding: 2px; background: var(--surface-2); }
+  .resident-app .language-switch button.is-active { color: var(--ink); }
+  .workspace-panel-header { padding: 8px 16px; }
+  .view-switch { padding: 2px; background: transparent; border: 1px solid var(--line); }
+  .view-switch button svg { width: 16px; height: 16px; }
+  .view-switch button[aria-pressed="true"] { color: var(--ink); background: var(--surface); }
+  .workspace-nav button { font-size: 12px; gap: 4px; }
+  .workspace-nav button svg { width: 22px; height: 22px; }
+  .workspace-nav button[aria-selected="true"] { color: var(--ink); font-weight: 600; }
+  .workspace-nav button[aria-selected="true"] svg { color: var(--tint-ink); }
+  .workspace-nav-indicator { background: var(--surface-3); }
+  .travel-heading h2 { margin: 8px 0; font-size: 27px; }
+  .travel-temperature { padding: 4px 8px; border-radius: 8px; font-size: 12px; background: transparent; color: var(--muted); }
+  .travel-shortcuts .mode-tile { min-height: 76px; padding: 12px 16px 12px 88px; border-radius: 0; }
+  .travel-shortcuts .mode-tile:hover { background: var(--surface); transform: none; }
+  .travel-shortcuts .mode-tile:active { transform: translateY(1px); }
   .travel-shortcuts .mode-model, .travel-shortcuts .mode-bus .mode-model { width: 72px; }
   .travel-shortcuts .mode-label { min-width: 0; }
-  .travel-shortcuts .parking-object { left: 26px; top: 21px; width: 32px; height: 38px; }
-  .resident-app .home-ai, .resident-app .panel-section { padding: 18px; border-radius: 12px; }
+  .travel-shortcuts .mode-label strong { font-size: 15px; line-height: 1.5; }
+  .travel-shortcuts .parking-object { left: 26px; top: 18px; width: 32px; height: 38px; background: var(--surface-3); color: var(--muted); }
+  .resident-app .home-ai, .resident-app .panel-section { padding: 16px; border-radius: 14px; }
+  .resident-app .home-ai, .resident-app[data-theme="dark"] .home-ai { background: var(--surface); color: var(--ink); }
+  .home-ai .home-ai-title p, .home-ai .home-ai-note { color: var(--muted); }
+  .home-ai .ai-glyph { background: var(--tint-soft); color: var(--tint-ink); }
+  .home-ai form { background: var(--surface-2); border-color: var(--line); box-shadow: none; }
+  .resident-app .home-ai form button:disabled { opacity: 1; background: var(--surface-3); color: var(--muted); }
   .home-ai-title p { font-size: 12px; }
   .home-ai-examples { flex-direction: column; gap: 2px; }
-  .home-ai-examples button { justify-content: space-between; min-height: 44px; gap: 12px; font-size: 12px; line-height: 1.7; }
+  .home-ai .home-ai-examples button { justify-content: space-between; min-height: 44px; gap: 12px; font-size: 12px; line-height: 1.7; color: var(--muted); }
+  .home-ai-examples button svg { color: var(--tint-ink); }
   .home-ai-note { margin-top: 8px; font-size: 11px; }
   .resident-app .assistant-form { grid-template-columns: minmax(0, 1fr); align-items: stretch; gap: 10px; }
-  .resident-app .assistant-form button { min-height: 44px; justify-content: center; }
+  .resident-app .assistant-form button { min-height: 44px; border-radius: 10px; font-size: 14px; justify-content: center; }
+  .resident-app .assistant-form button:disabled { opacity: 1; background: var(--surface-3); color: var(--muted); }
+  .resident-app .workspace-map-top button { min-height: 44px; border-radius: 10px; }
   .workspace-map.has-guide.has-guide-content:not(.guide-collapsed) { --guide-height: 54%; }
   .guide-empty, .assistant-brief, .assistant-guide .journey-map-detail { padding: 20px; }
 }
 
 .resident-app[data-theme="dark"] .travel-shortcuts .mode-tile { background: var(--surface); }
+@media (max-width: 767px) and (prefers-reduced-motion: no-preference) {
+  .resident-app, .resident-app :is(.workspace-header, .workspace-panel-header, .workspace-nav, .panel-section, .home-ai, .home-ai form, .home-ai input, .home-ai p, .home-ai-examples button, .ai-glyph, .travel-heading p, .travel-temperature, .language-switch, .language-switch button, .view-switch, .view-switch button, .parking-object) { transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease; }
+  .travel-shortcuts .mode-tile { transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease, transform 180ms ease; }
+}
 @media (min-width: 768px) and (max-width: 1100px) {
   .resident-app { grid-template-rows: 132px minmax(0, 1fr); }
   .workspace-header { display: grid; grid-template-columns: 1fr auto; padding: 10px 18px; gap: 6px; }
@@ -606,6 +639,26 @@
 .itinerary-connection summary { min-height: 44px; padding: 12px 0; cursor: pointer; font-size: 12px; color: var(--muted); }
 
 @media (max-width: 767px) {
+  .resident-app .mobile-only { display: flex; }
+  .resident-app .desktop-only, .workspace-header-actions { display: none; }
+  .workspace-nav { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .workspace-panel[data-tab="home"] .workspace-panel-header { position: absolute; width: 1px; height: 1px; min-height: 0; padding: 0; overflow: hidden; clip-path: inset(50%); }
+  .workspace-panel:is([data-tab="home"], [data-tab="more"], [data-tab="sources"]) .view-switch { display: none; }
+  .travel-heading > p, .home-ai-examples, .home-ai-note, .home-nearby, .home-weather, .home-saved.is-empty, .travel-shortcuts .mode-lrt, .travel-shortcuts .mode-parking { display: none; }
+  .resident-app .home-ai form { grid-template-columns: minmax(0, 1fr); padding: 0; gap: 12px; border: 0; background: transparent; }
+  .home-ai input { min-height: 52px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); }
+  .home-ai form button { display: flex; justify-content: center; gap: 8px; min-height: 48px; font-size: 16px; font-weight: 600; border-radius: 10px; }
+  .travel-shortcuts .mode-bus { min-height: 88px; border-bottom: 0; }
+  .travel-shortcuts .mode-bus .mode-label strong { font-size: 18px; }
+  .more-grid { gap: 10px; }
+  .more-grid button { min-height: 60px; padding: 16px; border-radius: 12px; }
+  .resident-app details.mobile-settings { display: block; padding: 0 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+  .mobile-settings summary { display: list-item; min-height: 60px; padding: 18px 0; cursor: pointer; font-size: 15px; }
+  .mobile-settings .appearance-toggle { width: 100%; min-height: 48px; padding: 0 16px; border-color: var(--line); margin: 0 0 12px; }
+  .more-grid .mobile-settings .appearance-toggle span { display: inline; flex: initial; }
+  .mobile-settings .language-switch { display: flex; margin-bottom: 16px; }
+  .mobile-settings .language-switch button { flex: 1; min-height: 48px; height: 48px; padding: 0 12px; }
+  .resident-app[data-theme="dark"] .assistant-form button:not(:disabled) { color: #10212d; }
   .trip-form input, .trip-form textarea, .assistant-location-fallback input { font-size: 16px; }
 }
 @media (max-width: 359px) {

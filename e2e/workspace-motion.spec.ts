@@ -1,3 +1,4 @@
+import { openSection } from "./navigation";
 import { expect, test } from "@playwright/test";
 import { mockDashboard } from "./fixtures";
 
@@ -107,7 +108,7 @@ test("a route card becomes its detail within the content scope, with a reversibl
 });
 
 test("rapid section changes finish at the last destination and keep keyboard navigation usable", async ({
-  page,
+  page, isMobile,
 }) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
@@ -117,13 +118,13 @@ test("rapid section changes finish at the last destination and keep keyboard nav
   await page.keyboard.press("ArrowRight");
   await page.keyboard.press("ArrowLeft");
   await expect(
-    page.getByRole("tab", { name: "輕軌", exact: true }),
+    page.getByRole("tab", { name: isMobile ? "AI 助手" : "輕軌", exact: true }),
   ).toBeFocused();
   await expect(page.locator(".workspace-panel")).toHaveAttribute(
     "data-tab",
-    "lrt",
+    isMobile ? "assistant" : "lrt",
   );
-  await expect(page.locator(".lrt-lines")).toBeVisible();
+  await expect(page.locator(isMobile ? ".assistant-form" : ".lrt-lines")).toBeVisible();
   expect(errors).toEqual([]);
 });
 
@@ -138,7 +139,7 @@ test("reduced motion and unsupported scoped transitions keep navigation immediat
     });
   });
   await page.goto("/");
-  await page.getByRole("tab", { name: "泊車", exact: true }).click();
+  await openSection(page, "泊車");
   await page.locator(".parking-row").first().click();
   await expect(page.locator(".parking-detail")).toBeInViewport();
   expect(
@@ -204,7 +205,7 @@ test("mobile view transitions remove outgoing controls and transfer focus while 
   isMobile,
 }) => {
   await page.goto("/");
-  await page.getByRole("tab", { name: "輕軌", exact: true }).click();
+  await openSection(page, "輕軌");
   await page.locator(".lrt-lines button").first().click();
   await page.locator(".lrt-station-button").first().click();
   if (isMobile) {

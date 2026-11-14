@@ -119,7 +119,7 @@ export function TravelHome({
             maxLength={500}
             value={question}
             onChange={(event) => setQuestion(event.target.value)}
-            placeholder={c.aiExample}
+            placeholder={t("assistantPlaceholder")}
           />
           <button
             type="submit"
@@ -127,6 +127,7 @@ export function TravelHome({
             disabled={!question.trim()}
           >
             <Send size={18} />
+            <span className="mobile-only">{t("assistantSend")}</span>
           </button>
         </form>
         <div className="home-ai-examples">
@@ -207,7 +208,7 @@ export function TravelHome({
         ))}
         <SourceNote meta={parkingMeta} />
       </section>
-      <section className="panel-section home-saved">
+      <section className={`panel-section home-saved${favorites.length ? "" : " is-empty"}`}>
         <div className="section-heading">
           <h2>{c.saved}</h2>
           <Star size={17} />

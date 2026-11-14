@@ -1,3 +1,4 @@
+import { toggleTheme } from "./navigation";
 import { expect, test, type Page } from "@playwright/test";
 import { mockDashboard, meta } from "./fixtures";
 import { JOURNEY_COLORS } from "../src/components/dashboard/journey-map";
@@ -140,13 +141,13 @@ test("walking directions are a user-opened link with a disclosure, with no autom
   expect(googleRequests).toEqual([]);
 });
 
-test("dark navigation has no white inset shine and keyboard focus remains visible", async ({ page }) => {
-  await page.getByRole("button", { name: "配色", exact: true }).click();
+test("dark navigation has no white inset shine and keyboard focus remains visible", async ({ page, isMobile }) => {
+  await toggleTheme(page);
   const shadow = await page.locator(".workspace-nav-indicator").evaluate((element) => getComputedStyle(element).boxShadow);
   expect(shadow).not.toContain("255, 255, 255");
   await page.getByRole("tab", { name: "巴士", exact: true }).focus();
   await page.keyboard.press("ArrowRight");
-  const outline = await page.getByRole("tab", { name: "輕軌", exact: true }).evaluate((element) => ({ style: getComputedStyle(element).outlineStyle, width: getComputedStyle(element).outlineWidth }));
+  const outline = await page.getByRole("tab", { name: isMobile ? "AI 助手" : "輕軌", exact: true }).evaluate((element) => ({ style: getComputedStyle(element).outlineStyle, width: getComputedStyle(element).outlineWidth }));
   expect(outline.style).not.toBe("none"); expect(parseFloat(outline.width)).toBeGreaterThan(0);
 });
 

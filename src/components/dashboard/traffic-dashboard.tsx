@@ -8,10 +8,8 @@ import {
   Layers3,
   List,
   Map as MapIcon,
-  Moon,
   MoreHorizontal,
   Navigation,
-  Sun,
   TramFront,
   Video,
   Bell,
@@ -19,7 +17,6 @@ import {
   Sparkles,
 } from "lucide-react";
 import { APP_NAME } from "@/lib/config";
-import { localeOptions } from "@/lib/i18n";
 import { metaIsDelayed } from "@/lib/live-status";
 import { residentCopy } from "@/lib/resident-copy";
 import type { Coordinates, ParkingKind } from "@/lib/resident-tools";
@@ -60,6 +57,7 @@ import type { BusJourneyLeg } from "@/lib/bus-journey";
 import { stopKey } from "@/lib/resident-tools";
 import { useWorkspaceMotion } from "./use-workspace-motion";
 import { WorkspaceNav } from "./workspace-nav";
+import { WorkspaceSettings } from "./workspace-settings";
 import {
   useResidentPreferences,
   type Favorite,
@@ -105,7 +103,7 @@ function SourceStateNote({ state }: { state: SourceState }) {
 }
 
 export function TrafficDashboard() {
-  const { locale, setLocale, t } = useLanguage();
+  const { locale, t } = useLanguage();
   const c = residentCopy[locale];
   const preferences = useResidentPreferences();
   const [tab, setTab] = useState<Tab>("home");
@@ -410,6 +408,7 @@ export function TrafficDashboard() {
             ? cameras
             : null;
   const moreItems: Array<{ id: Tab; label: string; icon: typeof Activity }> = [
+    { id: "parking", label: t("parking"), icon: CircleParking },
     { id: "overview", label: t("trafficSummary"), icon: Activity },
     { id: "lrt", label: t("lrt"), icon: TramFront },
     { id: "notices", label: c.news, icon: Bell },
@@ -464,32 +463,36 @@ export function TrafficDashboard() {
               { id: "lrt", label: t("lrt"), icon: TramFront },
               { id: "parking", label: t("parking"), icon: CircleParking },
               { id: "assistant", label: t("assistant"), icon: Sparkles },
+              { id: "more", label: c.more, icon: MoreHorizontal },
             ] as const
-          ).map(({ id, label, icon: Icon }, index, items) => (
+          ).map(({ id, label, icon: Icon }) => (
             <button
               type="button"
               role="tab"
-              id={`nav-${id}`}
+              id={id === "more" ? "nav-more-mobile" : `nav-${id}`}
+              className={id === "more" ? "mobile-only" : id === "lrt" || id === "parking" ? "desktop-only" : undefined}
               aria-controls="workspace-content"
-              aria-selected={primary === id}
-              tabIndex={primary === id ? 0 : -1}
+              aria-selected={primary === id || (id === "more" && (tab === "lrt" || tab === "parking"))}
+              tabIndex={primary === id || (id === "more" && (tab === "lrt" || tab === "parking")) ? 0 : -1}
               key={id}
               onClick={() => navigate(id)}
               onKeyDown={(event) => {
+                const buttons = [...event.currentTarget.parentElement!.querySelectorAll<HTMLButtonElement>('button[role="tab"]')].filter(button => button.offsetWidth > 0);
+                const index = buttons.indexOf(event.currentTarget);
                 const next =
                   event.key === "ArrowRight" || event.key === "ArrowDown"
-                    ? (index + 1) % items.length
+                    ? (index + 1) % buttons.length
                     : event.key === "ArrowLeft" || event.key === "ArrowUp"
-                      ? (index + items.length - 1) % items.length
+                      ? (index + buttons.length - 1) % buttons.length
                       : event.key === "Home"
                         ? 0
                         : event.key === "End"
-                          ? items.length - 1
+                          ? buttons.length - 1
                           : null;
                 if (next === null) return;
                 event.preventDefault();
-                navigate(items[next].id);
-                document.getElementById(`nav-${items[next].id}`)?.focus();
+                buttons[next].click();
+                buttons[next].focus();
               }}
             >
               <Icon size={20} aria-hidden="true" />
@@ -508,48 +511,19 @@ export function TrafficDashboard() {
           >
             <MoreHorizontal size={20} />
           </button>
-          <button
-            type="button"
-            className="appearance-toggle"
-            aria-label={c.appearance}
-            onClick={() =>
-              preferences.setTheme(
-                preferences.theme === "light" ? "dark" : "light",
-              )
-            }
-          >
-            {preferences.theme === "light" ? (
-              <Moon size={18} />
-            ) : (
-              <Sun size={18} />
-            )}
-            <span>{preferences.theme === "light" ? c.dark : c.light}</span>
-          </button>
-          <div className="language-switch" aria-label="Language">
-            {localeOptions.map((option) => (
-              <button
-                type="button"
-                key={option.value}
-                onClick={() => setLocale(option.value)}
-                aria-pressed={locale === option.value}
-                className={locale === option.value ? "is-active" : ""}
-              >
-                {option.short}
-              </button>
-            ))}
-          </div>
+          <WorkspaceSettings theme={preferences.theme} onToggleTheme={() => preferences.setTheme(preferences.theme === "light" ? "dark" : "light")} />
         </div>
       </header>
 
       <section className="workspace-body">
         <aside className="workspace-panel" data-tab={tab} ref={panelRef}>
           <div className="workspace-panel-header">
-            {!["home", "bus", "lrt", "parking", "assistant", "more"].includes(
+            {!["home", "bus", "assistant", "more"].includes(
               tab,
             ) ? (
               <button
                 type="button"
-                className="back-button"
+                className={`back-button${tab === "lrt" || tab === "parking" ? " mobile-only" : ""}`}
                 aria-label={c.more}
                 onClick={() => navigate("more")}
               >
@@ -591,7 +565,7 @@ export function TrafficDashboard() {
             {currentSource && !(tab === "bus" && (selectedRoute || selectedJourney)) ? (
               <SourceStateNote state={currentSource} />
             ) : null}
-            {tab === "home" ? (
+            <div hidden={tab !== "home"}>
               <TravelHome
                 favorites={preferences.favorites}
                 routes={busRoutes.data}
@@ -612,7 +586,7 @@ export function TrafficDashboard() {
                 }}
                 onOverview={() => navigate("overview")}
               />
-            ) : null}
+            </div>
             {tab === "bus" && selectedJourney && !selectedRoute ? <JourneyMapDetail
               selected={selectedJourney}
               states={selectedJourney.journey.legs.map((_, index) => index === 0 ? journeyEta0 : journeyEta1)}
@@ -829,15 +803,19 @@ export function TrafficDashboard() {
               <div className="more-grid">
                 {moreItems
                   .filter(
-                    (item) => item.id !== "lrt" && item.id !== "assistant",
+                    (item) => item.id !== "assistant",
                   )
                   .map(({ id, label, icon: Icon }) => (
-                    <button type="button" key={id} onClick={() => navigate(id)}>
+                    <button type="button" key={id} data-section={id} className={id === "lrt" || id === "parking" ? "mobile-only" : undefined} onClick={() => navigate(id)}>
                       <Icon size={21} />
                       <span>{label}</span>
                       <span aria-hidden="true">→</span>
                     </button>
                   ))}
+                <details className="mobile-settings mobile-only">
+                  <summary>{c.settings}</summary>
+                  <WorkspaceSettings theme={preferences.theme} onToggleTheme={() => preferences.setTheme(preferences.theme === "light" ? "dark" : "light")} />
+                </details>
               </div>
             ) : null}
             {tab === "sources" ? (

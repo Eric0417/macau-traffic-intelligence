@@ -23,7 +23,7 @@ export function WorkspaceNav({
     const nav = ref.current;
     if (!nav) return;
     const measure = () => {
-      const button = nav.querySelector<HTMLElement>('[aria-selected="true"]');
+      const button = [...nav.querySelectorAll<HTMLElement>('[aria-selected="true"]')].find(element => element.offsetWidth > 0);
       setIndicator({
         x: button?.offsetLeft ?? 0,
         y: button?.offsetTop ?? 0,

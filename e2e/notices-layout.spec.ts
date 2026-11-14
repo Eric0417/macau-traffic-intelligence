@@ -1,3 +1,4 @@
+import { openMore } from "./navigation";
 import { expect, test } from "@playwright/test";
 import { mockDashboard, meta } from "./fixtures";
 
@@ -9,7 +10,7 @@ test("long publication links and controls fit beside the map", async ({ page, is
     meta: meta({ id: "news", name: "政府交通新聞", url: "https://www.dsat.gov.mo/" }),
   } }));
   await page.goto("/");
-  await page.getByRole("button", { name: "更多", exact: true }).click();
+  await openMore(page);
   await page.getByRole("button", { name: "交通公告", exact: true }).click();
   await expect(page.getByRole("heading", { name: "交通公告排版測試" })).toBeVisible();
   const sizes = await page.locator(".workspace-scroll").evaluate(e => ({ width: e.clientWidth, content: e.scrollWidth }));
