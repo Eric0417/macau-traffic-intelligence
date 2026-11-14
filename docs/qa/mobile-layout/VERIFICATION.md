@@ -23,4 +23,8 @@ These are simulated mobile browser checks. Physical iPhone Safari browser chrome
 
 ## Deployment
 
-Pending. Previous live code: `0928d2cf72dbdaf0f9d75919719594017c40debc`, deployment `dep-dbs335ijnfac73bqfpv0`. No data migration or source contract changes.
+Render deployed `414b9f494be13953cc2df77d87e0a91395ddd69f` as `dep-dbs4mc68bjmc73e49ht0`, live at 2026-11-14 11:52:23 UTC. The public health endpoint returned `ok` with Redis; see `render-health.json`.
+
+Chrome production checks at 320/390/430px found no inner overflow in the home cards, question form or suggestion buttons. The send button remained 44×44px at every width. `render-layout.json` records the measurements; `render-home.jpg` is the 390px production screenshot. A real request for `幫我安排澳門傳統文化一日遊` opened the details form. All date/time/text fields stayed inside the phone viewport with 16px text. No console errors were captured. Temporary viewport and language settings were restored after testing.
+
+Rollback target: `0928d2cf72dbdaf0f9d75919719594017c40debc`, deployment `dep-dbs335ijnfac73bqfpv0`. No data migration or source contract changes.
