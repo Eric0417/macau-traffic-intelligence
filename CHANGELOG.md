@@ -2,6 +2,12 @@
 
 All notable user-visible and architectural changes are recorded here.
 
+## Phone layout and Safari card sizing - 2026-11-14
+
+- Keep cards and the homepage question field inside the phone width in WebKit. Grid content can shrink, and the send button keeps its own 44px column.
+- Use smaller card padding, separate rows for suggested questions and a stacked assistant form on phones. Compact transport shortcuts and readable date/time fields fit narrow screens without losing their controls.
+- Keep localized date punctuation differences between Node and WebKit from rebuilding the page during hydration. Add WebKit coverage for card bounds, all five primary tabs, three languages and day-trip fields at 320, 390 and 430px.
+
 ## Compact map guidance and place-name understanding - 2026-11-14
 
 - Keep idle assistant guidance to a 76px strip. Desktop route guidance uses at most 34% of the map area, capped at 280px, and collapses to 48px without losing the selected route. The map resizes with the guide.

@@ -73,7 +73,7 @@ export function TravelHome({
     <div className="travel-home panel-stack">
       <section className="travel-heading">
         <div className="travel-dateline">
-          <span className="eyebrow">
+          <span className="eyebrow" suppressHydrationWarning>
             {new Date().toLocaleDateString(
               locale === "en" ? "en-GB" : "zh-MO",
               {

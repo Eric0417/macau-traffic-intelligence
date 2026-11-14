@@ -32,5 +32,10 @@ export default defineConfig({
         browserName: "chromium",
       },
     },
+    {
+      name: "mobile-webkit",
+      testMatch: "mobile-layout.spec.ts",
+      use: { ...devices["iPhone 13"] },
+    },
   ],
 });

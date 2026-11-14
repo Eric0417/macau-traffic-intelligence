@@ -23,6 +23,8 @@ External data never enters a client component directly. Public contracts are def
 
 ## Product Decisions
 
+- The phone-layout follow-up on `codex/mobile-layout` fixes WebKit's oversized implicit grid column and keeps the homepage submit button visible. Phone cards have tighter padding, question suggestions use separate rows and assistant input stacks above its button. Day-trip fields use 16px text, with time fields stacked below 360px. WebKit and mobile Chromium regressions cover 320/390/430px, three languages, primary tabs and form controls. See `docs/qa/mobile-layout/VERIFICATION.md` for checks and deployment status.
+
 - The map guidance follow-up on `codex/map-guide-place-intent` reduces idle guidance to 76px and desktop route guidance to at most 34%/280px, with a 48px collapsed state. Unresolved place names now use one batched model interpretation followed by catalogue matching. It covers typed origins, ordered destinations and day-trip endpoints; known aliases and selected IDs avoid the extra call. It was deployed as `0928d2c` in Render deployment `dep-dbs335ijnfac73bqfpv0` on 2026-11-14. Verification is in `docs/qa/map-guide-place-intent/VERIFICATION.md`.
 
 - The assistant now covers one destination, user-ordered destinations and themed cultural day trips. Multi-stop journeys preserve order and return visits. Day trips first collect date, start/end time, endpoints and preferences, then offer two or three complete alternatives. The selected itinerary supports follow-up text and editable stops/stays. See ADR 0018 and `docs/qa/itineraries/VERIFICATION.md`.
