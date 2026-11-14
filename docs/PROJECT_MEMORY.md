@@ -2,7 +2,7 @@
 
 ## Current State
 
-Version `0.1.0` is a standalone Next.js 16 application with Traditional Chinese, Simplified Chinese and English. The `codex/resident-workspace` revision (2026-11-13) has a trip workspace: horizontal desktop navigation, a left input/option panel, a wide map and a right-side guidance area, plus mobile list/map switching and bottom navigation. That workspace was deployed as `675d75f` on 2026-11-14. The new itinerary revision is on `codex/multi-stop-itineraries`, pending deployment. See `tasks/plan.md` and `docs/qa/resident-workspace/VERIFICATION.md`.
+Version `0.1.0` is a standalone Next.js 16 application with Traditional Chinese, Simplified Chinese and English. The trip workspace has horizontal desktop navigation, a left input/option panel, a wide map and a right-side guidance area, plus mobile list/map switching and bottom navigation. Ordered journeys and cultural day trips were deployed from `codex/multi-stop-itineraries` through `main` as `5ec14f6` on 2026-11-14. Render deployment `dep-dbs2malbedkc73bmr1n0` is live. See `docs/qa/itineraries/VERIFICATION.md` for local and production checks.
 
 The existing deployment is recorded on Render as project `Macau Traffic Intelligence`, environment `production`, at https://macau-traffic-intelligence.onrender.com. The service runs two instances in Singapore with a private Render Key Value instance for cache, locks, circuit state, and rate limiting; autoscaling remains declarative until the workspace is on a Pro plan.
 

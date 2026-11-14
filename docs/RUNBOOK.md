@@ -75,7 +75,7 @@ Use the Render dashboard, `render deploys` plus the rollback action, or push a r
 
 ## Resident revision release notes
 
-The resident workspace and original model journey flow were deployed as `675d75f` on 2026-11-14. The itinerary release uses the existing server-side provider configuration. Local live-provider checks now cover single destinations, ordered journeys, day-trip clarification, full alternatives and follow-up edits. No keys belong in client configuration or commits.
+The itinerary release was deployed as `5ec14f6` on 2026-11-14 and uses the existing server-side provider configuration. Local and Render live-provider checks cover single destinations, ordered journeys, day-trip clarification, full alternatives and follow-up edits. No keys belong in client configuration or commits.
 
 After an approved release, invalidate only the affected cached source records (`borders`, `parking`, `notices`, `lrt-network`, `lrt-notices`) or wait for their TTLs. The old cache can contain generated border minutes, misparsed timestamps or the old LRT geometry. Keep the source ids and API v1 unchanged. Do not flush user or unrelated application data. Restarting this local development server clears its process-memory cache.
 
@@ -85,4 +85,4 @@ After an approved release, invalidate only the affected cached source records (`
 
 Run `ITINERARY_BASE_URL=https://macau-traffic-intelligence.onrender.com node scripts/smoke-itineraries.mjs` for a deliberate live-provider check. This uses public landmark coordinates and makes six assistant requests. Optional `ITINERARY_REPORT_PATH` writes a compact report without location or question payloads. It does not record any user's position.
 
-For this release, the prior live deployment is `dep-dbrt8pe7bikc73eebflg` at commit `675d75f39e5d30e9a2a2561301b5ab0be1c3d4ca`. Record the new deployment ID and post-release checks in `docs/qa/itineraries/VERIFICATION.md`. No database migration or cache flush is needed; `cultural-places` uses a new source ID. To disable new cultural recommendations independently, set `SOURCE_CULTURAL_PLACES_ENABLED=false`; point-to-point and ordered transport continue.
+The live itinerary deployment is `dep-dbs2malbedkc73bmr1n0` at commit `5ec14f6bae51be4788af95ae718c664764908b11`. The rollback target is `dep-dbrt8pe7bikc73eebflg` at commit `675d75f39e5d30e9a2a2561301b5ab0be1c3d4ca`. Post-release checks are in `docs/qa/itineraries/VERIFICATION.md`. No database migration or cache flush is needed; `cultural-places` uses a new source ID. To disable new cultural recommendations independently, set `SOURCE_CULTURAL_PLACES_ENABLED=false`; point-to-point and ordered transport continue.
