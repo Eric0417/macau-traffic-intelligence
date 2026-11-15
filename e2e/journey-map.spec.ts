@@ -130,7 +130,7 @@ test("uses current Macau time again on each search, including across UTC midnigh
 test("walking directions are a user-opened link with a disclosure, with no automatic Google request", async ({ page, context, isMobile }) => {
   await context.grantPermissions(["geolocation"]); await context.setGeolocation({ longitude: 113.5493, latitude: 22.2155 });
   const googleRequests: string[] = []; page.on("request", (request) => { if (request.url().includes("google.com/maps")) googleRequests.push(request.url()); });
-  await page.getByRole("button", { name: "使用目前位置", exact: true }).click();
+  await page.locator(".journey-planner:visible").getByRole("button", { name: "使用目前位置", exact: true }).click();
   await choose(page, "終點", "M3", "測試終點站 M3");
   await page.getByRole("button", { name: "尋找行程方案" }).click();
   await page.getByRole("button", { name: "地圖與步驟" }).click();
