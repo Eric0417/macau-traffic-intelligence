@@ -1,0 +1,22 @@
+{
+  "timestamp": "2026-11-15T19:19:33.694Z",
+  "status": 200,
+  "firstCandidatesMs": 19399,
+  "finalMs": 20741,
+  "finalKind": "plans",
+  "optionCount": 3,
+  "phases": [
+    {
+      "phase": "understanding",
+      "ms": 157
+    },
+    {
+      "phase": "searching",
+      "ms": 776
+    },
+    {
+      "phase": "comparing",
+      "ms": 19399
+    }
+  ]
+}

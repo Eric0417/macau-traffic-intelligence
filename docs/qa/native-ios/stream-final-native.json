@@ -1,0 +1,13 @@
+{
+  "checkedAt" : "2026-11-15T19:49:28Z",
+  "finalMs" : 7356,
+  "firstCandidatesMs" : 5916,
+  "optionCount" : 3,
+  "personalLocationUsed" : false,
+  "phases" : [
+    "understanding",
+    "searching",
+    "comparing"
+  ],
+  "transport" : "Native URLSession streaming and production Codable models"
+}

@@ -1,0 +1,18 @@
+[
+  {
+    "timestamp": "2026-11-15T19:49:26.815593515Z",
+    "event": "journey_candidates_timing",
+    "walkingMs": 1094,
+    "searchMs": 3146,
+    "stopChecksMs": 88,
+    "totalMs": 4330
+  },
+  {
+    "timestamp": "2026-11-15T19:50:09.989314798Z",
+    "event": "journey_candidates_timing",
+    "walkingMs": 891,
+    "searchMs": 3696,
+    "stopChecksMs": 2,
+    "totalMs": 4591
+  }
+]

@@ -12,6 +12,8 @@ Build 3 was rejected after physical use on November 16. The earlier tests missed
 
 The user requested the whole Macau Traffic application as a native iOS app with a new Apple-style design. Target iOS 26; use the existing deployed API. The initial client reused the existing API. Build 4 adds an opt-in progressive response and requires deploying the matching server change.
 
+November 16 release: Macao Move Build 6 is installed and independently identified on the iPhone. Server code `0c8af7a` is live. The final run passed 257 repository tests, 31 native unit tests and the assistant-to-home UI flow; the interface revision also passed all 15 iPhone UI flows and three iPad flows before the calculation-only follow-ups. Production first candidates now took about six seconds in the two final checks, with final AI comparison at about 7.3 seconds. Full receipts and physical-device limits are in `docs/qa/native-ios/VERIFICATION.md`.
+
 1. Create the Xcode project, typed API client, preferences, native navigation and map. Verify a simulator build.
 2. Add route search, directions, stop selection, estimates, route geometry, favourites and freshness. Test null, suspended and delayed cases.
 3. Add local place/stop and walking/bus planning using the existing algorithm bundle. Verify shared fixture results and map geometry.
