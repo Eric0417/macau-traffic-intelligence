@@ -8,6 +8,7 @@
 - Show real microphone levels, an enabled white send button and cancellable waiting. Deliver checked route candidates before AI comparison finishes, retain explicit incomplete/error states and abort cancelled model requests.
 - Shorten AI explanations, preserve stable route identity while ranking changes, and clear previous itinerary context when a single journey replaces it. Add regression coverage for map controls, complete traffic geometry, gestures, cancellation and streaming responses.
 - Reuse numeric route ordering, index nearby pedestrian edges and skip an unchanged search after empty suspension checks. Keep the same paths and snap limits. Record aggregate search-stage durations without questions, coordinates or route records.
+- Avoid allocating intermediate bus labels already beaten by an existing state, while preserving complete alternatives and tie ordering. Verify full outputs against the prior implementation across 1,600 generated queries and four real day/night searches.
 
 ## Native iOS application - 2026-11-16
 

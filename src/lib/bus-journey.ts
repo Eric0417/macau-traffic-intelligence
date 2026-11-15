@@ -167,20 +167,26 @@ export function planBusJourneys(network: BusNetwork, origin: BusJourneyEndpoint,
     for (const [station, arrivals] of frontier) {
       for (const arrival of arrivals) for (const item of departures.get(station) ?? []) {
         if (arrival.legs.at(-1)?.routeCode === item.routeCode) continue;
+        const end = item.to.stationCode;
+        const egress = ends.get(end);
+        const labels = next.get(end) ?? new Map<string, BusJourney>();
+        const key = `${item.routeCode}:${Number(hasHours(arrival) && Boolean(item.serviceWindows))}`;
+        const previous = labels.get(key);
+        if (egress === undefined && previous) {
+          const partialScore = arrival.totalStops + item.stopCount + arrival.accessMeters / 100 + arrival.legs.length * 6;
+          const previousScore = score(previous);
+          // A strictly worse intermediate label cannot win the existing comparison.
+          if (partialScore > previousScore || (partialScore === previousScore && arrival.legs.length + 1 > previous.legs.length)) continue;
+        }
         const plan: BusJourney = {
           id: `${arrival.id ? `${arrival.id}|` : ""}${item.routeCode}:${item.direction}:${item.fromSequence}-${item.toSequence}`,
           legs: [...arrival.legs, item], accessMeters: arrival.accessMeters, egressMeters: 0, transferMeters: 0,
           totalStops: arrival.totalStops + item.stopCount,
         };
-        const end = item.to.stationCode;
-        const egress = ends.get(end);
         if (egress !== undefined && plan.legs[0].from.stationCode !== end &&
             new Set(plan.legs.map(l => l.routeCode)).size === plan.legs.length) {
           plans.push({ ...plan, egressMeters: egress });
         }
-        const labels = next.get(end) ?? new Map<string, BusJourney>();
-        const key = `${item.routeCode}:${Number(hasHours(plan))}`;
-        const previous = labels.get(key);
         if (!previous || compare(plan, previous) < 0) labels.set(key, plan);
         next.set(end, labels);
       }

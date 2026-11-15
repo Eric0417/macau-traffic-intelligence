@@ -128,6 +128,16 @@ var NativePlanner = (() => {
       for (const [station, arrivals] of frontier) {
         for (const arrival of arrivals) for (const item of departures.get(station) ?? []) {
           if (arrival.legs.at(-1)?.routeCode === item.routeCode) continue;
+          const end = item.to.stationCode;
+          const egress = ends.get(end);
+          const labels2 = next.get(end) ?? /* @__PURE__ */ new Map();
+          const key = `${item.routeCode}:${Number(hasHours(arrival) && Boolean(item.serviceWindows))}`;
+          const previous = labels2.get(key);
+          if (egress === void 0 && previous) {
+            const partialScore = arrival.totalStops + item.stopCount + arrival.accessMeters / 100 + arrival.legs.length * 6;
+            const previousScore = score(previous);
+            if (partialScore > previousScore || partialScore === previousScore && arrival.legs.length + 1 > previous.legs.length) continue;
+          }
           const plan2 = {
             id: `${arrival.id ? `${arrival.id}|` : ""}${item.routeCode}:${item.direction}:${item.fromSequence}-${item.toSequence}`,
             legs: [...arrival.legs, item],
@@ -136,14 +146,9 @@ var NativePlanner = (() => {
             transferMeters: 0,
             totalStops: arrival.totalStops + item.stopCount
           };
-          const end = item.to.stationCode;
-          const egress = ends.get(end);
           if (egress !== void 0 && plan2.legs[0].from.stationCode !== end && new Set(plan2.legs.map((l) => l.routeCode)).size === plan2.legs.length) {
             plans.push({ ...plan2, egressMeters: egress });
           }
-          const labels2 = next.get(end) ?? /* @__PURE__ */ new Map();
-          const key = `${item.routeCode}:${Number(hasHours(plan2))}`;
-          const previous = labels2.get(key);
           if (!previous || compare(plan2, previous) < 0) labels2.set(key, plan2);
           next.set(end, labels2);
         }
