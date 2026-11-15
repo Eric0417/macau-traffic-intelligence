@@ -294,6 +294,42 @@ test("layout fits narrow phones, tablets and desktop widths", async ({ page }) =
   }
 });
 
+test("long bus route numbers fit on one line inside each card", async ({ page }) => {
+  const routeNames = ["103", "701X", "701XS", "AP1", "25AX", "25BS"];
+  await page.route("**/api/v1/bus/routes", route => route.fulfill({ json: {
+    data: routeNames.map((routeName, index) => ({
+      routeName,
+      routeCode: routeName.padStart(5, "0"),
+      routeType: 0,
+      company: index === 1 || index === 2
+        ? { id: "orange", name: "澳巴", color: "orange" }
+        : { id: "blue", name: "新福利", color: "blue" },
+      hasChange: false,
+      live: true,
+    })),
+    meta: meta({ id: "routes", name: "Test routes", url: "https://example.com" }),
+  } }));
+  await page.reload();
+  await page.getByRole("tab", { name: "巴士", exact: true }).click();
+  const labels = page.locator(".route-grid button strong");
+  await expect(labels).toHaveText(routeNames);
+  await page.evaluate(() => document.fonts.ready.then(() => true));
+
+  for (const width of [320, 390, 768, 1024, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    const outside = await labels.evaluateAll(elements => elements.flatMap(element => {
+      const card = element.closest("button")!.getBoundingClientRect();
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      const text = range.getBoundingClientRect();
+      return range.getClientRects().length !== 1 || text.left < card.left + 4 || text.right > card.right - 4
+        ? [element.textContent]
+        : [];
+    }));
+    expect(outside, `Route numbers outside their card padding at ${width}px`).toEqual([]);
+  }
+});
+
 
 test("a homepage AI question opens its answer with snapshot evidence", async ({ page }) => {
   let question = "";

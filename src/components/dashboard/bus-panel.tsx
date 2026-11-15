@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type CSSProperties } from "react";
+import { useMemo, useState } from "react";
 import { ArrowLeft, BusFront, MapPin, Search, Star } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
 import { residentCopy } from "@/lib/resident-copy";
@@ -94,13 +94,11 @@ export function BusPanel({
                 type="button"
                 key={route.routeCode}
                 data-route-code={route.routeCode}
-                style={
-                  { "--route-color": route.company.color } as CSSProperties
-                }
+                data-operator={route.company.color}
                 onClick={() => onSelect(route)}
               >
                 <strong>{route.routeName}</strong>
-                <small>{route.company.name}</small>
+                <small className="bus-operator">{route.company.name}</small>
                 {!route.live ? (
                   <span className="route-flag">{t("seasonal")}</span>
                 ) : null}
@@ -117,10 +115,7 @@ export function BusPanel({
     );
 
   return (
-    <div
-      className="panel-stack bus-workspace"
-      style={{ "--route-color": selected.company.color } as CSSProperties}
-    >
+    <div className="panel-stack bus-workspace" data-operator={selected.company.color}>
       <section className="panel-section bus-route-header" tabIndex={-1}>
         <button type="button" className="text-action" onClick={onBack}>
           <ArrowLeft size={17} />
@@ -129,7 +124,7 @@ export function BusPanel({
         <div className="route-detail-head">
           <span className="route-badge">{selected.routeName}</span>
           <div className="bus-heading">
-            <small>{selected.company.name}</small>
+            <small className="bus-operator">{selected.company.name}</small>
             <h2>
               {eta.data?.stops.length
                 ? `${c.towards} ${eta.data.stops.at(-1)?.stationName}`

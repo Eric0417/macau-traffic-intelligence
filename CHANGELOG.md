@@ -1,5 +1,9 @@
 # Changelog
 
+## Bus route cards - 2026-11-16
+
+- Give route cards a responsive minimum width so codes such as 701X and 701XS fit on one line. Use lighter route numbers and muted operator labels in both themes.
+
 ## Voice input and bus trip search - 2026-11-15
 
 - Record short questions from the home screen and AI Assistant. DeepSeek transcribes the recording into the editable draft. The user can review it before asking.
