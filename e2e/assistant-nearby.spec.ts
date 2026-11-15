@@ -15,7 +15,7 @@ test("nearby parking requests location and shows the grounded answer in the main
   });
   await page.goto("/");
   await page.locator("#home-question").fill("我附近有咩停車場？");
-  await page.locator(".home-ai form").getByRole("button").click();
+  await page.locator('.home-ai form button[type="submit"]').click();
   const result = page.getByRole("region", { name: "附近交通資訊" });
   await expect(result).toBeVisible();
   await expect(result).toContainText("輕型車 12");
@@ -35,7 +35,7 @@ test("denied nearby location recovers with a typed landmark", async ({ page }) =
   });
   await page.goto("/");
   await page.locator("#home-question").fill("附近有咩巴士站？");
-  await page.locator(".home-ai form").getByRole("button").click();
+  await page.locator('.home-ai form button[type="submit"]').click();
   await page.getByRole("textbox", { name: "出發地點", exact: true }).fill("培正中學");
   await page.getByRole("button", { name: "由呢度出發", exact: true }).click();
   await expect(page.getByRole("region", { name: "附近交通資訊" })).toBeVisible();

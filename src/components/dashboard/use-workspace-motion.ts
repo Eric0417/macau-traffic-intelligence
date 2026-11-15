@@ -80,34 +80,37 @@ export function useWorkspaceMotion(rootRef: RefObject<HTMLDivElement | null>) {
             .querySelector<HTMLElement>(options.focus)
             ?.focus({ preventScroll: true });
       };
+      const animatePanel = () => {
+        cleanup();
+        if (id !== sequence.current || !scope.clientWidth || !scope.clientHeight) return;
+        const animation = scope.animate(
+          [
+            { opacity: 0.25, transform: `translateX(${direction === "back" ? -14 : 14}px)` },
+            { opacity: 1, transform: "translateX(0)" },
+          ],
+          { duration: 220, easing: "cubic-bezier(.2,.8,.2,1)" },
+        );
+        active.current = { cleanup: () => animation.cancel() };
+        void animation.finished.then(
+          () => {
+            if (id === sequence.current) active.current = null;
+          },
+          () => {},
+        );
+      };
       if (animate && scope.startViewTransition) {
         const transition = scope.startViewTransition(commit);
         active.current = { transition, cleanup };
-        // A second interaction can skip the previous snapshot before it is ready.
-        void transition.ready.catch(() => {});
-        void transition.finished.then(cleanup, cleanup);
+        // Chromium can reject a scoped snapshot during layout. Animate the
+        // committed panel after the snapshot has been released.
+        void transition.ready.then(
+          () => transition.finished.then(cleanup, cleanup),
+          () => transition.finished.then(animatePanel, cleanup),
+        );
       } else {
         commit();
-        cleanup();
-        if (animate) {
-          const animation = scope.animate(
-            [
-              {
-                opacity: 0.25,
-                transform: `translateX(${direction === "back" ? -14 : 14}px)`,
-              },
-              { opacity: 1, transform: "translateX(0)" },
-            ],
-            { duration: 220, easing: "cubic-bezier(.2,.8,.2,1)" },
-          );
-          active.current = { cleanup: () => animation.cancel() };
-          void animation.finished.then(
-            () => {
-              if (id === sequence.current) active.current = null;
-            },
-            () => {},
-          );
-        }
+        if (animate) animatePanel();
+        else cleanup();
       }
     },
     [rootRef],

@@ -3,14 +3,15 @@
 import { useState } from "react";
 
 import {
+  ArrowRight,
   ArrowUpRight,
   BusFront,
+  ChevronDown,
   CircleParking,
-  MapPin,
+  LocateFixed,
   Star,
-  Sparkles,
-  Send,
   Thermometer,
+  TramFront,
 } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
 import { residentCopy } from "@/lib/resident-copy";
@@ -27,6 +28,7 @@ import type {
 } from "@/lib/types";
 import { favoriteId, type Favorite } from "./use-resident-preferences";
 import { SourceNote } from "./panels";
+import { VoiceInput } from "./voice-input";
 
 export function TravelHome({
   favorites,
@@ -44,6 +46,7 @@ export function TravelHome({
   onLrt,
   onAsk,
   onOverview,
+  voiceView,
 }: {
   favorites: Favorite[];
   routes: BusRoute[] | null;
@@ -58,6 +61,7 @@ export function TravelHome({
   onLrt: () => void;
   onAsk: (question: string) => void;
   onOverview: () => void;
+  voiceView?: "list" | "map";
   weatherMeta: ResponseMeta | null;
   parkingMeta: ResponseMeta | null;
 }) {
@@ -71,38 +75,15 @@ export function TravelHome({
     : [];
   return (
     <div className="travel-home panel-stack">
-      <section className="travel-heading">
-        <div className="travel-dateline">
-          <span className="eyebrow" suppressHydrationWarning>
-            {new Date().toLocaleDateString(
-              locale === "en" ? "en-GB" : "zh-MO",
-              {
-                timeZone: "Asia/Macau",
-                month: "short",
-                day: "numeric",
-                weekday: "short",
-              },
-            )}
-          </span>
+      <section className="home-ai" aria-labelledby="travel-title">
+        <div className="travel-heading">
+          <h2 id="travel-title">{c.today}</h2>
           {weather?.temperatureCelsius != null ? (
             <span className="travel-temperature">
               <Thermometer size={16} aria-hidden="true" />
               {weather.temperatureCelsius}°C
             </span>
           ) : null}
-        </div>
-        <h2>{c.today}</h2>
-        <p>{c.intro}</p>
-      </section>
-      <section className="home-ai">
-        <div className="home-ai-title">
-          <span className="ai-glyph">
-            <Sparkles size={21} />
-          </span>
-          <div>
-            <h2>{t("assistant")}</h2>
-            <p>{c.aiPrompt}</p>
-          </div>
         </div>
         <form
           onSubmit={(event) => {
@@ -119,57 +100,48 @@ export function TravelHome({
             maxLength={500}
             value={question}
             onChange={(event) => setQuestion(event.target.value)}
-            placeholder={t("assistantPlaceholder")}
+            placeholder={c.homeSearch}
           />
+          {voiceView ? <VoiceInput key={voiceView} onTranscript={text => setQuestion(value => [value.trimEnd(), text].filter(Boolean).join(" ").slice(0, 500))} /> : null}
           <button
             type="submit"
             aria-label={t("assistantSend")}
+            title={t("assistantSend")}
             disabled={!question.trim()}
           >
-            <Send size={18} />
-            <span className="mobile-only">{t("assistantSend")}</span>
+            <ArrowRight size={22} aria-hidden="true" />
           </button>
         </form>
-        <div className="home-ai-examples">
-          {[locale === "en" ? "I want to go to Senado Square" : locale === "zh-Hans" ? "我想去议事亭前地" : "我想去議事亭前地", t("assistantQ1")].map((item) => (
-            <button type="button" key={item} onClick={() => onAsk(item)}>
-              {item}
-              <ArrowUpRight size={13} />
-            </button>
-          ))}
-        </div>
-        <p className="home-ai-note">{c.aiEvidence}</p>
+        <details className="home-ai-help">
+          <summary>{c.questionExamples}<ChevronDown size={14} aria-hidden="true" /></summary>
+          <div className="home-ai-examples">
+            {[locale === "en" ? "I want to go to Senado Square" : locale === "zh-Hans" ? "我想去议事亭前地" : "我想去議事亭前地", t("assistantQ1")].map((item) => (
+              <button type="button" key={item} onClick={() => onAsk(item)}>
+                {item}
+                <ArrowUpRight size={13} aria-hidden="true" />
+              </button>
+            ))}
+          </div>
+          <p className="home-ai-note">{c.aiEvidence}</p>
+        </details>
       </section>
       <div className="travel-shortcuts">
         <button type="button" onClick={onBus} className="mode-tile mode-bus">
-          <span className="mode-model" aria-hidden="true" />
-          <span className="mode-label">
-            <strong>{c.startBus}</strong>
-            <small>{c.busHint}</small>
-          </span>
-          <ArrowUpRight size={16} />
+          <span className="mode-label">{c.startBus}</span>
+          <span className="mode-preview" aria-hidden="true" />
+          <ArrowUpRight size={20} aria-hidden="true" />
         </button>
         <button type="button" onClick={onLrt} className="mode-tile mode-lrt">
-          <span className="mode-model" aria-hidden="true" />
-          <span className="mode-label">
-            <strong>{t("lrt")}</strong>
-            <small>{c.lrtHint}</small>
-          </span>
-          <ArrowUpRight size={16} />
+          <TramFront size={21} aria-hidden="true" />
+          <span className="mode-label">{t("lrt")}</span>
         </button>
         <button
           type="button"
           onClick={onParking}
           className="mode-tile mode-parking"
         >
-          <span className="parking-object" aria-hidden="true">
-            P
-          </span>
-          <span className="mode-label">
-            <strong>{c.startParking}</strong>
-            <small>{c.parkingHint}</small>
-          </span>
-          <ArrowUpRight size={16} />
+          <CircleParking size={21} aria-hidden="true" />
+          <span className="mode-label">{c.startParking}</span>
         </button>
       </div>
       <section className="panel-section home-nearby">
@@ -181,7 +153,7 @@ export function TravelHome({
             onClick={onLocate}
             disabled={locating}
           >
-            <MapPin size={15} aria-hidden="true" />
+            <LocateFixed size={15} aria-hidden="true" />
             {locating ? c.locating : c.locate}
           </button>
         </div>
@@ -208,76 +180,64 @@ export function TravelHome({
         ))}
         <SourceNote meta={parkingMeta} />
       </section>
-      <section className={`panel-section home-saved${favorites.length ? "" : " is-empty"}`}>
+      {favorites.length ? <section className="panel-section home-saved">
         <div className="section-heading">
           <h2>{c.saved}</h2>
           <Star size={17} />
         </div>
-        {!favorites.length ? (
-          <div className="saved-empty">
-            <p>{c.savedEmpty}</p>
-            <span>{c.localOnly}</span>
-          </div>
-        ) : (
-          <div className="saved-list">
-            {favorites.map((favorite) => {
-              const route =
-                favorite.kind === "bus"
-                  ? routes?.find(
-                      (item) => item.routeCode === favorite.routeCode,
-                    )
-                  : null;
-              const park =
-                favorite.kind === "parking"
-                  ? parking?.find((item) => item.id === favorite.id)
-                  : null;
-              return (
-                <button
-                  type="button"
-                  key={favoriteId(favorite)}
-                  onClick={() => onOpen(favorite)}
-                >
-                  {favorite.kind === "bus" ? (
-                    <BusFront size={19} />
+        <div className="saved-list">
+          {favorites.map((favorite) => {
+            const route =
+              favorite.kind === "bus"
+                ? routes?.find(
+                    (item) => item.routeCode === favorite.routeCode,
+                  )
+                : null;
+            const park =
+              favorite.kind === "parking"
+                ? parking?.find((item) => item.id === favorite.id)
+                : null;
+            return (
+              <button
+                type="button"
+                key={favoriteId(favorite)}
+                onClick={() => onOpen(favorite)}
+              >
+                {favorite.kind === "bus" ? (
+                  <BusFront size={19} />
+                ) : (
+                  <CircleParking size={19} />
+                )}
+                <span>
+                  <strong>
+                    {favorite.kind === "bus"
+                      ? `${route?.routeName ?? favorite.routeCode} · ${favorite.stopName ?? t("route")}`
+                      : (park?.name ?? favorite.id)}
+                  </strong>
+                  <small>
+                    {favorite.kind === "bus"
+                      ? favorite.direction === 0
+                        ? t("outbound")
+                        : t("return")
+                      : t("lightVehicle")}
+                  </small>
+                </span>
+                <b>
+                  {favorite.kind === "parking" ? (
+                    (park?.availability.lightVehicle ?? "–")
                   ) : (
-                    <CircleParking size={19} />
+                    <ArrowUpRight size={17} />
                   )}
-                  <span>
-                    <strong>
-                      {favorite.kind === "bus"
-                        ? `${route?.routeName ?? favorite.routeCode} · ${favorite.stopName ?? t("route")}`
-                        : (park?.name ?? favorite.id)}
-                    </strong>
-                    <small>
-                      {favorite.kind === "bus"
-                        ? favorite.direction === 0
-                          ? t("outbound")
-                          : t("return")
-                        : t("lightVehicle")}
-                    </small>
-                  </span>
-                  <b>
-                    {favorite.kind === "parking" ? (
-                      (park?.availability.lightVehicle ?? "–")
-                    ) : (
-                      <ArrowUpRight size={17} />
-                    )}
-                  </b>
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </section>
+                </b>
+              </button>
+            );
+          })}
+        </div>
+      </section> : null}
 
       <section className="panel-section home-weather">
         <div className="section-heading">
           <h2>{t("weather")}</h2>
-          <span>
-            {weather?.temperatureCelsius != null
-              ? `${weather.temperatureCelsius}°C`
-              : "–"}
-          </span>
         </div>
         <SourceNote meta={weatherMeta} />
         {weather ? (

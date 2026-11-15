@@ -25,7 +25,7 @@ test("shows a complete bus recommendation with alternatives collapsed", async ({
   await page.route("**/api/v1/assistant/journeys", route => route.fulfill({ json: envelope(result) }));
   await page.goto("/");
   await page.locator("#home-question").fill("幫我安排整套巴士路線");
-  await page.locator(".home-ai form").getByRole("button").click();
+  await page.locator('.home-ai form button[type="submit"]').click();
   const itinerary = page.getByRole("region", { name: "完整行程" });
   await expect(itinerary.getByText(result.options[0].reason, { exact: true })).toBeVisible();
   await expect(itinerary.locator(".trip-connection-steps")).toContainText("二龍喉公園");
@@ -47,7 +47,7 @@ test("ordered destinations keep separate connections, open the second map and re
   });
   await page.goto("/");
   await page.locator("#home-question").fill("由培正去澳門運動場，再去媽閣");
-  await page.locator(".home-ai form").getByRole("button").click();
+  await page.locator('.home-ai form button[type="submit"]').click();
   const itinerary = page.getByRole("region", { name: "完整行程" });
   await expect(itinerary.locator(".itinerary-stop-heading h3")).toHaveText(points.map(p => p.name));
   await expect(itinerary.locator(".itinerary-connection")).toHaveCount(2);
@@ -80,7 +80,7 @@ test("day trip asks for details, compares complete alternatives and keeps the se
   });
   await page.goto("/");
   await page.locator("#home-question").fill("幫我安排傳統文化一日遊");
-  await page.locator(".home-ai form").getByRole("button").click();
+  await page.locator('.home-ai form button[type="submit"]').click();
   await expect(page.getByRole("heading", { name: "先了解你嘅一日遊" })).toBeVisible();
   await expect(page.locator(".itinerary-results")).toHaveCount(0);
   const futureDate = new Date(Date.now() + 2 * 86400_000).toISOString().slice(0, 10);
@@ -118,7 +118,7 @@ test("denied geolocation retains all ordered destinations for manual recovery", 
   });
   await page.goto("/");
   await page.locator("#home-question").fill("去澳門運動場，再去媽閣");
-  await page.locator(".home-ai form").getByRole("button").click();
+  await page.locator('.home-ai form button[type="submit"]').click();
   await expect(page.getByText("未能取得位置。可以重試，或者輸入出發地點。")).toBeVisible();
   await page.getByLabel("出發地點", { exact: true }).fill("澳門培正中學");
   await page.getByRole("button", { name: "由呢度出發", exact: true }).click();

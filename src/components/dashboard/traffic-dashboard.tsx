@@ -3,8 +3,10 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
+  ArrowUpRight,
   BusFront,
   CircleParking,
+  Info,
   Layers3,
   List,
   Map as MapIcon,
@@ -115,6 +117,7 @@ export function TrafficDashboard() {
   );
   const [selectedNoticeId, setSelectedNoticeId] = useState<string | null>(null);
   const [selectedRoute, setSelectedRoute] = useState<BusRoute | null>(null);
+  const [manualBusPlanner, setManualBusPlanner] = useState(false);
   const [busDirection, setBusDirection] = useState<0 | 1>(0);
   const [manualStopKey, setSelectedStopKey] = useState<string | null>(null);
   const [journeyBoarding, setJourneyBoarding] = useState<BusJourneyLeg | null>(null);
@@ -134,7 +137,8 @@ export function TrafficDashboard() {
   } | null>(null);
   const [assistantFocus, setAssistantFocus] =
     useState<LearningAssistantAction | null>(null);
-  const [view3d, setView3d] = useState(false);
+  const [overview3d, setOverview3d] = useState(false);
+  const [bus3d, setBus3d] = useState(true);
   const [layerOpen, setLayerOpen] = useState(false);
   const [layers, setLayers] = useState<Record<MapLayer, boolean>>({
     roads: true,
@@ -153,6 +157,9 @@ export function TrafficDashboard() {
   const move = useWorkspaceMotion(scrollRef);
   const busVisible =
     tab === "bus" || (tab === "assistant" && assistantFocus?.kind === "bus");
+  const busFocused = busVisible && selectedRoute !== null;
+  const view3d = busFocused ? bus3d : overview3d;
+  const setView3d = busFocused ? setBus3d : setOverview3d;
 
   const roads = useLiveJson<RoadCollection>("/api/v1/traffic/roads", 60_000);
   const bridges = useLiveJson<BridgeTime[]>("/api/v1/traffic/bridges", 60_000);
@@ -292,7 +299,7 @@ export function TrafficDashboard() {
     parking.data?.length,
   ]);
 
-  const navigate = (next: Tab) => {
+  const navigate = (next: Tab, focus?: string) => {
     if (!selectedStopKey) setJourneyBoarding(null);
     if (next === requestedTab.current && next === tab) {
       setView("list");
@@ -325,6 +332,7 @@ export function TrafficDashboard() {
       },
       {
         animate: next !== "assistant",
+        focus,
         direction:
           order.indexOf(next) < order.indexOf(previous) ? "back" : "forward",
         scrollTop: 0,
@@ -451,6 +459,17 @@ export function TrafficDashboard() {
   const selectedStop = busEta.data?.stops.find(
     (stop) => `${stop.sequence}:${stop.stationCode}` === selectedStopKey,
   );
+  const busJourney = tab === "bus" && !selectedRoute ? selectedJourney : null;
+  const lrtOnMap = tab === "lrt" || assistantFocus?.kind === "lrt";
+  const parkingOnMap = tab === "parking" && selectedParkingId;
+  const mapNote = tab === "notices" ? c.newsIntro
+    : lrtOnMap ? t("lrtNoLive")
+      : busJourney ? (!journeyReady
+        ? (locale === "en" ? "Checking official route geometry…" : locale === "zh-Hans" ? "正在核对官方走线…" : "正在核對官方走線…")
+        : busJourney.journey.walking
+          ? (locale === "en" ? "Green lines: walking paths. Dashed lines: approximate connections." : locale === "zh-Hans" ? "绿线为人行路径，虚线为端点接驳示意。" : "綠線係步行路徑，虛線係端點接駁示意。")
+          : (locale === "en" ? "Coloured lines: official bus routes. Dashed lines: approximate connections." : locale === "zh-Hans" ? "彩色线为官方巴士走线，虚线为接驳示意。" : "彩色線係官方巴士走線，虛線係接駁示意。"))
+        : null;
 
   return (
     <main
@@ -462,10 +481,7 @@ export function TrafficDashboard() {
       <header className="workspace-header">
         <div className="workspace-brand">
           <Navigation size={23} aria-hidden="true" />
-          <div>
-            <strong>{APP_NAME}</strong>
-            <span>MACAU TRANSIT</span>
-          </div>
+          <strong>{APP_NAME}</strong>
         </div>
         <WorkspaceNav selected={primary} label={t("tagline")}>
           {(
@@ -597,6 +613,7 @@ export function TrafficDashboard() {
                   navigate("assistant");
                 }}
                 onOverview={() => navigate("overview")}
+                voiceView={tab === "home" ? view : undefined}
               />
             </div>
             {tab === "bus" && selectedJourney && !selectedRoute ? <JourneyMapDetail
@@ -616,9 +633,21 @@ export function TrafficDashboard() {
                 }, { from: ".journey-map-detail", to: ".bus-route-header", focus: ".bus-route-header", scrollTop: 0 });
               }}
             /> : null}
-            <div hidden={tab !== "bus" || selectedRoute !== null || selectedJourney !== null}>
+            {tab === "bus" && !selectedRoute && !selectedJourney ? <button
+              type="button"
+              className={manualBusPlanner ? "text-action bus-planner-back" : "bus-plan-link"}
+              onClick={() => {
+                setManualBusPlanner(false);
+                navigate("assistant", ".assistant-form textarea");
+              }}
+            >
+              {manualBusPlanner ? <ArrowLeft size={17} aria-hidden="true" /> : <Sparkles size={17} aria-hidden="true" />}
+              {manualBusPlanner ? c.backToAssistant : c.planBus}
+              {!manualBusPlanner ? <ArrowUpRight size={16} aria-hidden="true" /> : null}
+            </button> : null}
+            <div hidden={tab !== "bus" || !manualBusPlanner || selectedRoute !== null || selectedJourney !== null}>
               <JourneyPlanner
-                enabled={tab === "bus"}
+                enabled={tab === "bus" && manualBusPlanner}
                 location={location}
                 locating={locating}
                 locationError={locationError}
@@ -645,7 +674,7 @@ export function TrafficDashboard() {
                 }}
               />
             </div>
-            {tab === "bus" && (!selectedJourney || selectedRoute) ? (
+            {tab === "bus" && ((!selectedJourney && !manualBusPlanner) || selectedRoute) ? (
               <BusPanel
                 routes={busRoutes.data}
                 selected={selectedRoute}
@@ -791,6 +820,12 @@ export function TrafficDashboard() {
             <div hidden={tab !== "assistant"}>
               <AssistantPanel
                 request={assistantRequest}
+                voiceView={tab === "assistant" ? view : undefined}
+                onManualBus={() => {
+                  setManualBusPlanner(true);
+                  setSelectedJourney(null); setSelectedRoute(null); setSelectedStopKey(null); setJourneyBoarding(null);
+                  navigate("bus", ".journey-planner input");
+                }}
                 guideTarget={guideTarget}
                 onShowGuide={() => { guideModeRef.current = "brief"; setGuideMode("brief"); setGuideCollapsed(false); setSelectedJourney(null); setView("map"); }}
                 onStart={() => {
@@ -855,6 +890,7 @@ export function TrafficDashboard() {
 
         <div className={`workspace-map map-stage${tab === "assistant" ? ` has-guide${guideHasContent ? " has-guide-content" : ""}${guideHasContent && guideCollapsed ? " guide-collapsed" : ""}` : ""}`} ref={mapRef}>
           <MacauMap
+            panelRef={panelRef}
             journey={(tab === "bus" || tab === "assistant") && !selectedRoute ? journeyInput : null}
             theme={preferences.theme}
             roads={roads.data}
@@ -866,6 +902,7 @@ export function TrafficDashboard() {
                 : null
             }
             lrtFocus={tab === "lrt" || assistantFocus?.kind === "lrt"}
+            busFocused={busFocused}
             busRoute={busVisible ? busEta.data : null}
             busColor={
               busVisible ? (selectedRoute?.company.color ?? null) : null
@@ -936,10 +973,10 @@ export function TrafficDashboard() {
               className="map-settings"
               aria-expanded={layerOpen}
               aria-label={t("layers")}
+              title={t("layers")}
               onClick={() => setLayerOpen(!layerOpen)}
             >
-              <Layers3 size={18} />
-              {t("layers")}
+              <Layers3 size={20} aria-hidden="true" />
             </button>
           </div>
           {layerOpen ? (
@@ -981,41 +1018,32 @@ export function TrafficDashboard() {
               <p>{c.modelsNote}</p>
             </div>
           ) : null}
-          <div className="map-context">
-            <span>
-              {tab === "notices"
-                ? c.newsIntro
-                : tab === "bus" && selectedJourney && !selectedRoute
-                  ? (!journeyReady
-                    ? (locale === "en" ? "Checking official route geometry…" : locale === "zh-Hans" ? "正在核对官方走线…" : "正在核對官方走線…")
-                    : selectedJourney.journey.walking
-                      ? (locale === "en" ? "Green lines: walking paths. Dashed lines: approximate connections." : locale === "zh-Hans" ? "绿线为人行路径，虚线为端点接驳示意。" : "綠線係步行路徑，虛線係端點接駁示意。")
-                      : (locale === "en" ? "Coloured lines: official bus routes. Dashed lines: approximate connections." : locale === "zh-Hans" ? "彩色线为官方巴士走线，虚线为接驳示意。" : "彩色線係官方巴士走線，虛線係接駁示意。"))
-                : busVisible
-                  ? t("positionNote")
-                  : tab === "lrt" || assistantFocus?.kind === "lrt"
-                    ? t("lrtNoLive")
-                    : c.mapHint}
-            </span>
-            {tab === "bus" && selectedJourney?.journey.legs.length && !selectedRoute ? <span>
-              {locale === "en" ? "White-centred markers: official vehicle estimates." : locale === "zh-Hans" ? "白心圆点为官方车辆估算位置。" : "白心圓點係官方車輛估算位置。"}
-            </span> : null}
-            {tab === "bus" && selectedJourney && !selectedRoute ? <button type="button" onClick={() => setView("list")}>
-              {locale === "en" ? "View journey steps →" : locale === "zh-Hans" ? "查看行程步骤 →" : "查看行程步驟 →"}
-            </button> : selectedStop && busVisible ? (
-              <button type="button" onClick={() => setView("list")}>
-                {selectedStop.stationName} · {c.stopView} →
-              </button>
-            ) : selectedParkingId && tab === "parking" ? (
-              <button type="button" onClick={() => setView("list")}>
-                {
-                  parking.data?.find((item) => item.id === selectedParkingId)
-                    ?.name
-                }{" "}
-                →
-              </button>
-            ) : null}
-          </div>
+          {busFocused || mapNote || parkingOnMap ? (
+            <div className={`map-context${busFocused ? " bus-map-context" : ""}`}>
+              {mapNote ? <span>{mapNote}</span> : null}
+              {busFocused ? (
+                <details className="bus-map-note">
+                  <summary><Info size={15} aria-hidden="true" />{c.busMapEstimate}</summary>
+                  <p>{t("positionNote")}</p>
+                  {view3d ? <p>{c.modelsNote}</p> : null}
+                </details>
+              ) : null}
+              {busJourney?.journey.legs.length ? <span>
+                {locale === "en" ? "White-centred markers: official vehicle estimates." : locale === "zh-Hans" ? "白心圆点为官方车辆估算位置。" : "白心圓點係官方車輛估算位置。"}
+              </span> : null}
+              {busJourney ? <button type="button" onClick={() => setView("list")}>
+                {locale === "en" ? "View journey steps →" : locale === "zh-Hans" ? "查看行程步骤 →" : "查看行程步驟 →"}
+              </button> : selectedStop && busFocused ? (
+                <button type="button" className="mobile-only" onClick={() => setView("list")}>
+                  {c.stopView} <ArrowUpRight size={14} aria-hidden="true" />
+                </button>
+              ) : parkingOnMap ? (
+                <button type="button" onClick={() => setView("list")}>
+                  {parking.data?.find((item) => item.id === selectedParkingId)?.name} →
+                </button>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </section>
       <CameraViewer

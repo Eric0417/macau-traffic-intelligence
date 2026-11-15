@@ -21,11 +21,11 @@ test("a stationary 3D bus keeps native canvas detail without continuous WebGL wo
   const etaResponse = page.waitForResponse("**/api/v1/bus/routes/00003/eta?direction=0");
   await page.locator(".route-grid button").first().click();
   const eta = await (await etaResponse).json();
+  const model = page.waitForResponse("**/models/bus-tcm.glb");
   await page.locator(".stop-row").click();
   if (isMobile) await page.locator(".view-switch").getByRole("button", { name: "地圖", exact: true }).click();
-  const model = page.waitForResponse("**/models/bus-tcm.glb");
-  await page.locator(".quick-3d").click();
   await model;
+  await expect(page.locator(".quick-3d")).toHaveAttribute("aria-pressed", "true");
   // Let the camera and shader compilation finish; measure a frozen publisher
   // position while the normal two-second route polling remains enabled.
   await page.waitForTimeout(2_000);

@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { meta, mockDashboard } from "./fixtures";
+import { openManualBusPlanner } from "./navigation";
 import type { WalkingNetwork } from "../src/lib/walking-network";
 
 const walking: WalkingNetwork = {
@@ -21,7 +22,7 @@ test("finds a named destination and compares walking with bus transfers", async 
     json: { data: walking, meta: meta({ id: "walking-network", name: "OSM fixture", url: "https://www.openstreetmap.org/copyright" }) },
   }));
   await page.goto("/");
-  await page.getByRole("tab", { name: "巴士", exact: true }).click();
+  await openManualBusPlanner(page);
   await page.getByRole("searchbox", { name: "起點", exact: true }).fill("北區測試公園");
   await page.getByRole("button", { name: "北區測試公園 地點" }).click();
   await page.getByRole("searchbox", { name: "終點", exact: true }).fill("South Library");
@@ -29,7 +30,7 @@ test("finds a named destination and compares walking with bus transfers", async 
   await page.getByRole("button", { name: "尋找行程方案" }).click();
 
   const bus = page.getByRole("article", { name: "方案 1" });
-  await expect(bus).toContainText("轉乘一次");
+  await expect(bus.locator(".journey-route-kind")).toHaveText("轉乘 · 1");
   await expect(bus).toContainText("步行到上車站");
   await expect(bus).toContainText("落車後步行到目的地");
   await expect(bus).toContainText("測試轉乘站");

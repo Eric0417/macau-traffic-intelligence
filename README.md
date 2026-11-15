@@ -91,6 +91,8 @@ The repository contains `Dockerfile` and `render.yaml`. The blueprint creates:
 
 Set the required source flags from `.env.example` only when a source must be disabled. No government-source credentials are required. The optional AI learning assistant needs `ASSISTANT_API_KEY`; it also accepts `ASSISTANT_BASE_URL` and `ASSISTANT_MODEL` for any OpenAI-compatible endpoint. Without a key the assistant endpoint returns 503 and the rest of the app works unchanged. See `docs/ADR/0007-ai-learning-assistant.md`.
 
+Voice input uses the same key with DeepSeek’s direct API. The browser microphone needs HTTPS or localhost. See `docs/ADR/0022-deepseek-voice-input.md`.
+
 ## Data Notes
 
 - DSAT road, bridge, camera, bus, and parking feeds are public-facing feeds used by official DSAT web applications. Some are not formally documented and may change.

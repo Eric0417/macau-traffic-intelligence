@@ -1,5 +1,16 @@
 # Changelog
 
+## Voice input and bus trip search - 2026-11-15
+
+- Record short questions from the home screen and AI Assistant. DeepSeek transcribes the recording into the editable draft. The user can review it before asking.
+- Open the assistant to plan a bus trip from the bus catalogue. Find the manual stop-to-stop planner under the assistant’s manual stop choice.
+
+## Figma Make colours and typography - 2026-11-15
+
+- Use Inter for Latin text and Noto Sans TC for Chinese. Use lighter headings, white and graphite surfaces, and blue selection states.
+- Give the destination field a white surface and circular submit button. Use a faint grid behind the bus preview.
+- Use neutral streets and blue-grey water in both map themes. The bus-focused label rules and 3D models remain available.
+
 ## Stable bus estimates and forward map movement - 2026-11-15
 
 - Keep the nearest bus selected when its time is uncertain. Show stationary or updating status, and label a changed bus instead of silently replacing a one-minute arrival with a later service.
@@ -15,12 +26,24 @@
 
 All notable user-visible and architectural changes are recorded here.
 
+## Bus map focus and workspace controls - 2026-11-15
+
+- Hide basemap labels and icons while a bus route is selected. Show the selected stop name or the route termini, and show vehicle plates at street zoom. Restore the basemap symbols when leaving the route.
+- Start selected bus routes in 3D. Load the existing operator bus and stop sign models at street zoom. Keep the 2D switch and flat markers for wide views and model failures.
+- Reduce the home screen to its destination field, example disclosure and service controls. Move desktop navigation to the bottom of the side panel. Use the original bus render on the main shortcut and enlarge route numbers.
+
 ## Bus access, transfers and taxi alternatives - 2026-11-15
 
 - Fix the Panda Pavilion walking graph: explicitly unlocked gates on permitted paths remain connected. The park bus stop now has a mapped 430 m connection to the pavilion, so bus routes are no longer removed by a false detour.
 - Search endpoint stops within 1 km and up to three same-platform transfers. Balance walking, ridden stops and transfers, and check all four possible bus legs independently in the map and guidance.
 - Show a separate taxi alternative for long trips without inventing driving paths, fares, travel times or vehicle availability. Empty bus searches state their limits.
 - Version the walking snapshot cache so deployment loads the corrected graph immediately.
+
+## Map workspace redesign - 2026-11-15
+
+- Fill the desktop workspace with the interactive map. Move the five primary sections to a vertical toolbar, place the query and result panel beside it, and group layers, 3D, zoom and compass on the right.
+- Give the phone home screen a direct list/map switch and place return and map controls on the map itself. Keep the four bottom tabs and restore keyboard focus when switching views.
+- Use a light vector-style basemap by day and a deep navy palette at night. Style journey origins with a blue navigation arrow and halo, destinations with red pins, and night routes with a soft outline. Preserve the traffic status colours and map data sources.
 
 ## Assistant transport and nearby answers - 2026-11-15
 

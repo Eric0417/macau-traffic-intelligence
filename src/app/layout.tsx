@@ -1,8 +1,14 @@
 import type { Metadata } from "next";
-import { Noto_Sans_TC } from "next/font/google";
+import { Inter, Noto_Sans_TC } from "next/font/google";
 import { APP_DESCRIPTION, APP_NAME, APP_NAME_EN } from "@/lib/config";
 import "./globals.css";
 import "./workspace.css";
+
+const uiFont = Inter({
+  variable: "--font-ui",
+  display: "swap",
+  subsets: ["latin"],
+});
 
 const interfaceFont = Noto_Sans_TC({
   variable: "--font-interface",
@@ -24,7 +30,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="zh-Hant" className={`h-full antialiased ${interfaceFont.variable}`}>
+    <html lang="zh-Hant" className={`h-full antialiased ${uiFont.variable} ${interfaceFont.variable}`}>
       <body className="min-h-full">{children}</body>
     </html>
   );

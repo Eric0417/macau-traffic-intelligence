@@ -21,20 +21,37 @@ test.beforeEach(async ({ page }) => {
 test("one workspace renders the primary navigation and a usable mobile list", async ({ page, isMobile }) => {
   await expect(page.getByRole("tab")).toHaveCount(isMobile ? 4 : 5);
   await expect(page.locator("#workspace-content")).toHaveCount(1);
-  await expect(page.getByRole("heading", { name: "今日點樣出發？" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "去邊度？" })).toBeVisible();
+  await expect(page.locator(".home-ai-help")).not.toHaveAttribute("open");
   await expect(page.locator(".workspace-map")).toBeVisible({ visible: !isMobile });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  if (isMobile) {
+    await showMap(page, true);
+    const back = page.locator(".map-return");
+    await expect(back).toBeFocused();
+    await back.click();
+    await expect(page.locator('.view-switch button[aria-pressed="true"]')).toBeFocused();
+    await expect(page.getByRole("heading", { name: "去邊度？" })).toBeVisible();
+  }
 });
 
-test("desktop navigation contains all five tabs on narrow windows", async ({ page, isMobile }) => {
-  test.skip(isMobile, "Desktop header layout");
+test("the desktop tool tray fits beneath the panel at narrow and wide sizes", async ({ page, isMobile }) => {
+  test.skip(isMobile, "Desktop layout");
   const nav = page.getByRole("tablist");
   for (const width of [768, 1024, 1100, 1101, 1280]) {
     await page.setViewportSize({ width, height: 800 });
     await expect(nav.getByRole("tab")).toHaveCount(5);
-    const header = await page.locator(".workspace-header").boundingBox();
+    const map = await page.locator(".workspace-map").boundingBox();
     const bar = await nav.boundingBox();
-    expect(bar!.y + bar!.height, `Navigation bottom at ${width}px`).toBeLessThan(header!.y + header!.height);
+    const panel = await page.locator(".workspace-panel").boundingBox();
+    const content = await page.locator(".workspace-scroll").boundingBox();
+    const tools = await page.locator(".workspace-map-top").boundingBox();
+    expect(map!.width).toBe(width);
+    expect(bar!.x).toBeGreaterThanOrEqual(panel!.x);
+    expect(bar!.x + bar!.width).toBeLessThan(panel!.x + panel!.width);
+    expect(content!.y + content!.height).toBeLessThanOrEqual(bar!.y);
+    expect(bar!.y + bar!.height).toBeLessThan(800);
+    expect(panel!.x + panel!.width).toBeLessThan(tools!.x);
     const outside = await nav.evaluate((element) => {
       const bar = element.getBoundingClientRect();
       return [...element.querySelectorAll('[role="tab"]')]
@@ -58,7 +75,7 @@ test("primary navigation supports keyboard arrows and Home", async ({ page }) =>
   await expect(page.getByRole("searchbox", { name: "搜尋路線號" })).toBeVisible();
   await page.keyboard.press("Home");
   await expect(home).toBeFocused();
-  await expect(page.getByRole("heading", { name: "今日點樣出發？" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "去邊度？" })).toBeVisible();
 });
 
 test("route selection opens stop-first details without a long catalog above them", async ({ page }) => {
@@ -197,19 +214,20 @@ test("LRT station selection opens a usable map and keeps the schematic notice", 
   await expect(page.locator(".workspace-panel")).toContainText("地圖列車為示意動畫");
 });
 
-test("3D loads models on demand while 2D keeps flat markers", async ({ page, isMobile }) => {
+test("focused bus routes load both 3D models at street zoom and can switch to 2D", async ({ page, isMobile }) => {
   const models: string[] = [];
   page.on("request", (request) => { if (request.url().includes(".glb")) models.push(request.url()); });
   await openRoute(page);
+  expect(models).toHaveLength(0);
   await page.locator(".stop-row").click();
   await showMap(page, isMobile);
   await expect(page.locator(".maplibregl-canvas")).toBeVisible();
-  expect(models).toHaveLength(0);
-  await page.getByRole("button", { name: "圖層", exact: true }).click();
-  await page.locator(".workspace-layer-menu").getByRole("button", { name: "3D", exact: true }).click();
-  await expect.poll(() => models.length, { timeout: 15_000 }).toBeGreaterThan(0);
+  await expect(page.locator(".quick-3d")).toHaveAttribute("aria-pressed", "true");
   await expect.poll(() => models.some((url) => url.endsWith("bus-stop.glb"))).toBe(true);
   await expect.poll(() => models.some((url) => url.endsWith("bus-tcm.glb"))).toBe(true);
+  await page.getByRole("button", { name: "圖層", exact: true }).click();
+  await page.locator(".workspace-layer-menu").getByRole("button", { name: "2D", exact: true }).click();
+  await expect(page.locator(".quick-3d")).toHaveAttribute("aria-pressed", "false");
 });
 
 test("camera viewer opens and closes with the keyboard", async ({ page }) => {
@@ -281,7 +299,7 @@ test("a homepage AI question opens its answer with snapshot evidence", async ({ 
   let question = "";
   await page.route("**/api/v1/assistant", async (route) => { question = route.request().postDataJSON().question; await route.fallback(); });
   await page.locator("#home-question").fill("而家邊條橋比較暢順？");
-  await page.locator(".home-ai form").getByRole("button").click();
+  await page.locator('.home-ai form button[type="submit"]').click();
   await expect(page.getByRole("tab", { name: "AI 助手", exact: true })).toHaveAttribute("aria-selected", "true");
   await expect(page.locator(".assistant-answer")).toContainText("友誼大橋");
   await expect(page.locator(".assistant-context")).toContainText("官方道路狀態");
@@ -292,7 +310,7 @@ test("a homepage AI question opens its answer with snapshot evidence", async ({ 
 test("AI provider failure shows an unavailable answer", async ({ page }) => {
   await page.route("**/api/v1/assistant", (route) => route.fulfill({ status: 503, json: { message: "Unavailable" } }));
   await page.locator("#home-question").fill("巴士有冇改道？");
-  await page.locator(".home-ai form").getByRole("button").click();
+  await page.locator('.home-ai form button[type="submit"]').click();
   await expect(page.locator(".assistant-entry .error-copy")).toBeVisible();
   await expect(page.locator(".assistant-answer")).toHaveCount(0);
 });

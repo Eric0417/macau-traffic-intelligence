@@ -1,4 +1,4 @@
-import { openSection } from "./navigation";
+import { openManualBusPlanner, openSection } from "./navigation";
 import { expect, test, type Page } from "@playwright/test";
 import { meta, mockDashboard } from "./fixtures";
 
@@ -10,8 +10,7 @@ async function chooseStop(page: Page, label: string, query: string, name: string
 test.beforeEach(async ({ page }) => {
   await mockDashboard(page);
   await page.goto("/");
-  await page.getByRole("tab", { name: "巴士", exact: true }).click();
-  await expect(page.locator(".journey-planner")).toBeVisible();
+  await openManualBusPlanner(page);
 });
 
 test("a directed journey opens its live boarding stop and survives returning to the planner", async ({ page }) => {
@@ -36,7 +35,7 @@ test("location-based one-transfer search keeps coordinates off API requests", as
   await expect(page.getByRole("button", { name: "尋找行程方案" })).toBeEnabled();
   await chooseStop(page, "終點", "M3", "測試終點站 M3");
   await page.getByRole("button", { name: "尋找行程方案" }).click();
-  await expect(page.locator(".journey-option")).toContainText("轉乘一次");
+  await expect(page.locator(".journey-option .journey-route-kind")).toHaveText("轉乘 · 1");
   await expect(page.locator(".journey-option .journey-leg")).toHaveCount(2);
   await expect(page.locator(".journey-option")).toContainText("到上車站直線距離");
   expect(requests.join("\n")).not.toMatch(/113\.5492|22\.2155|latitude|longitude/);

@@ -14,6 +14,13 @@ export async function openSection(page: Page, name: string) {
   await page.locator(".more-grid").getByRole("button", { name, exact: true }).click();
 }
 
+export async function openManualBusPlanner(page: Page) {
+  await openSection(page, "巴士");
+  await page.getByRole("button", { name: "用 AI 助手規劃行程", exact: true }).click();
+  await page.getByRole("button", { name: "手動揀站", exact: true }).click();
+  await expect(page.locator(".journey-planner")).toBeVisible();
+}
+
 async function settings(page: Page) {
   const previous = { tab: await page.locator(".workspace-panel").getAttribute("data-tab"), view: await page.locator(".resident-app").getAttribute("data-view") };
   if (await page.locator(".workspace-header-actions").isVisible()) return null;

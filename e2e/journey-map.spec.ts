@@ -1,4 +1,4 @@
-import { toggleTheme } from "./navigation";
+import { openManualBusPlanner, toggleTheme } from "./navigation";
 import { expect, test, type Page } from "@playwright/test";
 import { mockDashboard, meta } from "./fixtures";
 import { JOURNEY_COLORS } from "../src/components/dashboard/journey-map";
@@ -60,7 +60,7 @@ async function colourPixels(page: Page, colour: string, extent = false) {
 
 test.beforeEach(async ({ page }) => {
   await mockDashboard(page); await journeyGeometry(page);
-  await page.goto("/"); await page.getByRole("tab", { name: "巴士", exact: true }).click();
+  await page.goto("/"); await openManualBusPlanner(page);
 });
 
 test("one numbered option groups both buses and the map draws both official legs", async ({ page, isMobile }) => {
@@ -116,7 +116,7 @@ test("uses current Macau time again on each search, including across UTC midnigh
     }, meta: meta({ id: "bus-network", name: "Fixture timetable", url: "https://example.com/" }) } });
   });
   await page.reload();
-  await page.getByRole("tab", { name: "巴士", exact: true }).click();
+  await openManualBusPlanner(page);
   await expect(page.locator('input[type="time"]')).toHaveCount(0);
   await expect(page.locator(".journey-planner:visible").getByText("現在出發", { exact: true })).toBeVisible();
   await page.clock.setFixedTime(new Date("2026-11-11T18:00:00Z"));
@@ -130,7 +130,7 @@ test("uses current Macau time again on each search, including across UTC midnigh
 test("walking directions are a user-opened link with a disclosure, with no automatic Google request", async ({ page, context, isMobile }) => {
   await context.grantPermissions(["geolocation"]); await context.setGeolocation({ longitude: 113.5493, latitude: 22.2155 });
   const googleRequests: string[] = []; page.on("request", (request) => { if (request.url().includes("google.com/maps")) googleRequests.push(request.url()); });
-  await page.locator(".journey-planner:visible").getByRole("button", { name: "使用目前位置", exact: true }).click();
+  await page.locator(".journey-planner").getByRole("button", { name: "使用目前位置", exact: true }).click();
   await choose(page, "終點", "M3", "測試終點站 M3");
   await page.getByRole("button", { name: "尋找行程方案" }).click();
   await page.getByRole("button", { name: "地圖與步驟" }).click();

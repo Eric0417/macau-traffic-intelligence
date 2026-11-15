@@ -18,7 +18,7 @@ export interface JourneyMapGeometry {
   uncertainTransfers: number[];
   bounds: Coordinates[];
 }
-export const JOURNEY_COLORS = ["#176a96", "#bc572b"] as const;
+export const JOURNEY_COLORS = ["#1972d8", "#bc572b"] as const;
 const labels = {
   "zh-Hant": {
     origin: "起點",

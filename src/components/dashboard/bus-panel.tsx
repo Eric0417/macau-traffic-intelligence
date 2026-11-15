@@ -201,8 +201,15 @@ export function BusPanel({
           aria-label={c.selectedStop}
           tabIndex={-1}
         >
-          <div className="eyebrow">{c.selectedStop}</div>
-          <h2>{stop.stationName}</h2>
+          <div className="waiting-heading">
+            <div>
+              <h2>{stop.stationName}</h2>
+              <span>{stop.stationCode}</span>
+            </div>
+            <button className="primary-action" type="button" aria-label={c.map} title={c.map} onClick={onMap}>
+              <MapPin size={19} aria-hidden="true" />
+            </button>
+          </div>
           <div className="waiting-number">
             <BusArrivalEstimate stop={stop} disabled={Boolean(eta.error) || !eta.meta || metaIsDelayed(eta.meta)} fallback={
               status === "suspended" ? (
@@ -211,6 +218,7 @@ export function BusPanel({
               t("dueAtStop")
             ) : status === "waiting" ? (
               <>
+                <span className="sr-only">{c.nextBus} </span>
                 {stop.stopsAway}
                 <small>{t("stopsShort")}</small>
               </>
@@ -221,11 +229,7 @@ export function BusPanel({
           </div>
           <SourceNote meta={eta.meta} />
           {eta.error ? <p role="status">{c.delayed}</p> : null}
-          <p>{stop.suspended ? c.suspensionNote : c.nextBus}</p>
-          <button className="primary-action" type="button" onClick={onMap}>
-            <MapPin size={17} />
-            {c.map}
-          </button>
+          {stop.suspended ? <p>{c.suspensionNote}</p> : null}
         </section>
       ) : null}
 

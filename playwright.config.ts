@@ -34,7 +34,7 @@ export default defineConfig({
     },
     {
       name: "mobile-webkit",
-      testMatch: "mobile-layout.spec.ts",
+      testMatch: ["mobile-layout.spec.ts", "voice-input.spec.ts"],
       use: { ...devices["iPhone 13"] },
     },
   ],

@@ -54,7 +54,7 @@ test("a destination automatically gets location, renders model alternatives and 
   });
   await page.goto("/");
   await page.locator("#home-question").fill("我想去澳門體育館");
-  await page.locator(".home-ai form").getByRole("button").click();
+  await page.locator('.home-ai form button[type="submit"]').click();
   const guide = page.getByRole("region", { name: "出行指引" });
   await expect(guide).toContainText("同一站牌轉乘");
   expect(requests).toHaveLength(2);
@@ -97,7 +97,7 @@ test("ambiguous destinations need a choice and unknown places do not invent plan
   await page.route("**/api/v1/assistant/journeys", route => route.fulfill({ json: envelope({ kind: "choose", field: "destination", choices: [destination, { ...destination, id: "other", name: "另一體育館" }] }) }));
   await page.goto("/");
   await page.locator("#home-question").fill("我想去體育館");
-  await page.locator(".home-ai form").getByRole("button").click();
+  await page.locator('.home-ai form button[type="submit"]').click();
   await expect(page.getByText("你想去邊一個地點？")).toBeVisible();
   await expect(page.getByRole("button", { name: "澳門體育館", exact: true })).toBeVisible();
   await expect(page.locator(".assistant-option")).toHaveCount(0);

@@ -25,6 +25,7 @@ import { localized } from "@/lib/i18n";
 import { metaIsDelayed } from "@/lib/live-status";
 import { residentCopy } from "@/lib/resident-copy";
 import { LrtServicePanel } from "./lrt-service-panel";
+import { VoiceInput } from "./voice-input";
 import type {
   ApiEnvelope,
   BorderStatus,
@@ -340,12 +341,14 @@ export function LrtPanel({
 }
 
 export function AssistantPanel({
-  route, direction, onAction, onOpenTab, request, guideTarget, onShowGuide, onStart, onJourney,
+  route, direction, onAction, onOpenTab, request, guideTarget, onShowGuide, onStart, onJourney, onManualBus, voiceView,
 }: {
   guideTarget?: HTMLElement | null;
   onShowGuide?: () => void;
   onStart: () => void;
   onJourney: (journey: SelectedJourney) => void;
+  onManualBus: () => void;
+  voiceView?: "list" | "map";
   route: BusRoute | null;
   direction: 0 | 1;
   onAction?: (action: LearningAssistantAction | null) => void;
@@ -448,11 +451,12 @@ export function AssistantPanel({
         <p className="quiet-copy">{t("assistantIntro")}</p>
         <form className="assistant-form" onSubmit={event => { event.preventDefault(); void ask(draft); }}>
           <label><span className="sr-only">{t("assistantPlaceholder")}</span><textarea value={draft} rows={2} maxLength={500} placeholder={t("assistantPlaceholder")} onChange={event => setDraft(event.target.value)} /></label>
+          {voiceView ? <VoiceInput key={`${voiceView}:${busy}`} disabled={busy} onTranscript={text => setDraft(value => [value.trimEnd(), text].filter(Boolean).join(" ").slice(0, 500))} /> : null}
           <button type="submit" disabled={busy || draft.trim().length < 2}><Send size={15} aria-hidden="true" /><span>{t("assistantSend")}</span></button>
         </form>
         <p className="assistant-privacy">{t("assistantPrivacy")}</p>
         {busy ? <p className="assistant-progress" role="status">{locating ? label("正在取得目前位置…", "正在获取当前位置…", "Getting your location…") : label("正在理解要求及連接各段交通…", "正在理解要求并连接各段交通…", "Resolving places and connecting your journey…")}</p> : null}
-        {!entry ? <div className="assistant-suggestions">{[label("我想去澳門運動場", "我想去澳门运动场", "I want to go to Macau Stadium"), label("由培正去澳門運動場，再去媽閣", "从培正去澳门运动场，再去妈阁", "From Pui Ching to Macau Stadium, then A-Ma Temple"), label("幫我安排傳統文化一日遊", "帮我安排传统文化一日游", "Plan a traditional culture day trip")].map(suggestion => <button type="button" key={suggestion} disabled={busy} onClick={() => void ask(suggestion)}>{suggestion}</button>)}</div> : null}
+        {!entry ? <div className="assistant-suggestions">{[label("由關閘搭巴士去媽閣廟", "从关闸坐巴士去妈阁庙", "Take a bus from Border Gate to A-Ma Temple"), label("由培正去澳門運動場，再去媽閣", "从培正去澳门运动场，再去妈阁", "From Pui Ching to Macau Stadium, then A-Ma Temple"), label("幫我安排傳統文化一日遊", "帮我安排传统文化一日游", "Plan a traditional culture day trip")].map(suggestion => <button type="button" key={suggestion} disabled={busy} onClick={() => void ask(suggestion)}>{suggestion}</button>)}</div> : null}
         {result?.kind === "choose" && pending ? <div className="assistant-place-choices">
           <p>{result.field === "origin" ? label("請揀出發地點", "请选择出发地点", "Choose your origin") : label("你想去邊一個地點？", "你想去哪个地点？", "Which destination do you mean?")}</p>
           {result.choices.map(place => <button type="button" key={place.id} disabled={busy} onClick={() => void ask(pending.question, { ...pending, [result.field === "origin" ? "originId" : "destinationId"]: place.id })}>{place.name}{place.nearbyStop ? ` · ${label("近", "近", "near")} ${place.nearbyStop}` : ""}</button>)}
@@ -468,6 +472,7 @@ export function AssistantPanel({
         </div> : null}
         {entry?.failed ? <p className="error-copy" role="alert">{entry.unconfigured ? residentCopy[locale].aiNotEnabled : t("assistantUnavailable")}</p> : null}
         {entry?.answer ? <button type="button" className="text-action" onClick={onShowGuide}>{label("查看指引", "查看指引", "View guidance")}</button> : null}
+        <button type="button" className="text-action assistant-manual-plan" disabled={busy} onClick={onManualBus}>{residentCopy[locale].manualBus}</button>
       </section>
       {result && "draft" in result ? <ItineraryPanel key={result.kind === "itineraries" ? result.generatedAt : JSON.stringify(result.draft)} result={result} busy={busy}
         onContinue={trip => { if (pending) void ask(pending.question, { ...pending, trip, previousTrip: undefined }); }}
