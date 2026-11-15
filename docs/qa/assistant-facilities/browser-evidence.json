@@ -1,0 +1,57 @@
+[
+  {
+    "name": "render-desktop",
+    "question": "我想要最近嘅醫院",
+    "shown": [
+      "目前位置 → 鏡湖醫院",
+      "",
+      "直線距離約 631 m",
+      "",
+      "AI 幫你比較咗以下方案",
+      "",
+      "由目前位置去鏡湖醫院，最直接係步行：有已地圖化嘅步行路線，全長約751米（2026-11-09 步行地圖），唔使轉車。若想搭車，可考慮 N2（往沙梨頭北街/筷子基北灣方向）：喺「高士德/培正」上車，坐1個站到「高士德/亞利鴉架街」落車，再步行約764米到醫院；全程步行約877米，較步行路線略長。留意路線同步行資料有指定日期，服務時間、封路同候車時間未核實，出發前請查看停站狀態。"
+    ],
+    "requests": [
+      {
+        "origin": null
+      },
+      {
+        "origin": "synthetic device location",
+        "facilitySearch": {
+          "category": "hospital",
+          "action": "directions"
+        }
+      }
+    ],
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "name": "render-phone",
+    "question": "我喺塔石廣場，附近有冇診所？",
+    "shown": [
+      "附近診所",
+      "",
+      "以「塔石廣場」為中心",
+      "",
+      "塔石衛生中心",
+      "",
+      "直線距離約 64 m · 肥利喇亞美打大馬路(荷蘭園大馬路)(荷蘭園正街) Avenida do Conselheiro Ferreira de Almeida",
+      "",
+      "查看路線",
+      "Dr. Face",
+      "",
+      "直線距離約 214 m · 東望洋街 Rua de Ferreira do Amaral",
+      "",
+      "查看路線",
+      "GMC"
+    ],
+    "requests": [
+      {
+        "origin": null
+      }
+    ],
+    "overflow": false,
+    "errors": []
+  }
+]

@@ -1,0 +1,184 @@
+[
+  {
+    "question": "我想要最近嘅醫院",
+    "locale": "zh-Hant",
+    "kind": "facility-location",
+    "search": {
+      "category": "hospital",
+      "action": "directions"
+    },
+    "provider": "AI assistant (deepseek-chat)",
+    "generatedAt": "2026-11-15T16:32:25.169Z",
+    "elapsedMs": 862
+  },
+  {
+    "question": "我想要最近嘅醫院",
+    "locale": "zh-Hant",
+    "kind": "plans",
+    "search": {
+      "category": "hospital",
+      "action": "directions"
+    },
+    "origin": "目前位置",
+    "destination": "鏡湖醫院",
+    "options": [
+      {
+        "id": "walk",
+        "walkMeters": 751,
+        "routes": []
+      },
+      {
+        "id": "000N2:1:21-22",
+        "walkMeters": 877,
+        "routes": [
+          [
+            "N2",
+            "M84/2",
+            "M91"
+          ]
+        ]
+      }
+    ],
+    "provider": "AI assistant (deepseek-chat)",
+    "generatedAt": "2026-11-15T16:33:00.352Z",
+    "elapsedMs": 35149
+  },
+  {
+    "question": "Where's the closest hospital to Senado Square?",
+    "locale": "en",
+    "kind": "facilities",
+    "search": {
+      "category": "hospital",
+      "action": "nearest"
+    },
+    "origin": "議事亭前地",
+    "matches": [
+      {
+        "id": "n8246380911",
+        "name": "澳門銀葵醫院",
+        "distanceMeters": 520
+      }
+    ],
+    "provider": "AI assistant (deepseek-chat)",
+    "generatedAt": "2026-11-15T16:33:01.803Z",
+    "elapsedMs": 1453
+  },
+  {
+    "question": "有没有离关闸广场近一点的卫生中心？",
+    "locale": "zh-Hans",
+    "kind": "facilities",
+    "search": {
+      "category": "clinic",
+      "action": "nearest"
+    },
+    "origin": "關閘廣場",
+    "matches": [
+      {
+        "id": "n12051459490",
+        "name": "澳門工會聯合總會工人醫療所 (台山)",
+        "distanceMeters": 361
+      }
+    ],
+    "provider": "AI assistant (deepseek-chat)",
+    "generatedAt": "2026-11-15T16:33:02.963Z",
+    "elapsedMs": 1167
+  },
+  {
+    "question": "依家仲開緊嘅藥房有冇",
+    "locale": "zh-Hant",
+    "kind": "facilities",
+    "search": {
+      "category": "pharmacy",
+      "action": "list",
+      "verify": "hours"
+    },
+    "origin": "目前位置",
+    "matches": [
+      {
+        "id": "n7658782307",
+        "name": "萬寧",
+        "distanceMeters": 114
+      },
+      {
+        "id": "n8795196852",
+        "name": "萬寧",
+        "distanceMeters": 282
+      },
+      {
+        "id": "n7658822249",
+        "name": "萬寧",
+        "distanceMeters": 461
+      },
+      {
+        "id": "n11111168163",
+        "name": "耀華大藥房",
+        "distanceMeters": 473
+      },
+      {
+        "id": "n4820741989",
+        "name": "Fo Lam",
+        "distanceMeters": 505
+      }
+    ],
+    "provider": "AI assistant (deepseek-chat)",
+    "generatedAt": "2026-11-15T16:33:03.911Z",
+    "elapsedMs": 939
+  },
+  {
+    "question": "我而家喺石排灣輕軌站，搭巴士去最近嗰間醫院",
+    "locale": "zh-Hant",
+    "kind": "plans",
+    "search": {
+      "category": "hospital",
+      "action": "directions"
+    },
+    "origin": "石排灣站",
+    "destination": "離島醫療綜合體北京協和醫院澳門醫學中心",
+    "options": [
+      {
+        "id": "000N5:0:21-22",
+        "walkMeters": 541,
+        "routes": [
+          [
+            "N5",
+            "C689/2",
+            "C702"
+          ]
+        ]
+      },
+      {
+        "id": "000H3:0:1-2",
+        "walkMeters": 541,
+        "routes": [
+          [
+            "H3",
+            "C689/2",
+            "C702"
+          ]
+        ]
+      },
+      {
+        "id": "00050:0:26-28",
+        "walkMeters": 565,
+        "routes": [
+          [
+            "50",
+            "C689/1",
+            "C702"
+          ]
+        ]
+      }
+    ],
+    "provider": "AI assistant (deepseek-chat)",
+    "generatedAt": "2026-11-15T16:33:15.917Z",
+    "elapsedMs": 12005
+  },
+  {
+    "question": "幫我叫白車",
+    "locale": "zh-Hant",
+    "kind": "emergency",
+    "provider": "AI assistant (deepseek-chat)",
+    "generatedAt": "2026-11-15T16:33:16.564Z",
+    "elapsedMs": 649
+  }
+]

@@ -1,0 +1,587 @@
+{
+  "method": "Configured DeepSeek model with dated snapshots, Macau public landmarks and a synthetic location near Pui Ching",
+  "scenarios": [
+    {
+      "question": "我想要最近嘅醫院",
+      "locale": "zh-Hant",
+      "expected": "facility-location:hospital:directions",
+      "actual": "facility-location:hospital:directions",
+      "ok": true,
+      "ms": 759
+    },
+    {
+      "question": "我想要最近嘅醫院",
+      "continuation": {
+        "kind": "plans",
+        "destination": "鏡湖醫院",
+        "routes": [
+          "walk",
+          "N2"
+        ]
+      }
+    },
+    {
+      "question": "呢頭邊間醫院最近啊",
+      "locale": "zh-Hant",
+      "expected": "facilities:hospital:nearest",
+      "actual": "facilities:hospital:nearest",
+      "ok": true,
+      "details": {
+        "origin": "目前位置",
+        "matches": [
+          [
+            "a344603858",
+            "鏡湖醫院",
+            631
+          ]
+        ]
+      },
+      "ms": 789
+    },
+    {
+      "question": "我喺議事亭前地，附近有邊幾間醫院？",
+      "locale": "zh-Hant",
+      "expected": "facilities:hospital:list",
+      "actual": "facilities:hospital:list",
+      "ok": true,
+      "details": {
+        "origin": "議事亭前地",
+        "matches": [
+          [
+            "n8246380911",
+            "澳門銀葵醫院",
+            520
+          ],
+          [
+            "a344603858",
+            "鏡湖醫院",
+            699
+          ],
+          [
+            "a481867710",
+            "仁伯爵綜合醫院",
+            710
+          ],
+          [
+            "a1334509320",
+            "氹仔精神科大樓",
+            3903
+          ],
+          [
+            "a412210580",
+            "鏡湖醫院氹仔醫療中心",
+            4904
+          ]
+        ]
+      },
+      "ms": 818
+    },
+    {
+      "question": "离我最近的医院是哪家",
+      "locale": "zh-Hans",
+      "expected": "facilities:hospital:nearest",
+      "actual": "facilities:hospital:nearest",
+      "ok": true,
+      "details": {
+        "origin": "当前位置",
+        "matches": [
+          [
+            "a344603858",
+            "鏡湖醫院",
+            631
+          ]
+        ]
+      },
+      "ms": 887
+    },
+    {
+      "question": "Where's the closest hospital to Senado Square?",
+      "locale": "en",
+      "expected": "facilities:hospital:nearest",
+      "actual": "facilities:hospital:nearest",
+      "ok": true,
+      "details": {
+        "origin": "議事亭前地",
+        "matches": [
+          [
+            "n8246380911",
+            "澳門銀葵醫院",
+            520
+          ]
+        ]
+      },
+      "ms": 1053
+    },
+    {
+      "question": "我而家喺石排灣輕軌站，搭巴士去最近嗰間醫院",
+      "locale": "zh-Hant",
+      "expected": "plans:hospital",
+      "actual": "plans:hospital",
+      "ok": true,
+      "details": {
+        "origin": "石排灣站",
+        "destination": "離島醫療綜合體北京協和醫院澳門醫學中心",
+        "distance": 678,
+        "routes": [
+          "N5",
+          "H3",
+          "50"
+        ]
+      },
+      "ms": 4927
+    },
+    {
+      "question": "由石排灣搭車去最近嗰間醫院",
+      "locale": "zh-Hant",
+      "expected": "plans:hospital|choose:origin",
+      "actual": "choose:origin",
+      "ok": true,
+      "details": [
+        "石排灣",
+        "石排灣"
+      ],
+      "ms": 688
+    },
+    {
+      "question": "Take me to the closest hospital, I'm at Macau International Airport",
+      "locale": "en",
+      "expected": "plans:hospital",
+      "actual": "plans:hospital",
+      "ok": true,
+      "details": {
+        "origin": "澳門國際機場",
+        "destination": "科大醫院",
+        "distance": 823,
+        "routes": [
+          "N2",
+          "AP1",
+          "walk"
+        ]
+      },
+      "ms": 4976
+    },
+    {
+      "question": "我喺塔石廣場，想行去最近嗰個公廁",
+      "locale": "zh-Hant",
+      "expected": "plans:toilets",
+      "actual": "plans:toilets",
+      "ok": true,
+      "details": {
+        "origin": "塔石廣場",
+        "destination": "M20 塔石廣場公廁",
+        "distance": 163,
+        "routes": [
+          "walk",
+          "N2"
+        ]
+      },
+      "ms": 5920
+    },
+    {
+      "question": "附近有冇睇醫生嘅診所呀",
+      "locale": "zh-Hant",
+      "expected": "facilities:clinic",
+      "actual": "facilities:clinic:list",
+      "ok": true,
+      "details": {
+        "origin": "目前位置",
+        "matches": [
+          [
+            "n6540324496",
+            "沈氏醫療中心",
+            53
+          ],
+          [
+            "n4820498403",
+            "Centro Médico Dek Ou",
+            312
+          ],
+          [
+            "a2626596246",
+            "結核病防治中心",
+            426
+          ],
+          [
+            "a411568920",
+            "塔石衛生中心",
+            464
+          ],
+          [
+            "n4821507141",
+            "GMC",
+            501
+          ]
+        ]
+      },
+      "ms": 843
+    },
+    {
+      "question": "有没有离关闸广场近一点的卫生中心？",
+      "locale": "zh-Hans",
+      "expected": "facilities:clinic",
+      "actual": "facilities:clinic:nearest",
+      "ok": true,
+      "details": {
+        "origin": "關閘廣場",
+        "matches": [
+          [
+            "n12051459490",
+            "澳門工會聯合總會工人醫療所 (台山)",
+            361
+          ]
+        ]
+      },
+      "ms": 859
+    },
+    {
+      "question": "关闸附近的诊所",
+      "locale": "zh-Hans",
+      "expected": "facilities:clinic|choose:origin",
+      "actual": "choose:origin",
+      "ok": true,
+      "details": [
+        "關閘",
+        "關閘"
+      ],
+      "ms": 628
+    },
+    {
+      "question": "Any pharmacies around Senado Square?",
+      "locale": "en",
+      "expected": "facilities:pharmacy:list",
+      "actual": "facilities:pharmacy:list",
+      "ok": true,
+      "details": {
+        "origin": "議事亭前地",
+        "matches": [
+          [
+            "n7658892844",
+            "萬寧",
+            24
+          ],
+          [
+            "n4828853111",
+            "Tsan Heng",
+            47
+          ],
+          [
+            "n12450972007",
+            "泰來藥房",
+            56
+          ],
+          [
+            "n7658892845",
+            "屈臣氏",
+            69
+          ],
+          [
+            "a1560498302",
+            "便民藥房",
+            70
+          ]
+        ]
+      },
+      "ms": 651
+    },
+    {
+      "question": "依家仲開緊嘅藥房有冇",
+      "locale": "zh-Hant",
+      "expected": "facilities:pharmacy:hours",
+      "actual": "facilities:pharmacy:hours",
+      "ok": true,
+      "details": {
+        "origin": "目前位置",
+        "matches": [
+          [
+            "n7658782307",
+            "萬寧",
+            114
+          ],
+          [
+            "n8795196852",
+            "萬寧",
+            282
+          ],
+          [
+            "n7658822249",
+            "萬寧",
+            461
+          ],
+          [
+            "n11111168163",
+            "耀華大藥房",
+            473
+          ],
+          [
+            "n4820741989",
+            "Fo Lam",
+            505
+          ]
+        ]
+      },
+      "ms": 882
+    },
+    {
+      "question": "我去山頂醫院有咩巴士",
+      "locale": "zh-Hant",
+      "expected": "location:仁伯爵綜合醫院",
+      "actual": "location:仁伯爵綜合醫院",
+      "ok": true,
+      "ms": 909
+    },
+    {
+      "question": "我想去醫院後街",
+      "locale": "zh-Hant",
+      "expected": "choose:destination|location",
+      "actual": "location:醫院後街",
+      "ok": true,
+      "ms": 442
+    },
+    {
+      "question": "nearest ER from Senado Square",
+      "locale": "en",
+      "expected": "facilities:hospital:service",
+      "actual": "facilities:hospital:service",
+      "ok": true,
+      "details": {
+        "origin": "議事亭前地",
+        "matches": [
+          [
+            "n8246380911",
+            "澳門銀葵醫院",
+            537
+          ],
+          [
+            "a344603858",
+            "鏡湖醫院",
+            654
+          ],
+          [
+            "a481867710",
+            "仁伯爵綜合醫院",
+            678
+          ],
+          [
+            "a1334509320",
+            "氹仔精神科大樓",
+            3919
+          ],
+          [
+            "a412210580",
+            "鏡湖醫院氹仔醫療中心",
+            4928
+          ]
+        ]
+      },
+      "ms": 1015
+    },
+    {
+      "question": "幫我叫白車",
+      "locale": "zh-Hant",
+      "expected": "emergency",
+      "actual": "emergency",
+      "ok": true,
+      "ms": 386
+    },
+    {
+      "question": "我行到攰啦，最近有冇巴士站",
+      "locale": "zh-Hant",
+      "expected": "nearby-location",
+      "actual": "nearby-location",
+      "ok": true,
+      "ms": 869
+    },
+    {
+      "question": "我想搵個地方泊低架車",
+      "locale": "zh-Hant",
+      "expected": "nearby-location",
+      "actual": "nearby-location",
+      "ok": true,
+      "ms": 1051
+    },
+    {
+      "question": "由培正去石排灣坐咩巴士",
+      "locale": "zh-Hant",
+      "expected": "plans|choose:destination",
+      "actual": "choose:destination",
+      "ok": true,
+      "details": [
+        "石排灣",
+        "石排灣"
+      ],
+      "ms": 1001
+    },
+    {
+      "question": "想去媽閣廟，跟住去大三巴",
+      "locale": "zh-Hant",
+      "expected": "trip-location|trip-choose",
+      "actual": "trip-location",
+      "ok": true,
+      "ms": 985
+    },
+    {
+      "question": "幫我 plan 一日遊 睇澳門舊建築",
+      "locale": "zh-Hant",
+      "expected": "trip-details",
+      "actual": "trip-details",
+      "ok": true,
+      "ms": 773
+    },
+    {
+      "question": "而家邊條橋最塞",
+      "locale": "zh-Hant",
+      "expected": "traffic",
+      "actual": "traffic",
+      "ok": true,
+      "ms": 708
+    },
+    {
+      "question": "I'm looking for a pharmacy",
+      "locale": "en",
+      "expected": "facilities:pharmacy",
+      "actual": "facilities:pharmacy:nearest",
+      "ok": true,
+      "details": {
+        "origin": "Current location",
+        "matches": [
+          [
+            "n7658782307",
+            "萬寧",
+            114
+          ]
+        ]
+      },
+      "ms": 582
+    },
+    {
+      "question": "行過去邊間醫院最近",
+      "locale": "zh-Hant",
+      "expected": "facilities:hospital:walking|plans:hospital",
+      "actual": "facilities:hospital:walking",
+      "ok": true,
+      "details": {
+        "origin": "目前位置",
+        "matches": [
+          [
+            "a344603858",
+            "鏡湖醫院",
+            751
+          ]
+        ]
+      },
+      "ms": 1022
+    },
+    {
+      "question": "附近有冇洗手間唔該",
+      "locale": "zh-Hant",
+      "expected": "facilities:toilets",
+      "actual": "facilities:toilets:nearest",
+      "ok": true,
+      "details": {
+        "origin": "目前位置",
+        "matches": [
+          [
+            "n5257364007",
+            "M15 亞利鴉架街公廁",
+            239
+          ]
+        ]
+      },
+      "ms": 1022
+    },
+    {
+      "question": "我想要最近嘅醫院",
+      "locale": "zh-Hant",
+      "expected": "plans:hospital",
+      "actual": "plans:hospital",
+      "ok": true,
+      "details": {
+        "origin": "目前位置",
+        "destination": "鏡湖醫院",
+        "distance": 631,
+        "routes": [
+          "walk",
+          "N2"
+        ]
+      },
+      "ms": 4495
+    },
+    {
+      "question": "Nearest place for a prescription near Senado Square",
+      "locale": "en",
+      "expected": "facilities:pharmacy:service",
+      "actual": "facilities:pharmacy:service",
+      "ok": true,
+      "details": {
+        "origin": "議事亭前地",
+        "matches": [
+          [
+            "n7658892845",
+            "屈臣氏",
+            27
+          ],
+          [
+            "a1560498302",
+            "便民藥房",
+            27
+          ],
+          [
+            "n7658892844",
+            "萬寧",
+            33
+          ],
+          [
+            "n12450972005",
+            "永春藥房",
+            35
+          ],
+          [
+            "n12450972007",
+            "泰來藥房",
+            43
+          ]
+        ]
+      },
+      "ms": 625
+    },
+    {
+      "question": "關閘附近有冇無障礙廁所",
+      "locale": "zh-Hant",
+      "expected": "facilities:toilets:service|choose:origin",
+      "actual": "choose:origin",
+      "ok": true,
+      "details": [
+        "關閘",
+        "關閘"
+      ],
+      "ms": 653
+    },
+    {
+      "question": "行去最近嘅郵局",
+      "locale": "zh-Hant",
+      "expected": "clarify",
+      "actual": "clarify",
+      "ok": true,
+      "details": "目前可以按類別搵醫院、診所、藥房、廁所、停車場同巴士站。其他地點可以輸入名稱查路線。",
+      "ms": 547
+    },
+    {
+      "question": "帶我去最近嘅醫院，我喺澳門培正中學",
+      "locale": "zh-Hant",
+      "expected": "plans:hospital",
+      "actual": "plans:hospital",
+      "ok": true,
+      "details": {
+        "origin": "澳門培正中學",
+        "destination": "鏡湖醫院",
+        "distance": 605,
+        "routes": [
+          "walk",
+          "N2",
+          "N2"
+        ]
+      },
+      "ms": 6328
+    }
+  ]
+}
