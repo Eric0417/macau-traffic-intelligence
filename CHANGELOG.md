@@ -7,6 +7,7 @@
 - Apply assistant and manual plans to the home map, fit the selected route independently of traffic, and open details in a draggable sheet. Reset live route state on every application and omit current bus estimates for future journeys.
 - Show real microphone levels, an enabled white send button and cancellable waiting. Deliver checked route candidates before AI comparison finishes, retain explicit incomplete/error states and abort cancelled model requests.
 - Shorten AI explanations, preserve stable route identity while ranking changes, and clear previous itinerary context when a single journey replaces it. Add regression coverage for map controls, complete traffic geometry, gestures, cancellation and streaming responses.
+- Reuse numeric route ordering and skip an unchanged search after empty suspension checks. Record aggregate search-stage durations without questions, coordinates or route records.
 
 ## Native iOS application - 2026-11-16
 

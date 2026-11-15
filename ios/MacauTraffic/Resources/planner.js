@@ -40,6 +40,7 @@ var NativePlanner = (() => {
   var BUS_JOURNEY_ACCESS_METERS = 1e3;
   var MAX_BUS_LEGS = 4;
   var MAX_JOURNEYS = 6;
+  var journeyOrder = new Intl.Collator("en", { numeric: true });
   function coversDeparture(windows, minute) {
     return windows.some(
       ([start, end]) => start <= end ? minute >= start && minute <= end : minute >= start || minute <= end
@@ -102,7 +103,7 @@ var NativePlanner = (() => {
     const { distances: ends, paths: egressPaths } = endpointStops(network, destination, options.includeNearbyStops ?? false, options.walking?.egress);
     const hasHours = (plan2) => plan2.legs.every((item) => item.serviceWindows);
     const score = (plan2) => plan2.totalStops + (plan2.accessMeters + plan2.egressMeters) / 100 + Math.max(0, plan2.legs.length - 1) * 6;
-    const compare = (a, b) => (options.departureMinute === void 0 ? 0 : Number(hasHours(b)) - Number(hasHours(a))) || score(a) - score(b) || a.legs.length - b.legs.length || a.id.localeCompare(b.id, "en", { numeric: true });
+    const compare = (a, b) => (options.departureMinute === void 0 ? 0 : Number(hasHours(b)) - Number(hasHours(a))) || score(a) - score(b) || a.legs.length - b.legs.length || journeyOrder.compare(a.id, b.id);
     const departures = /* @__PURE__ */ new Map();
     for (const route of network.routes) {
       if (options.departureMinute !== void 0 && route.serviceWindows && !coversDeparture(route.serviceWindows, options.departureMinute)) continue;

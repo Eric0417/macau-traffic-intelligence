@@ -64,6 +64,7 @@ export interface BusJourney {
 export const BUS_JOURNEY_ACCESS_METERS = 1_000;
 const MAX_BUS_LEGS = 4;
 const MAX_JOURNEYS = 6;
+const journeyOrder = new Intl.Collator("en", { numeric: true });
 
 function coversDeparture(windows: NonNullable<BusJourneyRoute["serviceWindows"]>, minute: number): boolean {
   return windows.some(([start, end]) =>
@@ -138,7 +139,7 @@ export function planBusJourneys(network: BusNetwork, origin: BusJourneyEndpoint,
   const compare = (a: BusJourney, b: BusJourney) =>
     (options.departureMinute === undefined ? 0 : Number(hasHours(b)) - Number(hasHours(a))) ||
     score(a) - score(b) || a.legs.length - b.legs.length ||
-    a.id.localeCompare(b.id, "en", { numeric: true });
+    journeyOrder.compare(a.id, b.id);
   const departures = new Map<string, BusJourneyLeg[]>();
   for (const route of network.routes) {
     if (options.departureMinute !== undefined && route.serviceWindows &&

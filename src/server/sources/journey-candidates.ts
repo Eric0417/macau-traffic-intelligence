@@ -7,32 +7,43 @@ import type { Locale } from "@/lib/types";
 import { readSource, type SourceRead } from "@/server/cache";
 import { busDiversionSource } from "./bus";
 
-export async function journeyCandidates(bus: BusNetwork, walking: WalkingNetwork, origin: AssistantPlace, destination: AssistantPlace, locale: Locale, departureMinute?: number, router = createWalkingRouter(walking), checkCurrentSuspensions = departureMinute !== undefined, signal?: AbortSignal) {
+export async function journeyCandidates(bus: BusNetwork, walking: WalkingNetwork, origin: AssistantPlace, destination: AssistantPlace, locale: Locale, departureMinute?: number, router?: ReturnType<typeof createWalkingRouter>, checkCurrentSuspensions = departureMinute !== undefined, signal?: AbortSignal) {
   signal?.throwIfAborted();
+  const started = performance.now();
+  router ??= createWalkingRouter(walking);
   const text = (hant: string, hans: string, en: string) => locale === "en" ? en : locale === "zh-Hans" ? hans : hant;
   const refreshes: Array<() => Promise<void>> = [];
   const access = router(origin.coordinates), egress = router(destination.coordinates, true);
+  const walkingMs = Math.round(performance.now() - started);
+  let searchMs = 0, stopChecksMs = 0;
   const stops = [...new Map(bus.routes.flatMap(r => r.stops).map(s => [s.stationCode, s])).values()];
   const accessMapped = stops.some(s => distanceMeters(s.coordinates, origin.coordinates) <= BUS_JOURNEY_ACCESS_METERS && access(s.coordinates));
   const egressMapped = stops.some(s => distanceMeters(s.coordinates, destination.coordinates) <= BUS_JOURNEY_ACCESS_METERS && egress(s.coordinates));
   const unavailableStops = new Map<string, Set<string>>();
-  const plan = () => planBusJourneys(bus, origin, destination, {
-    departureMinute, unavailableStops, walking: { access: accessMapped ? access : undefined, egress: egressMapped ? egress : undefined },
-  });
+  const plan = () => {
+    const start = performance.now();
+    const plans = planBusJourneys(bus, origin, destination, {
+      departureMinute, unavailableStops, walking: { access: accessMapped ? access : undefined, egress: egressMapped ? egress : undefined },
+    });
+    searchMs += performance.now() - start;
+    return plans;
+  };
   let candidates = plan();
   const checks: Array<{ name: string; read: SourceRead<string[]> | null }> = [];
   // Refill from the network after exclusions, then check newly exposed routes.
   while (checkCurrentSuspensions) {
     const names = [...new Set(candidates.flatMap(c => c.legs.map(l => l.routeName)))].filter(name => !unavailableStops.has(name));
     if (!names.length) break;
+    const checking = performance.now();
     const reads = await Promise.all(names.map(async name => ({ name, read: await readSource(busDiversionSource(name)) })));
+    stopChecksMs += performance.now() - checking;
     signal?.throwIfAborted();
     for (const { name, read } of reads) {
       checks.push({ name, read });
       unavailableStops.set(name, new Set(read?.result.data ?? []));
       if (read?.refresh) refreshes.push(read.refresh);
     }
-    candidates = plan();
+    if (reads.some(({ read }) => read?.result.data.length)) candidates = plan();
   }
   const walk = access(destination.coordinates);
   if (walk) candidates.push({ id: "walk", legs: [], totalStops: 0, accessMeters: walk.meters, egressMeters: 0, transferMeters: 0, walking: { direct: walk } });
@@ -48,6 +59,8 @@ export async function journeyCandidates(bus: BusNetwork, walking: WalkingNetwork
   if (checks.some(({ read }) => !read || read.result.stale)) warnings.push(text("部分停站調整資料未能即時核實。", "部分停站调整资料未能即时核实。", "Some stop suspension checks are missing or delayed."));
   if (bus.coverage.missingRoutes.length) warnings.push(text("路線資料未涵蓋所有巴士服務。", "路线资料未涵盖所有巴士服务。", "The route dataset does not cover every bus service."));
   if (!candidates.some(c => c.legs.length)) warnings.push(text("呢次搜尋未搵到符合步行及轉乘限制嘅巴士方案，唔代表冇巴士服務。", "此次搜索未找到符合步行和换乘限制的巴士方案，不代表没有巴士服务。", "This search found no bus option within its walking and transfer limits; it does not establish that no bus service exists."));
+  if (process.env.NODE_ENV === "production") console.info(JSON.stringify({ event: "journey_candidates_timing", walkingMs,
+    searchMs: Math.round(searchMs), stopChecksMs: Math.round(stopChecksMs), totalMs: Math.round(performance.now() - started) }));
   return { candidates, warnings, checks, refreshes, taxiAlternative };
 }
 

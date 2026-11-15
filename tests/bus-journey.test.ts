@@ -17,6 +17,11 @@ const network = (routes: BusJourneyRoute[]): BusNetwork => ({
 const endpoint = (stationCode: string) => ({ stationCode });
 
 describe("local bus journey search", () => {
+  it("breaks equal-cost route ties in numeric order", () => {
+    const data = network(["10", "2", "1"].map(name => route(name, [stop("A"), stop("D")])));
+    expect(planBusJourneys(data, endpoint("A"), endpoint("D")).map(plan => plan.legs[0].routeName)).toEqual(["1", "2", "10"]);
+  });
+
   it("keeps a direct bus available for comparison when six shorter transfers rank ahead", () => {
     const data = network([
       route("56", [stop("A"), stop("B"), stop("C"), stop("D")]),
