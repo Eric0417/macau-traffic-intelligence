@@ -17,6 +17,21 @@ const graph: WalkingNetwork = {
 };
 
 describe("mapped walking journeys", () => {
+  it("snaps across a cell border and to the middle of a long edge", () => {
+    const route = createWalkingRouter({
+      nodes: [[113.5401, 22.188], [113.5401, 22.194]], edges: [[0, 1, 0, true]],
+    });
+    const origin: Coordinates = [113.5399, 22.190];
+    const destination: Coordinates = [113.5401, 22.1921];
+    const path = route(origin)(destination);
+    expect(path?.coordinates[0][0]).toBe(113.5401);
+    expect(path?.coordinates.at(-1)?.[1]).toBeCloseTo(destination[1], 8);
+    expect(path?.meters).toBeGreaterThan(250);
+    expect(path?.meters).toBeLessThan(260);
+    expect(route(destination, true)(origin)).toEqual(path);
+    expect(route([113.538, 22.190])(destination)).toBeNull();
+  });
+
   it("finds multilingual place names and prefers a landmark for an ambiguous prefix", () => {
     const street = { id: "w1", name: "大三巴街", aliases: [], coordinates: a, context: "", street: true };
     expect(searchJourneyPlaces(graph.places, "ruinas de sao paulo")[0].name).toBe("大三巴牌坊");

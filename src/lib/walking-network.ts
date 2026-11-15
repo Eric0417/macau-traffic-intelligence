@@ -101,6 +101,7 @@ interface Snap {
 const MAX_SNAP_METERS = 55;
 const longitudeScale = Math.cos(22.16 * Math.PI / 180);
 const searchRadius = MAX_SNAP_METERS / 100_000;
+const snapCellSize = 0.002;
 
 export function createWalkingRouter({ nodes, edges }: Pick<WalkingNetwork, "nodes" | "edges">) {
   const lengths = edges.map(([a, b]) => distanceMeters(nodes[a], nodes[b]));
@@ -108,6 +109,7 @@ export function createWalkingRouter({ nodes, edges }: Pick<WalkingNetwork, "node
   const incoming: [node: number, length: number][][] = nodes.map(() => []);
   const parents = Int32Array.from(nodes, (_, index) => index);
   const sizes = new Int32Array(nodes.length).fill(1);
+  const snapCells = new Map<string, number[]>();
   function component(node: number): number {
     while (parents[node] !== node) {
       parents[node] = parents[parents[node]];
@@ -115,7 +117,20 @@ export function createWalkingRouter({ nodes, edges }: Pick<WalkingNetwork, "node
     }
     return node;
   }
-  edges.forEach(([a, b, direction], index) => {
+  edges.forEach(([a, b, direction, canSnap], index) => {
+    if (canSnap) {
+      // Index the existing snap bounds, including edges that cross cell borders.
+      const minX = Math.floor((Math.min(nodes[a][0], nodes[b][0]) - searchRadius) / snapCellSize);
+      const maxX = Math.floor((Math.max(nodes[a][0], nodes[b][0]) + searchRadius) / snapCellSize);
+      const minY = Math.floor((Math.min(nodes[a][1], nodes[b][1]) - searchRadius) / snapCellSize);
+      const maxY = Math.floor((Math.max(nodes[a][1], nodes[b][1]) + searchRadius) / snapCellSize);
+      for (let x = minX; x <= maxX; x++) for (let y = minY; y <= maxY; y++) {
+        const key = `${x}:${y}`;
+        const cell = snapCells.get(key);
+        if (cell) cell.push(index);
+        else snapCells.set(key, [index]);
+      }
+    }
     let first = component(a), second = component(b);
     if (first !== second) {
       if (sizes[first] < sizes[second]) [first, second] = [second, first];
@@ -136,9 +151,9 @@ export function createWalkingRouter({ nodes, edges }: Pick<WalkingNetwork, "node
   function snap(coordinates: Coordinates): Snap | null {
     let best: Snap | null = null;
     let bestOnMain: Snap | null = null;
-    for (let edge = 0; edge < edges.length; edge++) {
-      const [a, b, , canSnap] = edges[edge];
-      if (!canSnap) continue;
+    const key = `${Math.floor(coordinates[0] / snapCellSize)}:${Math.floor(coordinates[1] / snapCellSize)}`;
+    for (const edge of snapCells.get(key) ?? []) {
+      const [a, b] = edges[edge];
       const start = nodes[a], end = nodes[b];
       const [x, y] = coordinates;
       if (x < Math.min(start[0], end[0]) - searchRadius || x > Math.max(start[0], end[0]) + searchRadius ||
