@@ -165,3 +165,14 @@ it("keeps bus choices for indoor coordinates while labelling unmapped access", a
   const { data } = await planAssistantJourney({ question: "去體育館", locale: "zh-Hant", destinationId: "arena", origin: from.coordinates });
   expect(data.kind).toBe("plans");
 });
+
+it("treats a generic hospital destination returned by the model as a nearby search", async () => {
+  sources();
+  const model = vi.spyOn(assistant, "callAssistantProvider").mockResolvedValue(JSON.stringify({
+    intent: "journey", destinationQueries: ["醫院"],
+  }));
+  const { data } = await planAssistantJourney({ question: "我想要最近嘅醫院", locale: "zh-Hant" });
+  expect(data).toMatchObject({ kind: "facility-location", search: { category: "hospital", action: "directions" } });
+  expect(model).toHaveBeenCalledOnce();
+  expect(cache.readSource).not.toHaveBeenCalled();
+});

@@ -1,5 +1,10 @@
 # Changelog
 
+## Find nearby facilities in the AI assistant - 2026-11-16
+
+- Understand whether a question asks for a nearby type of place, a specific destination or directions. Find hospitals, clinics, pharmacies and toilets by category.
+- Use device location or a named landmark to select the nearest mapped facility and open available bus and walking directions. Show opening hours and services as unverified when requested.
+
 ## Bus route cards - 2026-11-16
 
 - Give route cards a responsive minimum width so codes such as 701X and 701XS fit on one line. Use lighter route numbers and muted operator labels in both themes.

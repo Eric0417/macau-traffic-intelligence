@@ -2,6 +2,7 @@
 
 import { createPortal } from "react-dom";
 import type { AssistantJourneyPlans, AssistantJourneyRequest, AssistantJourneyResult } from "@/lib/assistant-journey";
+import { AssistantFacilitiesPanel, facilityDistanceLabel } from "./assistant-facilities-panel";
 import { itineraryDraft, ItineraryPanel } from "./itinerary-panel";
 import type { TripDraft } from "@/lib/itinerary";
 import type { BusJourney } from "@/lib/bus-journey";
@@ -405,7 +406,11 @@ export function AssistantPanel({
         setEntry({ question, answer: body.data }); onShowGuide?.(); onAction?.(body.data.action ?? null);
         return;
       }
-      if (data.kind === "location" || data.kind === "trip-location" || data.kind === "nearby-location") {
+      if (data.kind === "facility-location") {
+        payload = { ...payload, facilitySearch: data.search };
+        setPending(payload);
+      }
+      if (data.kind === "location" || data.kind === "trip-location" || data.kind === "nearby-location" || (data.kind === "facility-location" && !data.reason)) {
         if (data.kind === "location") payload = { ...payload, destinationId: data.destination.id };
         if (data.kind === "trip-location") payload = { ...payload, trip: data.draft };
         if (data.kind === "trip-location") setActiveTrip(data.draft);
@@ -430,7 +435,12 @@ export function AssistantPanel({
       setResult(data);
       if ("draft" in data) { setPending({ ...payload, trip: data.draft }); setActiveTrip(data.kind === "itineraries" ? itineraryDraft(data, data.options[0]) : data.draft); }
       else setActiveTrip(undefined);
-      if (data.kind === "choose") setPending({ ...payload, ...(data.destination ? { destinationId: data.destination.id } : {}), ...(data.originQuery ? { originQuery: data.originQuery } : {}) });
+      if (data.kind === "choose") setPending({
+        ...payload,
+        ...(data.destination ? { destinationId: data.destination.id } : {}),
+        ...(data.originQuery ? { originQuery: data.originQuery } : {}),
+        ...(data.facilitySearch ? { facilitySearch: data.facilitySearch } : {}),
+      });
       if (data.kind === "plans") showOption(data, data.options[0].journey);
     } catch (error) {
       setEntry({ question, failed: true, unconfigured: error instanceof Error && error.message === "assistant_unconfigured" });
@@ -443,6 +453,9 @@ export function AssistantPanel({
     requestedId.current = request.id;
     void ask(request.question);
   }, [request, busy, ask]);
+
+  const locationReason = result?.kind === "facility-location" ? result.reason : undefined;
+  const showOriginInput = locationFailed || locationReason || (result?.kind === "clarify" && result.allowOrigin !== false);
 
   return (
     <div className="panel-stack assistant-planning">
@@ -462,7 +475,14 @@ export function AssistantPanel({
           {result.choices.map(place => <button type="button" key={place.id} disabled={busy} onClick={() => void ask(pending.question, { ...pending, [result.field === "origin" ? "originId" : "destinationId"]: place.id })}>{place.name}{place.nearbyStop ? ` · ${label("近", "近", "near")} ${place.nearbyStop}` : ""}</button>)}
         </div> : null}
         {result?.kind === "clarify" ? <p className="data-warning" role="status">{result.message}</p> : null}
-        {(locationFailed || result?.kind === "clarify") && pending ? <div className="assistant-location-fallback">
+        {result?.kind === "emergency" ? <div className="data-warning" role="status">
+          <p>{label("如需澳門緊急救援或救護車，請立即致電 999。", "如需澳门紧急救援或救护车，请立即拨打 999。", "For emergency help or an ambulance in Macau, call 999 now.")}</p>
+          <a href="tel:999">{label("致電 999", "拨打 999", "Call 999")}</a>
+          {" · "}<a href="https://www.gov.mo/en/services/ps-1544/" target="_blank" rel="noreferrer">{label("衛生局急診資訊", "卫生局急诊信息", "Health Bureau emergency information")}</a>
+        </div> : null}
+        {showOriginInput && pending ? <div className="assistant-location-fallback">
+          {locationReason === "outside-macau" ? <p role="status">{label("定位喺搜尋範圍之外，請輸入澳門嘅出發地點或地標。", "定位在搜索范围之外，请输入澳门的出发地点或地标。", "Your location is outside the search area. Enter a starting point or landmark in Macau.")}</p> : null}
+          {locationReason === "unknown-landmark" ? <p role="status">{label("未能確定搜尋起點，請輸入附近地標或另一個叫法。", "无法确定搜索起点，请输入附近地标或其他名称。", "The starting point could not be identified. Enter a nearby landmark or another name.")}</p> : null}
           {locationFailed ? <p role="status">{label("未能取得位置。可以重試，或者輸入出發地點。", "未能获取位置。可以重试，或者输入出发地点。", "Location unavailable. Retry or enter your starting point.")}</p> : null}
           {locationFailed ? <button className="text-action" type="button" disabled={busy} onClick={() => void ask(pending.question, { ...pending, origin: undefined, originQuery: undefined, originId: undefined, trip: pending.trip ? { ...pending.trip, originQuery: undefined, originId: undefined } : undefined })}>{label("重試定位", "重试定位", "Retry location")}</button> : null}
           <form onSubmit={event => { event.preventDefault(); void ask(pending.question, { ...pending, origin: undefined, originQuery: originDraft, originId: undefined, trip: pending.trip ? { ...pending.trip, originQuery: originDraft, originId: undefined } : undefined }); }}>
@@ -482,8 +502,14 @@ export function AssistantPanel({
         <p className="assistant-answer">{result.answer.answer}</p>
         <ul className="assistant-context">{result.answer.contextSummary.map(item => <li key={item}>{item}</li>)}</ul>
       </section> : null}
+      {result?.kind === "facilities" && pending ? <AssistantFacilitiesPanel result={result} busy={busy}
+        onDirections={place => void ask(pending.question, {
+          question: pending.question, locale, destinationId: place.id,
+          ...(result.origin.id === "current" ? { origin: result.origin.coordinates } : { originId: result.origin.id }),
+        })} /> : null}
       {result?.kind === "plans" ? <section className="panel-section assistant-options" aria-label={label("AI 行程方案", "AI 行程方案", "AI journey options")}>
         <p className="eyebrow">{result.origin.name} → {result.destination.name}</p>
+        {result.facilityMatch ? <p className="quiet-copy">{facilityDistanceLabel(result.facilityMatch.search, result.facilityMatch.distanceMeters, locale)}</p> : null}
         <h2>{label("AI 幫你比較咗以下方案", "AI 帮你比较了以下方案", "Your AI journey options")}</h2>
         <p>{result.summary}</p>
         <p className="quiet-copy">{label("即時出發", "即刻出发", "Leave now")} · {new Date(result.generatedAt).toLocaleTimeString(locale === "en" ? "en-GB" : "zh-MO", { timeZone: "Asia/Macau", hour: "2-digit", minute: "2-digit" })}</p>

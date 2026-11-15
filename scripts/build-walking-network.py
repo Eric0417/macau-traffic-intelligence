@@ -37,6 +37,20 @@ NAME_KEYS = (
 )
 
 
+FACILITY_TAGS = {
+    "hospital": "hospital", "clinic": "clinic", "doctors": "clinic",
+    "pharmacy": "pharmacy", "toilets": "toilets",
+}
+
+
+def facility_category(tags):
+    if tags.get("access") in {"private", "no", "customers"} or tags.get("disused") == "yes":
+        return None
+    if any(marker in tags.get("name", "") for marker in ("暫停開放", "暂停开放")):
+        return None
+    return FACILITY_TAGS.get(tags.get("amenity")) or FACILITY_TAGS.get(tags.get("healthcare"))
+
+
 def foot_allowed(tags):
     foot = tags.get("foot", "")
     if tags.get("foot:conditional") or tags.get("access:conditional"):
@@ -95,10 +109,12 @@ class Snapshot(osmium.SimpleHandler):
         if not names:
             return
         context = tags.get("addr:street") or tags.get("addr:suburb") or ""
+        category = facility_category(tags)
         self.places.append({
             "id": ident, "name": names[0], "aliases": names[1:],
             "coordinates": coordinates, "context": context[:120],
             **({"approximate": True} if approximate else {}),
+            **({"facilityCategory": category} if category else {}),
             **({"street": True} if named_road and not any(key in tags for key in POI_KEYS) else {}),
         })
 

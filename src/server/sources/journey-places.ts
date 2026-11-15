@@ -8,15 +8,21 @@ import { distanceMeters } from "@/lib/resident-tools";
 
 const normalize = (name: string) => name.toLocaleLowerCase().replace(/[\s\p{P}]/gu, "");
 
-export function placesFor(query: string, bus: BusNetwork, walking: WalkingNetwork, includeRelated = false): AssistantPlace[] {
+export function placesFor(query: string, bus: BusNetwork | undefined, walking: WalkingNetwork, includeRelated = false): AssistantPlace[] {
   const places = searchJourneyPlaces(walking.places, query);
   const exact = places.filter(p => [p.name, ...p.aliases].some(n => normalize(n) === normalize(query)));
-  if (exact.length && !includeRelated) return exact.map(({ id, name, coordinates }) => {
-    if (exact.filter(p => p.name === name).length < 2) return { id, name, coordinates };
-    const nearest = bus.routes.flatMap(r => r.stops).map(s => ({ stop: s, distance: distanceMeters(coordinates, s.coordinates) })).sort((a, b) => a.distance - b.distance)[0];
-    return { id, name, coordinates, nearbyStop: nearest && nearest.distance <= 500 ? `${nearest.stop.stationName} (${nearest.stop.stationCode})` : undefined };
-  });
-  const stops = searchBusStops(bus, query).map(s => ({ id: `stop:${s.stationCode}`, name: `${s.stationName} (${s.stationCode})`, coordinates: s.coordinates }));
+  if (exact.length && !includeRelated) {
+    // A square's named landmark is a better search centre than its street fragments.
+    const landmarks = exact.filter(place => !place.street || place.id.startsWith("a"));
+    const matches = exact.filter(place => landmarks.includes(place) || !landmarks.some(landmark =>
+      landmark.name === place.name && distanceMeters(landmark.coordinates, place.coordinates) <= 300));
+    return matches.map(({ id, name, coordinates }) => {
+      if (matches.filter(p => p.name === name).length < 2) return { id, name, coordinates };
+      const nearest = bus?.routes.flatMap(r => r.stops).map(s => ({ stop: s, distance: distanceMeters(coordinates, s.coordinates) })).sort((a, b) => a.distance - b.distance)[0];
+      return { id, name, coordinates, nearbyStop: nearest && nearest.distance <= 500 ? `${nearest.stop.stationName} (${nearest.stop.stationCode})` : undefined };
+    });
+  }
+  const stops = (bus ? searchBusStops(bus, query) : []).map(s => ({ id: `stop:${s.stationCode}`, name: `${s.stationName} (${s.stationCode})`, coordinates: s.coordinates }));
   const exactStop = stops.find(s => s.id.toUpperCase() === `stop:${query}`.toUpperCase());
   return exactStop ? [exactStop] : [...places.map(({ id, name, coordinates }) => ({ id, name, coordinates })), ...stops].slice(0, 8);
 }
@@ -26,7 +32,7 @@ const correctionSchema = z.object({ corrections: z.array(z.object({
   searchQueries: z.array(z.string().trim().min(1).max(150)).max(3),
 })).max(10) });
 
-export async function resolvePlaceQueries(queries: string[], bus: BusNetwork, walking: WalkingNetwork, question: string) {
+export async function resolvePlaceQueries(queries: string[], bus: BusNetwork | undefined, walking: WalkingNetwork, question: string) {
   const matches = new Map([...new Set(queries.filter(q => q.trim()))].map(query => [query, placesFor(query, bus, walking)]));
   const unresolved = [...matches].filter(([, choices]) => !choices.length).map(([query]) => query);
   if (!unresolved.length) return matches;
@@ -43,7 +49,7 @@ export async function resolvePlaceQueries(queries: string[], bus: BusNetwork, wa
   }
   return matches;
 }
-export function placeById(id: string, bus: BusNetwork, walking: WalkingNetwork): AssistantPlace | undefined {
+export function placeById(id: string, bus: BusNetwork | undefined, walking: WalkingNetwork): AssistantPlace | undefined {
   if (id.startsWith("stop:")) return placesFor(id.slice(5), bus, walking).find(p => p.id === id);
   const p = walking.places.find(p => p.id === id);
   return p && { id: p.id, name: p.name, coordinates: p.coordinates };

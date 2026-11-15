@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { facilitySearchSchema } from "./facility-search";
 import { tripDraftSchema } from "./itinerary";
 
 const localizedTextSchema = z.object({
@@ -267,4 +268,5 @@ export const assistantJourneyRequestSchema = z.object({
   originId: z.string().min(1).max(120).optional(),
   trip: tripDraftSchema.optional(),
   previousTrip: tripDraftSchema.optional(),
+  facilitySearch: facilitySearchSchema.optional(),
 });

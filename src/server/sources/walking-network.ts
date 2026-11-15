@@ -1,6 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import snapshot from "../../../data/walking-network.json";
+import { facilityCategorySchema } from "@/lib/facility-search";
 import type { WalkingNetwork } from "@/lib/walking-network";
 import type { SourceDefinition } from "@/server/source";
 
@@ -16,6 +17,7 @@ export const walkingNetworkSchema = z.object({
     context: z.string(),
     approximate: z.boolean().optional(),
     street: z.boolean().optional(),
+    facilityCategory: facilityCategorySchema.optional(),
   })).min(1),
   nodes: z.array(coordinates).min(2),
   edges: z.array(z.tuple([
@@ -28,7 +30,7 @@ export const walkingNetworkSchema = z.object({
 
 export const walkingNetworkSource: SourceDefinition<WalkingNetwork> = {
   id: "walking-network",
-  cacheVersion: "unlocked-gates-v2",
+  cacheVersion: "facility-tags-v3",
   name: "OpenStreetMap Macau places and pedestrian network",
   url: "https://www.openstreetmap.org/copyright",
   attribution: "© OpenStreetMap contributors, ODbL. Macau extract by Geofabrik.",

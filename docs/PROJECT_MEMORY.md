@@ -29,6 +29,8 @@ External data never enters a client component directly. Public contracts are def
 
 ## Product Decisions
 
+- 2026-11-16: Facility intent (ADR 0023) distinguishes nearest and nearby searches from named trips. Hospitals, clinics, pharmacies and toilets come from tagged places in the same November 9 walking snapshot. The assistant carries the search through location or landmark selection and runs the shared bus and walking planner for directions. Opening hours and specified services are unverified. See `docs/qa/assistant-facilities/VERIFICATION.md` for question coverage and release checks.
+
 - 2026-11-16: Render deployment `dep-dbsticdbedkc73cjbfa0` is live at `5348e7b`. Bus route cards use responsive column widths, lighter numbers and muted operator labels. Typecheck, lint, the build and 230 unit tests passed. Browser checks covered 320–1440px. The mobile 3D performance test exceeded its draw limit once in the full run and passed twice in isolation. Production Chromium and mobile WebKit both showed all 90 route numbers within their cards and verified search and detail for 701XS.
 
 - 2026-11-15: Render deployment `dep-dbst22ajnfac73cljs10` is live at `6b191f5`. Voice input uses DeepSeek ASR for editable drafts on the home and assistant screens. The bus catalogue opens the assistant for trip searches, with manual stop selection available from the assistant. See ADR 0022. Typecheck, lint, 230 unit tests, 137 browser tests and the production build passed. Production checks covered a synthetic Cantonese recording, the editable transcript, an origin-to-destination plan, and the 3D bus and stop models. Health reported Redis and all 11 warmup endpoints returned HTTP 200.

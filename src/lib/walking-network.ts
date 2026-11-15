@@ -1,3 +1,4 @@
+import type { FacilityCategory } from "./facility-search";
 import { distanceMeters, type Coordinates } from "./resident-tools";
 
 export interface JourneyPlace {
@@ -8,6 +9,7 @@ export interface JourneyPlace {
   context: string;
   approximate?: boolean;
   street?: boolean;
+  facilityCategory?: FacilityCategory;
 }
 
 export type WalkingEdge = [from: number, to: number, direction: 0 | 1 | 2, canSnap: boolean];

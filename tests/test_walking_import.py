@@ -29,5 +29,23 @@ class WalkingGatePolicy(unittest.TestCase):
                 self.assertTrue(walking.node_blocks_walking(tags))
 
 
+class FacilityTagPolicy(unittest.TestCase):
+    def test_category_uses_tags_instead_of_name(self):
+        self.assertEqual(walking.facility_category({"amenity": "hospital"}), "hospital")
+        self.assertEqual(walking.facility_category({"healthcare": "doctors"}), "clinic")
+        self.assertEqual(walking.facility_category({"amenity": "pharmacy"}), "pharmacy")
+        self.assertIsNone(walking.facility_category({"name": "醫院後街"}))
+        self.assertIsNone(walking.facility_category({"amenity": "parking", "name": "鏡湖醫院停車場"}))
+
+    def test_excludes_explicitly_unavailable_facilities(self):
+        for tags in [
+            {"amenity": "toilets", "access": "customers"},
+            {"amenity": "hospital", "disused": "yes"},
+            {"amenity": "toilets", "name": "公廁 (暫停開放)"},
+        ]:
+            with self.subTest(tags=tags):
+                self.assertIsNone(walking.facility_category(tags))
+
+
 if __name__ == "__main__":
     unittest.main()
