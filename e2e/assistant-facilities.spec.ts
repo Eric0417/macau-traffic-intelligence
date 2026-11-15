@@ -95,6 +95,7 @@ test("lists English-language results by a named landmark and opens the chosen ro
   await page.locator('.home-ai form button[type="submit"]').click();
   const results = page.getByRole("region", { name: "Hospitals nearby" });
   await expect(results.locator("li")).toHaveCount(2);
+  await expect(results.getByRole("button", { name: "Directions to 鏡湖醫院" })).toBeInViewport({ ratio: 1 });
   await expect(results.locator("li").first()).toContainText("About 631 m straight-line distance");
   await results.getByRole("button", { name: "Directions to 鏡湖醫院" }).click();
   await verifyOpenedJourney(page, isMobile, "en");

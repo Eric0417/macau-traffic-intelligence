@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useLanguage } from "@/components/language-provider";
 import type { AssistantFacilityResults, AssistantPlace } from "@/lib/assistant-journey";
 import { facilityLabels, type FacilitySearch } from "@/lib/facility-search";
@@ -17,11 +18,17 @@ export function AssistantFacilitiesPanel({ result, busy, onDirections }: {
   onDirections: (place: AssistantPlace) => void;
 }) {
   const { locale } = useLanguage();
+  const sectionRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const section = sectionRef.current;
+    section?.scrollIntoView({ block: "start", inline: "nearest", behavior: "instant" });
+    section?.focus({ preventScroll: true });
+  }, [result]);
   const label = (hant: string, hans: string, en: string) => locale === "en" ? en : locale === "zh-Hans" ? hans : hant;
   const { search, origin, matches } = result;
   const category = facilityLabels[search.category][locale];
   const title = label(`附近${category}`, `附近${category}`, `${category} nearby`);
-  return <section className="panel-section" aria-label={title}>
+  return <section className="panel-section" aria-label={title} tabIndex={-1} ref={sectionRef}>
     <h2>{title}</h2>
     <p className="quiet-copy">{label(`以「${origin.name}」為中心`, `以「${origin.name}」为中心`, `From ${origin.name}`)}</p>
     {search.verify ? <p className="data-warning" role="status">
