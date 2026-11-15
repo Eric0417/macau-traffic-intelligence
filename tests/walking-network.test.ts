@@ -80,4 +80,13 @@ describe("mapped walking journeys", () => {
     expect(route?.meters).toBeGreaterThan(300);
     expect(route?.meters).toBeLessThan(900);
   });
+
+  it("connects the park bus stop to the Panda Pavilion through the mapped unlocked gates", async () => {
+    const data = await walkingNetworkSource.load();
+    const pavilion = data.places.find(p => p.id === "a458587494")!;
+    const route = createWalkingRouter(data)([113.55536, 22.12545])(pavilion.coordinates);
+    expect(route?.meters).toBeGreaterThan(400);
+    expect(route?.meters).toBeLessThan(500);
+    expect(data.mappedAt).toBe("2026-11-09T21:22:17Z");
+  });
 });

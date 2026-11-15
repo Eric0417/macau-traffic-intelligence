@@ -61,7 +61,8 @@ export interface BusJourney {
   walking?: { access?: WalkingPath; egress?: WalkingPath; direct?: WalkingPath };
 }
 
-export const BUS_JOURNEY_ACCESS_METERS = 500;
+export const BUS_JOURNEY_ACCESS_METERS = 1_000;
+const MAX_BUS_LEGS = 4;
 const MAX_JOURNEYS = 6;
 
 function coversDeparture(windows: NonNullable<BusJourneyRoute["serviceWindows"]>, minute: number): boolean {
@@ -130,54 +131,62 @@ function leg(route: BusJourneyRoute, from: number, to: number): BusJourneyLeg {
 export function planBusJourneys(network: BusNetwork, origin: BusJourneyEndpoint, destination: BusJourneyEndpoint, options: BusJourneyOptions = {}): BusJourney[] {
   const { distances: starts, paths: accessPaths } = endpointStops(network, origin, options.includeNearbyStops ?? false, options.walking?.access);
   const { distances: ends, paths: egressPaths } = endpointStops(network, destination, options.includeNearbyStops ?? false, options.walking?.egress);
-  const firstLegs = new Map<string, Array<{ leg: BusJourneyLeg; access: number }>>();
-  const secondLegs = new Map<string, Array<{ leg: BusJourneyLeg; egress: number }>>();
-  const plans: BusJourney[] = [];
-  const add = (legs: BusJourneyLeg[], accessMeters: number, egressMeters: number) => {
-    plans.push({
-      id: legs.map((item) => `${item.routeCode}:${item.direction}:${item.fromSequence}-${item.toSequence}`).join("|"),
-      legs, accessMeters, egressMeters, transferMeters: 0,
-      totalStops: legs.reduce((total, item) => total + item.stopCount, 0),
-    });
-  };
+  const hasHours = (plan: BusJourney) => plan.legs.every((item) => item.serviceWindows);
+  // Comparison points, not minutes: a transfer costs six stop edges and
+  // 100 m of endpoint walking costs one. Avoid saving one stop by changing bus.
+  const score = (plan: BusJourney) => plan.totalStops + (plan.accessMeters + plan.egressMeters) / 100 + Math.max(0, plan.legs.length - 1) * 6;
+  const compare = (a: BusJourney, b: BusJourney) =>
+    (options.departureMinute === undefined ? 0 : Number(hasHours(b)) - Number(hasHours(a))) ||
+    score(a) - score(b) || a.legs.length - b.legs.length ||
+    a.id.localeCompare(b.id, "en", { numeric: true });
+  const departures = new Map<string, BusJourneyLeg[]>();
   for (const route of network.routes) {
     if (options.departureMinute !== undefined && route.serviceWindows &&
         !coversDeparture(route.serviceWindows, options.departureMinute)) continue;
-    for (let from = 0; from < route.stops.length - 1; from += 1) {
-      if (options.unavailableStops?.get(route.routeName)?.has(route.stops[from].stationCode)) continue;
-      const access = starts.get(route.stops[from].stationCode);
-      for (let to = from + 1; to < route.stops.length; to += 1) {
-        if (options.unavailableStops?.get(route.routeName)?.has(route.stops[to].stationCode)) continue;
-        const egress = ends.get(route.stops[to].stationCode);
-        if (access === undefined && egress === undefined) continue;
-        const item = leg(route, from, to);
-        if (access !== undefined) {
-          const candidates = firstLegs.get(item.to.stationCode) ?? [];
-          candidates.push({ leg: item, access });
-          firstLegs.set(item.to.stationCode, candidates);
-          if (egress !== undefined && item.from.stationCode !== item.to.stationCode) add([item], access, egress);
+    for (let from = 0; from < route.stops.length - 1; from++) {
+      const station = route.stops[from].stationCode;
+      if (options.unavailableStops?.get(route.routeName)?.has(station)) continue;
+      const legs = departures.get(station) ?? [];
+      for (let to = from + 1; to < route.stops.length; to++) {
+        if (route.stops[to].stationCode === station || options.unavailableStops?.get(route.routeName)?.has(route.stops[to].stationCode)) continue;
+        legs.push(leg(route, from, to));
+      }
+      departures.set(station, legs);
+    }
+  }
+  let frontier = new Map<string, BusJourney[]>();
+  for (const [station, accessMeters] of starts) {
+    frontier.set(station, [{ id: "", legs: [], accessMeters, egressMeters: 0, transferMeters: 0, totalStops: 0 }]);
+  }
+  const plans: BusJourney[] = [];
+  // Each round boards one bus. Keep the cheapest arrival for each last route
+  // and reviewed-hours state: subsequent boarding costs depend only on these.
+  for (let round = 0; round < MAX_BUS_LEGS && frontier.size; round++) {
+    const next = new Map<string, Map<string, BusJourney>>();
+    for (const [station, arrivals] of frontier) {
+      for (const arrival of arrivals) for (const item of departures.get(station) ?? []) {
+        if (arrival.legs.at(-1)?.routeCode === item.routeCode) continue;
+        const plan: BusJourney = {
+          id: `${arrival.id ? `${arrival.id}|` : ""}${item.routeCode}:${item.direction}:${item.fromSequence}-${item.toSequence}`,
+          legs: [...arrival.legs, item], accessMeters: arrival.accessMeters, egressMeters: 0, transferMeters: 0,
+          totalStops: arrival.totalStops + item.stopCount,
+        };
+        const end = item.to.stationCode;
+        const egress = ends.get(end);
+        if (egress !== undefined && plan.legs[0].from.stationCode !== end &&
+            new Set(plan.legs.map(l => l.routeCode)).size === plan.legs.length) {
+          plans.push({ ...plan, egressMeters: egress });
         }
-        if (egress !== undefined) {
-          const candidates = secondLegs.get(item.from.stationCode) ?? [];
-          candidates.push({ leg: item, egress });
-          secondLegs.set(item.from.stationCode, candidates);
-        }
+        const labels = next.get(end) ?? new Map<string, BusJourney>();
+        const key = `${item.routeCode}:${Number(hasHours(plan))}`;
+        const previous = labels.get(key);
+        if (!previous || compare(plan, previous) < 0) labels.set(key, plan);
+        next.set(end, labels);
       }
     }
+    frontier = new Map([...next].map(([station, labels]) => [station, [...labels.values()]]));
   }
-  for (const [stationCode, arrivals] of firstLegs) {
-    for (const arrival of arrivals) for (const departure of secondLegs.get(stationCode) ?? []) {
-      if (arrival.leg.routeCode === departure.leg.routeCode) continue;
-      if (arrival.leg.from.stationCode === departure.leg.to.stationCode) continue;
-      add([arrival.leg, departure.leg], arrival.access, departure.egress);
-    }
-  }
-  const hasHours = (plan: BusJourney) => plan.legs.every((item) => item.serviceWindows);
-  plans.sort((a, b) =>
-    (options.departureMinute === undefined ? 0 : Number(hasHours(b)) - Number(hasHours(a))) ||
-    a.totalStops - b.totalStops ||
-    (a.accessMeters + a.egressMeters) - (b.accessMeters + b.egressMeters) ||
-    a.legs.length - b.legs.length || a.id.localeCompare(b.id, "en", { numeric: true }));
+  plans.sort(compare);
   const seen = new Set<string>();
   const distinct = plans.filter((plan) => {
     const buses = plan.legs.map((item) => `${item.routeCode}:${item.direction}`).join("|");
@@ -186,7 +195,20 @@ export function planBusJourneys(network: BusNetwork, origin: BusJourneyEndpoint,
     seen.add(key);
     return true;
   });
-  const selected = distinct.slice(0, MAX_JOURNEYS);
+  const selected: BusJourney[] = [];
+  for (const plan of distinct) {
+    // Do not offer extra changes when an already selected route sequence
+    // covers the same trip with no more stops or walking.
+    if (selected.some(other => {
+      if (other.legs.length >= plan.legs.length || other.totalStops > plan.totalStops ||
+          other.accessMeters > plan.accessMeters || other.egressMeters > plan.egressMeters) return false;
+      let index = 0;
+      for (const item of plan.legs) if (item.routeCode === other.legs[index]?.routeCode && item.direction === other.legs[index]?.direction) index++;
+      return index === other.legs.length;
+    })) continue;
+    selected.push(plan);
+    if (selected.length === MAX_JOURNEYS) break;
+  }
   // Keep a direct option for comparison even when shorter transfers fill the list.
   const direct = distinct.find(plan => plan.legs.length === 1);
   if (direct && !selected.some(plan => plan.legs.length === 1)) selected[selected.length - 1] = direct;

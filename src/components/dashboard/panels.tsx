@@ -483,11 +483,14 @@ export function AssistantPanel({
         <p>{result.summary}</p>
         <p className="quiet-copy">{label("即時出發", "即刻出发", "Leave now")} · {new Date(result.generatedAt).toLocaleTimeString(locale === "en" ? "en-GB" : "zh-MO", { timeZone: "Asia/Macau", hour: "2-digit", minute: "2-digit" })}</p>
         {result.options.map(({ journey, title, reason }, index) => <button type="button" className="assistant-option" key={journey.id} aria-pressed={selectedOption === journey.id} onClick={() => showOption(result, journey)}>
-          <span className="eyebrow">{index === 0 ? label("AI 推薦", "AI 推荐", "AI recommendation") : label("另一方案", "另一方案", "Alternative")} {index + 1}</span>
+          <span className="eyebrow">{!journey.legs.length && journey.accessMeters >= 3_000 && result.taxiAlternative
+            ? label("長距離步行備選", "长距离步行备选", "Long walking alternative")
+            : index === 0 ? label("AI 推薦", "AI 推荐", "AI recommendation") : label("另一方案", "另一方案", "Alternative")} {index + 1}</span>
           <strong>{title}</strong><span>{journey.legs.length ? journey.legs.map(l => `${l.routeName} → ${l.to.stationName}`).join(" · ") : label("全程步行", "全程步行", "Walk all the way")}</span>
           <span>{reason}</span>
           <small>{label("接駁距離約", "接驳距离约", "Access distance about")} {journey.accessMeters + journey.egressMeters + journey.transferMeters} m{journey.legs.length ? ` · ${journey.totalStops} ${label("個站", "个站", "stops")}` : ""} · {label("查看地圖及步驟", "查看地图及步骤", "Map & steps")}</small>
         </button>)}
+        {result.taxiAlternative ? <div className="trip-recommendation"><h3>{label("的士備選", "的士备选", "Taxi alternative")}</h3><p>{result.taxiAlternative}</p></div> : null}
         {result.warnings.map(w => <p className="quiet-copy" key={w}>{w}</p>)}
         <p className="quiet-copy">{label("路線資料", "路线资料", "Route data")} {result.networkFetchedAt.slice(0, 10)} · {label("步行資料", "步行资料", "Walking data")} {result.walkingMappedAt.slice(0, 10)}</p>
       </section> : null}

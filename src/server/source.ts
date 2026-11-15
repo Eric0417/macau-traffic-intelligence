@@ -4,6 +4,7 @@ import type { SourceAttribution } from "@/lib/types";
 
 export interface SourceDefinition<T> {
   id: string;
+  cacheVersion?: string;
   name: string;
   url: string;
   attribution: string;

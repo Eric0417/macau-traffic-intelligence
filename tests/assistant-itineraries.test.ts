@@ -39,7 +39,8 @@ it("uses model-selected connections and derives the overview from them, ignoring
   vi.spyOn(assistant, "callAssistantProvider").mockImplementation(async messages => {
     const c = JSON.parse(messages[1].content);
     expect(c.options[0].sections).toHaveLength(2);
-    return JSON.stringify({ options: [{ id: "ordered", summary: "搭虛構999號，全程步行", selections: c.options[0].sections.map((s: { candidates: Array<{ mode: string }> }) => {
+    return JSON.stringify({ options: [{ id: "ordered", summary: "搭虛構999號，全程步行", selections: c.options[0].sections.map((s: { candidates: Array<{ mode: string }> }, index: number) => {
+      if (index === 1) return s.candidates.findIndex(j => j.mode === "walk");
       const bus = s.candidates.findIndex(j => j.mode === "bus");
       return bus >= 0 ? bus : 0;
     }) }] });

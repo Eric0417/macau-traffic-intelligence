@@ -34,7 +34,7 @@ const copy = {
     alight: "落車",
     towards: "往",
     mapSteps: "地圖與步驟",
-    nearbyStops: "包括起終點 500 米內站牌",
+    nearbyStops: "包括起終點 1 公里內站牌",
     nearbyHint: "適用手選站牌。搜尋地名時會自動搵附近可步行到達嘅站牌。",
     nearbyAccess: "可由起點附近其他站牌上車。",
     nearbyEgress: "下車後需接駁至所選終點。",
@@ -49,9 +49,9 @@ const copy = {
     search: "尋找行程方案",
     choose: "請從建議清單選擇起點及終點。",
     empty:
-      "未找到符合條件的直達或一次轉乘方案。可改選其他站點，或開啟附近站牌搜尋。",
+      "未找到符合條件的直達或最多三次轉乘方案。可改選其他站點，或開啟附近站牌搜尋。",
     direct: "直達",
-    transfer: "轉乘一次",
+    transfer: "轉乘",
     stops: "站",
     inspect: "查看到站與停站狀態",
     access: "到上車站直線距離",
@@ -80,7 +80,7 @@ const copy = {
     walkLoading: "正在載入澳門地名同人行路網…",
     walkUnavailable: "地名同步行路網暫時無法載入。可以繼續按巴士站搜尋。",
     walkSource: "步行路網日期",
-    placeEmpty: "未搵到符合條件嘅直達或一次轉乘方案。會搜尋 500 米內站牌，接駁步行路徑最多 1 公里。",
+    placeEmpty: "未搵到符合條件嘅直達或最多三次轉乘方案。會搜尋 1 公里內站牌，接駁步行路徑最多 1 公里。",
   },
   "zh-Hans": {
     scheduled: "班次时间未核实",
@@ -93,7 +93,7 @@ const copy = {
     alight: "下车",
     towards: "往",
     mapSteps: "地图与步骤",
-    nearbyStops: "包括起终点 500 米内站牌",
+    nearbyStops: "包括起终点 1 公里内站牌",
     nearbyHint: "适用于手选站牌。搜索地名时会自动找附近可步行到达的站牌。",
     nearbyAccess: "可由起点附近其他站牌上车。",
     nearbyEgress: "下车后需接驳至所选终点。",
@@ -108,9 +108,9 @@ const copy = {
     search: "寻找行程方案",
     choose: "请从建议清单选择起点及终点。",
     empty:
-      "未找到符合条件的直达或一次转乘方案。可改选其他站点，或开启附近站牌搜索。",
+      "未找到符合条件的直达或最多三次换乘方案。可改选其他站点，或开启附近站牌搜索。",
     direct: "直达",
-    transfer: "转乘一次",
+    transfer: "换乘",
     stops: "站",
     inspect: "查看到站与停站状态",
     access: "到上车站直线距离",
@@ -139,7 +139,7 @@ const copy = {
     walkLoading: "正在载入澳门地名和人行路网…",
     walkUnavailable: "地名和步行路网暂时无法载入。可以继续按巴士站搜索。",
     walkSource: "步行路网日期",
-    placeEmpty: "未找到符合条件的直达或一次换乘方案。会搜索 500 米内站牌，接驳步行路径最多 1 公里。",
+    placeEmpty: "未找到符合条件的直达或最多三次换乘方案。会搜索 1 公里内站牌，接驳步行路径最多 1 公里。",
   },
   en: {
     scheduled: "Service hours not verified",
@@ -152,7 +152,7 @@ const copy = {
     alight: "Alight",
     towards: "Towards",
     mapSteps: "Map & steps",
-    nearbyStops: "Include stops within 500 m of either endpoint",
+    nearbyStops: "Include stops within 1 km of either endpoint",
     nearbyHint: "Applies to selected bus stops. Named places automatically search nearby stops reachable on foot.",
     nearbyAccess: "Board at an alternative stop near your origin.",
     nearbyEgress: "Continue from the final stop to your selected destination.",
@@ -167,9 +167,9 @@ const copy = {
     search: "Find journey options",
     choose: "Select your origin and destination from the suggestions.",
     empty:
-      "No direct or one-transfer option found. Try other stops or include nearby stops.",
+      "No direct or up-to-three-transfer option found. Try other stops or include nearby stops.",
     direct: "Direct",
-    transfer: "One transfer",
+    transfer: "Transfers",
     stops: "stops",
     inspect: "Check arrivals & stop status",
     access: "Straight-line distance to boarding stop",
@@ -198,7 +198,7 @@ const copy = {
     walkLoading: "Loading Macau places and walking paths…",
     walkUnavailable: "Place and walking data could not load. You can still search by bus stop.",
     walkSource: "Walking data date",
-    placeEmpty: "No direct or one-transfer option found. Place searches consider stops within 500 m and walking connections up to 1 km.",
+    placeEmpty: "No direct or up-to-three-transfer option found. Place searches consider stops within 1 km and walking connections up to 1 km.",
   },
 };
 
@@ -592,7 +592,7 @@ export function JourneyPlanner({
                     ))}
                   </div>
                   <span className="journey-route-kind">
-                    {journey.legs.length === 1 ? c.direct : c.transfer}
+                    {journey.legs.length === 1 ? c.direct : `${c.transfer} · ${journey.legs.length - 1}`}
                   </span>
                 </div>
                 <p className="journey-schedule-note">

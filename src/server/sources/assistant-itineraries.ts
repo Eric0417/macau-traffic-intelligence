@@ -145,7 +145,7 @@ export async function planItinerary(request: AssistantJourneyRequest, input: Tri
       const journeys = evidence.candidates;
       if (draft.mode === "ordered" && i > 0 && departureMinute !== undefined) evidence.warnings.push(text("後續服務時間按出發時段加停留時間篩選，未計交通耗時；實際上車前要再核對。", "后续服务时间按出发时段加停留时间筛选，未计交通耗时；实际乘车前须再核对。", "Later service hours use the departure time plus stays, excluding unknown travel time. Recheck before boarding."));
       if (!journeys.length) evidence.warnings.push(text("呢段未搵到可用接駁，請修改地點或另行安排交通。", "此段没有找到可用接驳，请修改地点或另行安排交通。", "No connection found for this section. Edit the place or arrange transport separately."));
-      option.sections.push({ from, to, journeys, warnings: evidence.warnings });
+      option.sections.push({ from, to, journeys, warnings: evidence.warnings, taxiAlternative: evidence.taxiAlternative });
     }
   }
   if (options.some(o => o.sections.some(s => s.journeys.length))) {

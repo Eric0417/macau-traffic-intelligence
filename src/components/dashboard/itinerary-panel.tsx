@@ -129,6 +129,7 @@ export function ItineraryPanel({ result, busy, onContinue, onJourney, onSelect, 
       {option.sections[index] ? <div className="itinerary-connection">
         <p className="eyebrow">{label("前往下一站", "前往下一站", "Continue to the next stop")}</p>
         {option.sections[index].journeys.length ? connection(index, 0) : null}
+        {option.sections[index].taxiAlternative ? <details><summary>{label("的士備選", "的士备选", "Taxi alternative")}</summary><p>{option.sections[index].taxiAlternative}</p></details> : null}
         {option.sections[index].journeys.length > 1 ? <details className="trip-other-connections"><summary>{label("其他接駁選項", "其他接驳选项", "Other connections")}</summary>{option.sections[index].journeys.slice(1).map((_, j) => connection(index, j + 1))}</details> : null}
         {!option.sections[index].journeys.length ? <p className="data-warning" role="status">{option.sections[index].warnings.at(-1)}</p> : <details><summary>{label("接駁資料說明", "接驳资料说明", "Connection notes")}</summary>{option.sections[index].warnings.map(w => <p className="quiet-copy" key={w}>{w}</p>)}</details>}
       </div> : null}

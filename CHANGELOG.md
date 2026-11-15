@@ -2,6 +2,13 @@
 
 All notable user-visible and architectural changes are recorded here.
 
+## Bus access, transfers and taxi alternatives - 2026-11-15
+
+- Fix the Panda Pavilion walking graph: explicitly unlocked gates on permitted paths remain connected. The park bus stop now has a mapped 430 m connection to the pavilion, so bus routes are no longer removed by a false detour.
+- Search endpoint stops within 1 km and up to three same-platform transfers. Balance walking, ridden stops and transfers, and check all four possible bus legs independently in the map and guidance.
+- Show a separate taxi alternative for long trips without inventing driving paths, fares, travel times or vehicle availability. Empty bus searches state their limits.
+- Version the walking snapshot cache so deployment loads the corrected graph immediately.
+
 ## Assistant transport and nearby answers - 2026-11-15
 
 - Treat destination bus questions such as “石排灣有咩巴士去？” as journeys. Preserve a direct bus candidate and search again after excluding suspended stops, so a truncated candidate list does not leave only walking.

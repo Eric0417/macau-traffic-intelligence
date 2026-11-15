@@ -26,6 +26,7 @@ BARRIERS = {
     "wall", "fence", "hedge", "retaining_wall", "block", "jersey_barrier",
     "chain", "gate", "lift_gate", "swing_gate", "turnstile", "sliding_gate",
 }
+OPERABLE_GATES = {"gate", "lift_gate", "swing_gate", "sliding_gate", "turnstile"}
 POI_KEYS = {
     "amenity", "tourism", "historic", "shop", "leisure", "office",
     "healthcare", "place", "public_transport", "railway", "aeroway", "craft",
@@ -54,6 +55,16 @@ def direction(tags):
     if tags.get("conveying") == "forward":
         return 1
     return 2 if value == "-1" else 1 if value in {"yes", "1", "true"} else 0
+
+
+def node_blocks_walking(tags):
+    if not foot_allowed(tags) or tags.get("locked") == "yes":
+        return True
+    if tags.get("barrier") not in BARRIERS:
+        return False
+    if tags.get("foot") in ALLOWED_FOOT or tags.get("access") in ALLOWED_FOOT:
+        return False
+    return not (tags.get("barrier") in OPERABLE_GATES and tags.get("locked") == "no")
 
 
 class Snapshot(osmium.SimpleHandler):
@@ -96,10 +107,7 @@ class Snapshot(osmium.SimpleHandler):
             return
         tags = node.tags
         point = [round(node.location.lon, 7), round(node.location.lat, 7)]
-        if not foot_allowed(tags) or (
-            tags.get("barrier") in BARRIERS and tags.get("foot") not in ALLOWED_FOOT
-            and tags.get("access") not in ALLOWED_FOOT
-        ):
+        if node_blocks_walking(tags):
             self.blocked_nodes.add(node.id)
         if tags.get("entrance") in {"main", "yes"} and node.id not in self.blocked_nodes:
             self.entrances[node.id] = (tags.get("entrance") == "main", point)

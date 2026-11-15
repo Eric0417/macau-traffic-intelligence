@@ -28,6 +28,7 @@ export const walkingNetworkSchema = z.object({
 
 export const walkingNetworkSource: SourceDefinition<WalkingNetwork> = {
   id: "walking-network",
+  cacheVersion: "unlocked-gates-v2",
   name: "OpenStreetMap Macau places and pedestrian network",
   url: "https://www.openstreetmap.org/copyright",
   attribution: "© OpenStreetMap contributors, ODbL. Macau extract by Geofabrik.",

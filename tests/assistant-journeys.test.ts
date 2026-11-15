@@ -39,6 +39,38 @@ it("finds daytime buses to Seac Pai Van from the checked-in Macau place and rout
   expect(evidence.candidates.some(c => c.legs.some(l => l.routeName.startsWith("N")))).toBe(false);
 });
 
+it("finds buses to the Panda Pavilion entrance from the reported Pui Ching location", async () => {
+  const { busNetworkSource } = await import("@/server/sources/bus-network");
+  const snapshot = (await import("../data/walking-network.json")).default as unknown as WalkingNetwork;
+  const buses = await busNetworkSource.load();
+  const origin = { id: "current", name: "目前位置", coordinates: [113.5477777257665, 22.20232924839855] as [number, number] };
+  const destination = snapshot.places.find(p => p.id === "a458587494")!;
+  for (const [start, end] of [[origin, destination], [destination, origin]]) {
+    const evidence = await journeyCandidates(buses, snapshot, start, end, "zh-Hant", 743, undefined, false);
+    const bus = evidence.candidates.find(c => c.legs.length === 1 && c.legs[0].routeName === "25");
+    expect(bus).toBeDefined();
+    expect(bus!.accessMeters).toBeLessThanOrEqual(1_000);
+    expect(bus!.egressMeters).toBeLessThanOrEqual(1_000);
+    expect(bus!.walking?.access).toBeDefined();
+    expect(bus!.walking?.egress).toBeDefined();
+    expect(evidence.taxiAlternative).toContain("的士");
+  }
+});
+
+it("offers a separate taxi suggestion for a long walk without inventing a taxi route", async () => {
+  const origin = { id: "start", name: "起點", coordinates: from.coordinates };
+  const destination = { id: "far", name: "遠處", coordinates: [113.59, 22.19] as [number, number] };
+  const empty = { ...network, routes: [] };
+  const map = { ...walking, nodes: [from.coordinates, destination.coordinates], edges: [[0, 1, 0, true]] } as WalkingNetwork;
+  const evidence = await journeyCandidates(empty, map, origin, destination, "zh-Hant", undefined, undefined, false);
+  expect(evidence.taxiAlternative).toContain("由起點乘的士前往遠處");
+  expect(evidence.taxiAlternative).toContain("未有即時車輛、行車路線、車費或車程資料");
+  expect(evidence.candidates.map(c => c.id)).toEqual(["walk"]);
+  expect(evidence.warnings.join(" ")).toContain("唔代表冇巴士服務");
+  const short = await journeyCandidates(network, walking, origin, walking.places[0], "zh-Hant", undefined, undefined, false);
+  expect(short.taxiAlternative).toBeUndefined();
+});
+
 it("asks the model to resolve a destination and requests location before planning", async () => {
   sources();
   const model = vi.spyOn(assistant, "callAssistantProvider").mockResolvedValue(JSON.stringify({ intent: "journey", destinationQueries: ["澳門體育館"] }));

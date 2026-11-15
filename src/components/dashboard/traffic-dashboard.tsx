@@ -176,6 +176,8 @@ export function TrafficDashboard() {
   }, [journeyBoarding, busEta.data, manualStopKey]);
   const journeyLeg0 = selectedJourney?.journey.legs[0];
   const journeyLeg1 = selectedJourney?.journey.legs[1];
+  const journeyLeg2 = selectedJourney?.journey.legs[2];
+  const journeyLeg3 = selectedJourney?.journey.legs[3];
   const journeyEta0 = useLiveJson<BusEta>(
     journeyLeg0 ? `/api/v1/bus/routes/${encodeURIComponent(journeyLeg0.routeCode)}/eta?direction=${journeyLeg0.direction}` : "/api/v1/health",
     2_000, Boolean(journeyLeg0) && (tab === "bus" || tab === "assistant") && !selectedRoute,
@@ -184,9 +186,19 @@ export function TrafficDashboard() {
     journeyLeg1 ? `/api/v1/bus/routes/${encodeURIComponent(journeyLeg1.routeCode)}/eta?direction=${journeyLeg1.direction}` : "/api/v1/health",
     2_000, Boolean(journeyLeg1) && (tab === "bus" || tab === "assistant") && !selectedRoute,
   );
+  const journeyEta2 = useLiveJson<BusEta>(
+    journeyLeg2 ? `/api/v1/bus/routes/${encodeURIComponent(journeyLeg2.routeCode)}/eta?direction=${journeyLeg2.direction}` : "/api/v1/health",
+    2_000, Boolean(journeyLeg2) && (tab === "bus" || tab === "assistant") && !selectedRoute,
+  );
+  const journeyEta3 = useLiveJson<BusEta>(
+    journeyLeg3 ? `/api/v1/bus/routes/${encodeURIComponent(journeyLeg3.routeCode)}/eta?direction=${journeyLeg3.direction}` : "/api/v1/health",
+    2_000, Boolean(journeyLeg3) && (tab === "bus" || tab === "assistant") && !selectedRoute,
+  );
   // A normal background cache refresh must not remove and re-add vehicles.
   const firstPositionsFresh = Boolean(journeyEta0.meta && !metaIsDelayed(journeyEta0.meta) && !journeyEta0.error);
   const secondPositionsFresh = Boolean(journeyEta1.meta && !metaIsDelayed(journeyEta1.meta) && !journeyEta1.error);
+  const thirdPositionsFresh = Boolean(journeyEta2.meta && !metaIsDelayed(journeyEta2.meta) && !journeyEta2.error);
+  const fourthPositionsFresh = Boolean(journeyEta3.meta && !metaIsDelayed(journeyEta3.meta) && !journeyEta3.error);
   const journeyInput = useMemo<JourneyMapInput | null>(() => selectedJourney ? {
     id: `${selectedJourney.journey.id}:${selectedJourney.origin.join(",")}:${selectedJourney.destination.join(",")}`,
     origin: selectedJourney.origin,
@@ -196,13 +208,13 @@ export function TrafficDashboard() {
     walking: selectedJourney.journey.walking,
     legs: selectedJourney.journey.legs.map((leg, index) => ({
       leg,
-      eta: index === 0 ? journeyEta0.data : journeyEta1.data,
-      positionsFresh: index === 0 ? firstPositionsFresh : secondPositionsFresh,
+      eta: [journeyEta0.data, journeyEta1.data, journeyEta2.data, journeyEta3.data][index],
+      positionsFresh: [firstPositionsFresh, secondPositionsFresh, thirdPositionsFresh, fourthPositionsFresh][index],
     })),
-  } : null, [selectedJourney, journeyEta0.data, journeyEta1.data, firstPositionsFresh, secondPositionsFresh]);
+  } : null, [selectedJourney, journeyEta0.data, journeyEta1.data, journeyEta2.data, journeyEta3.data, firstPositionsFresh, secondPositionsFresh, thirdPositionsFresh, fourthPositionsFresh]);
   const journeyGeometry = useMemo(() => journeyInput ? buildJourneyMap(journeyInput, locale) : null, [journeyInput, locale]);
   const journeyReady = selectedJourney?.journey.legs.every((leg, index) => {
-    const state = index === 0 ? journeyEta0 : journeyEta1;
+    const state = [journeyEta0, journeyEta1, journeyEta2, journeyEta3][index];
     return (state.data?.routeCode === leg.routeCode && state.data.direction === leg.direction) || (!state.loading && Boolean(state.error));
   }) ?? false;
   const parking = useLiveJson<ParkingFacility[]>("/api/v1/parking", 30_000);
@@ -589,7 +601,7 @@ export function TrafficDashboard() {
             </div>
             {tab === "bus" && selectedJourney && !selectedRoute ? <JourneyMapDetail
               selected={selectedJourney}
-              states={selectedJourney.journey.legs.map((_, index) => index === 0 ? journeyEta0 : journeyEta1)}
+              states={selectedJourney.journey.legs.map((_, index) => [journeyEta0, journeyEta1, journeyEta2, journeyEta3][index])}
               missingLegs={journeyGeometry?.missingLegs ?? []}
               uncertainTransfers={journeyGeometry?.uncertainTransfers ?? []}
               liveRouteCodes={liveRouteCodes}
@@ -885,7 +897,7 @@ export function TrafficDashboard() {
             <div ref={setGuideTarget} hidden={guideMode !== "brief"} />
             {tab === "assistant" && selectedJourney ? <JourneyMapDetail
               selected={selectedJourney}
-              states={selectedJourney.journey.legs.map((_, index) => index === 0 ? journeyEta0 : journeyEta1)}
+              states={selectedJourney.journey.legs.map((_, index) => [journeyEta0, journeyEta1, journeyEta2, journeyEta3][index])}
               missingLegs={journeyGeometry?.missingLegs ?? []}
               uncertainTransfers={journeyGeometry?.uncertainTransfers ?? []}
               liveRouteCodes={liveRouteCodes}

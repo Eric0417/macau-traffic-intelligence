@@ -65,6 +65,7 @@ export interface ItinerarySection {
   to: AssistantPlace;
   journeys: BusJourney[];
   warnings: string[];
+  taxiAlternative?: string;
 }
 export interface ItineraryOption {
   id: string;

@@ -187,7 +187,7 @@ async function refreshSource<T>(source: SourceDefinition<T>, backend: CacheBacke
   try {
     const data = source.schema.parse(await source.load());
     await backend.set(
-      `${CACHE_PREFIX}:source:${source.id}`,
+      `${CACHE_PREFIX}:source:${source.id}${source.cacheVersion ? `:${source.cacheVersion}` : ""}`,
       { data, updatedAt: new Date().toISOString() },
       source.staleTtlSeconds,
     );
@@ -206,7 +206,7 @@ export interface SourceRead<T> {
 
 export async function readSource<T>(source: SourceDefinition<T>): Promise<SourceRead<T> | null> {
   const backend = getCacheBackend();
-  const key = `${CACHE_PREFIX}:source:${source.id}`;
+  const key = `${CACHE_PREFIX}:source:${source.id}${source.cacheVersion ? `:${source.cacheVersion}` : ""}`;
   const cached = await backend.get<T>(key);
   const now = Date.now();
 

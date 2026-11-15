@@ -22,6 +22,7 @@ export interface AssistantJourneyPlans {
   model: string;
   summary: string;
   warnings: string[];
+  taxiAlternative?: string;
   options: Array<{ title: string; reason: string; journey: BusJourney }>;
 }
 export type AssistantJourneyResult =

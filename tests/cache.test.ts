@@ -57,4 +57,19 @@ describe("source cache", () => {
     expect(afterFailure?.result.data.value).toBe(2);
     expect(afterFailure?.result.stale).toBe(true);
   });
+
+  it("isolates a revised snapshot from old cached data, including background refreshes", async () => {
+    const source: SourceDefinition<{ value: number }> = {
+      id: "revised-snapshot", name: "Test", url: "https://example.com", attribution: "Test",
+      envKey: "TEST_SOURCE_ENABLED", ttlSeconds: 60, staleTtlSeconds: 120,
+      schema: z.object({ value: z.number() }), load: async () => ({ value: 1 }),
+    };
+    await readSource(source);
+    const revised = { ...source, cacheVersion: "v2", load: async () => ({ value: 2 }) };
+    expect((await readSource(revised))?.result.data.value).toBe(2);
+    const stale = await readSource({ ...revised, ttlSeconds: -1, load: async () => ({ value: 3 }) });
+    await stale?.refresh?.();
+    expect((await readSource(revised))?.result.data.value).toBe(3);
+    expect((await readSource(source))?.result.data.value).toBe(1);
+  });
 });

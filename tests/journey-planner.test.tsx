@@ -63,7 +63,7 @@ describe("journey result context", () => {
     choose("起點", "A"); choose("終點", "B");
     fireEvent.click(screen.getByRole("button", { name: "尋找行程方案" }));
     expect(screen.getByText("乘車合共 9 站")).toBeTruthy();
-    fireEvent.click(screen.getByRole("checkbox", { name: /包括起終點 500 米內站牌/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /包括起終點 1 公里內站牌/ }));
     expect(screen.queryByText("乘車合共 9 站")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "尋找行程方案" }));
     expect(screen.getByText("乘車合共 1 站")).toBeTruthy();

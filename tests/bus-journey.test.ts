@@ -78,15 +78,31 @@ describe("local bus journey search", () => {
     expect(result[0]?.totalStops).toBe(2);
   });
 
-  it("does not invent a walk between neighbouring platforms or a second transfer", () => {
+  it("does not invent a walk between neighbouring platforms", () => {
     const nearbyPlatforms = network([
       route("3", [stop("A"), stop("T/1")]), route("8", [stop("T/2"), stop("D")]),
     ]);
     expect(planBusJourneys(nearbyPlatforms, endpoint("A"), endpoint("D"))).toEqual([]);
-    const threeBuses = network([
-      route("3", [stop("A"), stop("T")]), route("8", [stop("T"), stop("U")]), route("9", [stop("U"), stop("D")]),
-    ]);
-    expect(planBusJourneys(threeBuses, endpoint("A"), endpoint("D"))).toEqual([]);
+  });
+
+  it("finds two and three transfers, but never a fourth transfer", () => {
+    const data = network(Array.from({ length: 5 }, (_, i) => route(String(i), [stop(`S${i}`), stop(`S${i + 1}`)])));
+    expect(planBusJourneys(data, endpoint("S0"), endpoint("S3"))[0]?.legs).toHaveLength(3);
+    expect(planBusJourneys(data, endpoint("S0"), endpoint("S4"))[0]?.legs).toHaveLength(4);
+    expect(planBusJourneys(data, endpoint("S0"), endpoint("S5"))).toEqual([]);
+    expect(planBusJourneys(data, endpoint("S0"), endpoint("S4"), { unavailableStops: new Map([["2", new Set(["S2"])]]) })).toEqual([]);
+    data.routes[2].serviceWindows = [[0, 360]];
+    expect(planBusJourneys(data, endpoint("S0"), endpoint("S4"), { departureMinute: 720 })).toEqual([]);
+  });
+
+  it("includes a mapped 900 m access, but excludes over-1-km and disconnected paths", () => {
+    const start = [113.54, 22.19] as [number, number];
+    const boarding = stop("A", "上車站", 113.547);
+    const data = network([route("3", [boarding, stop("D", "目的站", 113.57)])]);
+    const walking = (meters: number) => ({ access: () => ({ from: start, to: boarding.coordinates, coordinates: [start, boarding.coordinates], meters }) });
+    expect(planBusJourneys(data, { coordinates: start }, endpoint("D"), { walking: walking(900) })[0]?.accessMeters).toBe(900);
+    expect(planBusJourneys(data, { coordinates: start }, endpoint("D"), { walking: walking(1_001) })).toEqual([]);
+    expect(planBusJourneys(data, { coordinates: start }, endpoint("D"), { walking: { access: () => null } })).toEqual([]);
   });
 
   it("limits private-location access to nearby stops and returns only straight-line distance", () => {
@@ -97,14 +113,14 @@ describe("local bus journey search", () => {
     expect(planBusJourneys(data, { coordinates: [113.50, 22.19] }, endpoint("D"))).toEqual([]);
   });
 
-  it("orders fewer ridden stops before transfer count and deduplicates repeated boarding occurrences", () => {
+  it("avoids an unnecessary transfer to save one stop and deduplicates boarding occurrences", () => {
     const data = network([
       route("3", [stop("A"), stop("A"), stop("B"), stop("C"), stop("D")]),
       route("8", [stop("A"), stop("T")]), route("9", [stop("T"), stop("D")]),
     ]);
     const result = planBusJourneys(data, endpoint("A"), endpoint("D"));
-    expect(result[0]?.legs).toHaveLength(2);
-    expect(result[0]?.totalStops).toBe(2);
+    expect(result[0]?.legs).toHaveLength(1);
+    expect(result[0]?.totalStops).toBe(3);
     expect(result.filter((journey) => journey.legs.length === 1)).toHaveLength(1);
   });
 
@@ -131,17 +147,17 @@ describe("local bus journey search", () => {
 
   it("searches nearby boarding and alighting platforms only when explicitly requested", () => {
     const data = network([route("3", [
-      stop("A", "原定上車站", 113.54), stop("A2", "鄰近上車站", 113.541),
-      stop("D", "鄰近下車站", 113.56), stop("D2", "原定目的站", 113.561),
+      stop("A", "原定上車站", 113.54), stop("A2", "鄰近上車站", 113.5405),
+      stop("D", "鄰近下車站", 113.56), stop("D2", "原定目的站", 113.5605),
     ])]);
     expect(planBusJourneys(data, endpoint("A"), endpoint("D2"))[0]?.totalStops).toBe(3);
     const nearby = planBusJourneys(data, endpoint("A"), endpoint("D2"), { includeNearbyStops: true });
     expect(nearby).toHaveLength(1);
     expect(nearby[0].legs[0]).toMatchObject({ from: { stationCode: "A2" }, to: { stationCode: "D" }, stopCount: 1 });
-    expect(nearby[0].accessMeters).toBeGreaterThan(100);
-    expect(nearby[0].egressMeters).toBeGreaterThan(100);
-    expect(nearby[0].accessMeters).toBeLessThan(110);
-    expect(nearby[0].egressMeters).toBeLessThan(110);
+    expect(nearby[0].accessMeters).toBeGreaterThan(50);
+    expect(nearby[0].egressMeters).toBeGreaterThan(50);
+    expect(nearby[0].accessMeters).toBeLessThan(55);
+    expect(nearby[0].egressMeters).toBeLessThan(55);
   });
 
   it("keeps distinct bus combinations instead of filling results with equivalent transfer stations", () => {
