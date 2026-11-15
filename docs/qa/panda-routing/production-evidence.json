@@ -1,0 +1,90 @@
+{
+  "deployment": "dep-dbsjk67f3r2c73eg9dt0",
+  "commit": "0d39c9d1e595ac409dfd1f4178a49a8b0a44d16d",
+  "generatedAt": "2026-11-15T04:53:06.638Z",
+  "query": "我想搭巴士去澳門大熊貓館，請直接幫我安排方案",
+  "origin": "Reported Pui Ching area location",
+  "destination": "澳門大熊貓館",
+  "summary": "由目前位置去澳門大熊貓館，建議搭巴士。首選係56號：先步行約142米（依指定日期步行地圖）到「俾利喇/高士德」站上車，搭11個站到「蝴蝶谷大馬路總站」落車，再步行約980米（依指定日期步行地圖）到澳門大熊貓館，全程免轉車。想行少啲，可考慮56號轉21A或25號：喺「俾利喇/高士德」上56號，搭5個站到「氹仔茵景園」轉車，再搭到「安順大廈」落車，之後步行約320米到館；總步行約462米，但要轉一次車。路線同步行資料有指定日期，服務時間、封路同候車時間未核實，出發前請查看即時停站狀態。如想點對點，可考慮的士，但未有即時車輛、路線、車費或車程資料。",
+  "taxiAlternative": "可以考慮由目前位置乘的士前往澳門大熊貓館。請喺合法安全嘅位置上落車；目前未有即時車輛、行車路線、車費或車程資料。",
+  "options": [
+    {
+      "title": "56號直達（免轉車）",
+      "accessMeters": 142,
+      "egressMeters": 980,
+      "legs": [
+        {
+          "routeName": "56",
+          "from": "M92",
+          "to": "C690/6",
+          "stopCount": 11
+        }
+      ]
+    },
+    {
+      "title": "56號轉21A（步行較少）",
+      "accessMeters": 142,
+      "egressMeters": 320,
+      "legs": [
+        {
+          "routeName": "56",
+          "from": "M92",
+          "to": "T313",
+          "stopCount": 5
+        },
+        {
+          "routeName": "21A",
+          "from": "T313",
+          "to": "C652",
+          "stopCount": 9
+        }
+      ]
+    },
+    {
+      "title": "56號轉25號（步行較少）",
+      "accessMeters": 142,
+      "egressMeters": 320,
+      "legs": [
+        {
+          "routeName": "56",
+          "from": "M92",
+          "to": "T313",
+          "stopCount": 5
+        },
+        {
+          "routeName": "25",
+          "from": "T313",
+          "to": "C652",
+          "stopCount": 9
+        }
+      ]
+    }
+  ],
+  "walkingGraph": {
+    "mappedAt": "2026-11-09T21:22:17Z",
+    "nodes": 52983,
+    "edges": 57125
+  },
+  "health": {
+    "status": "ok",
+    "service": "Macau Traffic Intelligence",
+    "cache": "redis",
+    "failures": {
+      "roads": 0,
+      "bridges": 0,
+      "cameras": 0,
+      "bus-routes": 0,
+      "bus-network": 0,
+      "walking-network": 0,
+      "parking": 0,
+      "weather": 0,
+      "notices": 0,
+      "official-news": 0,
+      "lrt-network": 0,
+      "lrt-notices": 0,
+      "lrt-service": 0,
+      "borders": 0
+    },
+    "time": "2026-11-15T04:52:20.092Z"
+  }
+}
