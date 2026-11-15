@@ -10,7 +10,8 @@ const UNCHANGED_LIMIT_MS = 30_000;
 export function usableArrivalEstimate(stop: BusEtaStop, now = Date.now()) {
   const estimate = stop.arrivalEstimate;
   const age = estimate ? now - Date.parse(estimate.generatedAt) : Infinity;
-  return !stop.suspended && age >= 0 && age <= 10_000 ? estimate ?? null : null;
+  // The UI clock ticks every two seconds; a new response can precede its next tick.
+  return !stop.suspended && age >= -2000 && age <= 10_000 ? estimate ?? null : null;
 }
 
 export function predictBusArrivals(data: BusEta, loop: boolean, now: number, previous?: BusEta): BusEta {

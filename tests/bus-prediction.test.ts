@@ -73,6 +73,8 @@ describe("system bus predictions", () => {
   });
   it("suppresses old minutes independently of a fresh cache retrieval", () => {
     const result = predictBusArrivals(sample(), false, now);
+    expect(usableArrivalEstimate(result.stops[1], now - 1000)?.minutes).toBe(2);
+    expect(usableArrivalEstimate(result.stops[1], now - 60_000)).toBeNull();
     expect(usableArrivalEstimate(result.stops[1], now + 9000)?.minutes).toBe(2);
     expect(usableArrivalEstimate(result.stops[1], now + 11_000)).toBeNull();
   });
