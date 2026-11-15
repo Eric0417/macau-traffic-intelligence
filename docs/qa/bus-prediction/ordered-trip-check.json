@@ -1,0 +1,11 @@
+{
+  "generatedAt": "2026-11-15T05:56:19.359Z",
+  "kind": "itineraries",
+  "stopOrder": [
+    "澳門培正中學",
+    "媽閣",
+    "澳門運動場"
+  ],
+  "summary": "澳門培正中學 → 媽閣：巴士 65\n媽閣 → 澳門運動場：巴士 26",
+  "placeDisambiguation": "Selected A-Ma near M203/2 after an explicit two-place choice."
+}
