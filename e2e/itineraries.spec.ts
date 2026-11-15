@@ -33,6 +33,7 @@ test("shows a complete bus recommendation with alternatives collapsed", async ({
   const alternatives = itinerary.locator(".trip-other-connections");
   await expect(alternatives).not.toHaveAttribute("open", "");
   await expect(alternatives.locator(".trip-connection-option")).not.toBeVisible();
+  await itinerary.locator(".trip-connection-steps").scrollIntoViewIfNeeded();
   await page.screenshot({ path: `docs/qa/assistant-routing/${isMobile ? "mobile" : "desktop"}-complete-plan.png` });
   await alternatives.locator("summary").click();
   await expect(alternatives.locator(".trip-connection-option")).toBeVisible();

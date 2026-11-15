@@ -62,6 +62,16 @@ it("rejects missing and out-of-range model connection choices", async () => {
   }
 });
 
+it("asks once for a corrected complete selection without applying a partial model response", async () => {
+  sources();
+  const model = vi.spyOn(assistant, "callAssistantProvider").mockResolvedValueOnce(JSON.stringify({ options: [{ id: "ordered", selections: [0] }] }));
+  const { data } = await planAssistantJourney({ question: "安排兩站", locale: "zh-Hant", trip: { mode: "ordered", originQuery: "地點0", stops: [{ query: "地點2" }, { query: "地點1" }] } });
+  expect(data.kind).toBe("itineraries");
+  expect(model).toHaveBeenCalledTimes(2);
+  expect(model.mock.calls[1][0].at(-1)?.content).toContain("candidateCounts");
+  if (data.kind === "itineraries") expect(data.options[0].sections).toHaveLength(2);
+});
+
 it("retains all destinations while asking for location and recovering with a manual origin", async () => {
   sources();
   const trip = tripDraftSchema.parse({ mode: "ordered", stops: [{ query: "地點1" }, { query: "地點2" }] });

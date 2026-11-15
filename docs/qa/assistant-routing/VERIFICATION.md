@@ -13,7 +13,7 @@ A production day-trip probe then exposed contradictory model prose: an overview 
 ## Verification
 
 - TypeScript and ESLint pass. Production build and standalone packaging pass.
-- 186 unit/parser tests pass without government-network calls, including the checked-in Pui Ching to Seac Pai Van topology, suspended-route refill, later daytime sections, invalid model selections and nearby parking availability semantics.
+- 187 unit/parser tests pass without government-network calls, including the checked-in Pui Ching to Seac Pai Van topology, suspended-route refill, later daytime sections, invalid model selections and nearby parking availability semantics. A malformed or incomplete connection selection receives one correction attempt before any itinerary is changed; repeated invalid outputs still fail.
 - Targeted Chromium end-to-end tests: 19 pass, one desktop-only case is skipped on mobile. API responses and map styles are mocked. They cover location permission/recovery, place choices, complete bus steps, collapsed secondary connections and day-trip edits.
 - `npm run docs:check` passes.
 - Local requests using the configured real provider now route the original Seac Pai Van question to place confirmation. An ordered Pui Ching → Seac Pai Van → Macau Stadium request recommends 56 followed by H3, each from the dated network. `local-live-evidence.json` records these synthetic public-landmark probes.
