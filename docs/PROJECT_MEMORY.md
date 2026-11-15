@@ -29,9 +29,9 @@ External data never enters a client component directly. Public contracts are def
 
 ## Product Decisions
 
-- The local voice-input flow uses DeepSeek ASR for editable drafts on the home and assistant screens. The bus catalogue opens the assistant for trip searches. The manual stop planner is available from the assistant. See ADR 0022 for the audio boundary and rate limits.
+- 2026-11-15: Render deployment `dep-dbst22ajnfac73cljs10` is live at `6b191f5`. Voice input uses DeepSeek ASR for editable drafts on the home and assistant screens. The bus catalogue opens the assistant for trip searches, with manual stop selection available from the assistant. See ADR 0022. Typecheck, lint, 230 unit tests, 137 browser tests and the production build passed. Production checks covered a synthetic Cantonese recording, the editable transcript, an origin-to-destination plan, and the 3D bus and stop models. Health reported Redis and all 11 warmup endpoints returned HTTP 200.
 
-- The local Figma Make style pass uses Inter and Noto Sans TC, neutral day and night palettes, and blue selected states. Bus-focused views still use fewer map labels and load the bus and stop models at street zoom.
+- The same Render release applies the Figma Make style pass with Inter and Noto Sans TC, neutral day and night palettes, and blue selected states. Bus-focused views use fewer map labels and load the bus and stop models at street zoom.
 
 - The Panda Pavilion follow-up fixes the walking importer treating explicitly unlocked gates as barriers. The C655 to pavilion path is now 430 m in the same dated OSM extract, and the reported Pui Ching coordinates have bus options in both directions. Endpoint stop search extends to 1 km, with up to three same-platform transfers and a walking/transfer penalty in ranking. All four opened bus legs have independent live data. Long trips include a separate taxi suggestion with no invented fare, duration or driving route. The walking source has a scoped cache version. See ADR 0019 and `docs/qa/panda-routing/VERIFICATION.md` for checks and deployment status.
 
