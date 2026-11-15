@@ -25,6 +25,8 @@ The original walking-only input's starting point was not provided, so that exact
 
 ## Deployment
 
-Render deployment `dep-dbsilstckfvc73dmhttg` is live with commit `08ebbdb7ba0b926377185999ecab6e462ae736b7`.
+The final Render deployment `dep-dbsir4lbedkc73c8mk4g` is live with commit `b81c0f186ea9f8062296db4692019740f8af855b`.
 
 Production probes at 11:48 Macau time passed: the original Seac Pai Van bus question returned place choices with nearby-stop labels; the ordered route recommended 56 then H3; nearby parking returned five named facilities with vehicle counts and source times; nearby bus stops returned five exact platform codes and serving route names. The health endpoint reported `ok`, Redis, and zero source failure counters. `production-evidence.json` contains the responses to synthetic public-landmark queries; parking counts are observations at that time.
+
+After the overview and output-validation repairs, the final deployment returned three complete day-trip alternatives at 11:59. Each had four connections including the return; all overview bus/walking labels were checked against the selected route records. Another ordered request returned buses on both sections. `媽角廟` resolved to the catalogue entry for 媽閣廟 and requested an origin. Health remained `ok` with Redis.
