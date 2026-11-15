@@ -1,6 +1,6 @@
 # Project Memory
 
-- 2026-11-15: Added explicit system bus arrival estimates and bounded position extrapolation (ADR 0020). Minutes use official route geometry, reported/observed speed and congestion; parameters are uncalibrated. Vehicle-to-segment matching now checks incoming and outgoing segments. Forecasts stop at 15 seconds/the next stop, and arrival minutes are withheld for stopped or frozen vehicles. Bus panel, first boarding step and general assistant share these estimates. Production deployment verification is recorded in `docs/qa/bus-prediction/VERIFICATION.md` when complete.
+- 2026-11-15: Added explicit system bus arrival estimates and bounded position extrapolation (ADR 0020). Minutes use official route geometry, reported/observed speed and congestion; parameters are uncalibrated. Vehicle-to-segment matching now checks incoming and outgoing segments. Forecasts stop at 15 seconds/the next stop, and arrival minutes are withheld for stopped or frozen vehicles. Bus panel, first boarding step and general assistant share these estimates. Render deployment `dep-dbskfck9v7es73c192k0` is live with `d204264`. Typecheck, lint, 210 unit tests and production build passed; desktop/mobile production checks showed labelled minutes and no phone overflow. See `docs/qa/bus-prediction/VERIFICATION.md`.
 
 
 ## Current State

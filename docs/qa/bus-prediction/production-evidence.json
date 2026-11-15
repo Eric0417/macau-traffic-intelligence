@@ -1,0 +1,351 @@
+{
+  "deployment": "dep-dbskfck9v7es73c192k0",
+  "commit": "d20426409399620d69c744d5c2813da5e888f4aa",
+  "route": "56",
+  "meta": {
+    "generatedAt": "2026-11-15T05:50:16.550Z",
+    "updatedAt": "2026-11-15T05:50:16.548Z",
+    "stale": false,
+    "ttlSeconds": 2,
+    "source": {
+      "id": "bus-eta-00056-0",
+      "name": "巴士 00056 實時位置",
+      "url": "https://bis.dsat.gov.mo:37812/macauweb/",
+      "text": "交通事務局巴士報站資料；到站分鐘及推算位置為本網站系統估算"
+    }
+  },
+  "vehicles": [
+    {
+      "id": "E3392",
+      "plate": "AA7402",
+      "busType": "1",
+      "lowFloor": false,
+      "speedKph": 3,
+      "status": "1",
+      "stationCode": "T314/2",
+      "stationName": "信虹花園",
+      "stationSequence": 6,
+      "segmentIndex": 6,
+      "coordinates": [
+        113.559875,
+        22.15641
+      ],
+      "bearing": 10.04934858922536,
+      "positionSource": "feed",
+      "predictionAnchorAt": "2026-11-15T05:50:16.538Z",
+      "prediction": {
+        "segmentIndex": 6,
+        "distanceAlongSegment": 0.5154994171484474,
+        "speedKph": 3,
+        "anchorAt": "2026-11-15T05:50:16.538Z",
+        "validUntil": "2026-11-15T05:50:31.538Z",
+        "basis": "reported-speed"
+      },
+      "estimated": true
+    },
+    {
+      "id": "E3337",
+      "plate": "AA6356",
+      "busType": "1",
+      "lowFloor": false,
+      "speedKph": 10,
+      "status": "0",
+      "stationCode": "M155",
+      "stationName": "東方拱門",
+      "stationSequence": 12,
+      "segmentIndex": 12,
+      "coordinates": [
+        113.551285,
+        22.197897
+      ],
+      "bearing": 240.19088579322693,
+      "positionSource": "feed",
+      "predictionAnchorAt": "2026-11-15T05:50:16.538Z",
+      "prediction": {
+        "segmentIndex": 12,
+        "distanceAlongSegment": 935.8924846888506,
+        "speedKph": 10,
+        "anchorAt": "2026-11-15T05:50:16.538Z",
+        "validUntil": "2026-11-15T05:50:31.538Z",
+        "basis": "reported-speed"
+      },
+      "estimated": true
+    },
+    {
+      "id": "E3250",
+      "plate": "AA2961",
+      "busType": "1",
+      "lowFloor": false,
+      "speedKph": 26,
+      "status": "0",
+      "stationCode": "M61/2",
+      "stationName": "二龍喉公園",
+      "stationSequence": 15,
+      "segmentIndex": 15,
+      "coordinates": [
+        113.563194,
+        22.198164
+      ],
+      "bearing": 173.7093292235278,
+      "positionSource": "feed",
+      "predictionAnchorAt": "2026-11-15T05:50:16.538Z",
+      "prediction": {
+        "segmentIndex": 15,
+        "distanceAlongSegment": 2111.251954838419,
+        "speedKph": 26,
+        "anchorAt": "2026-11-15T05:50:16.538Z",
+        "validUntil": "2026-11-15T05:50:31.538Z",
+        "basis": "reported-speed"
+      },
+      "estimated": true
+    }
+  ],
+  "stops": [
+    {
+      "stationName": "蝴蝶谷大馬路總站",
+      "stationCode": "C690/6",
+      "arrivalEstimate": {
+        "minutes": 23,
+        "generatedAt": "2026-11-15T05:50:16.538Z",
+        "vehicleId": "E3250",
+        "basis": "reported-speed"
+      }
+    },
+    {
+      "stationName": "和諧廣場/樂群樓",
+      "stationCode": "C689/2",
+      "arrivalEstimate": {
+        "minutes": 24,
+        "generatedAt": "2026-11-15T05:50:16.538Z",
+        "vehicleId": "E3250",
+        "basis": "reported-speed"
+      }
+    },
+    {
+      "stationName": "連貫公路/新濠影匯",
+      "stationCode": "T360",
+      "arrivalEstimate": {
+        "minutes": 27,
+        "generatedAt": "2026-11-15T05:50:16.538Z",
+        "vehicleId": "E3250",
+        "basis": "reported-speed"
+      }
+    },
+    {
+      "stationName": "連貫公路/巴黎人",
+      "stationCode": "T376/2",
+      "arrivalEstimate": {
+        "minutes": 28,
+        "generatedAt": "2026-11-15T05:50:16.538Z",
+        "vehicleId": "E3250",
+        "basis": "reported-speed"
+      }
+    },
+    {
+      "stationName": "連貫公路/威尼斯人",
+      "stationCode": "T363/2",
+      "arrivalEstimate": {
+        "minutes": 30,
+        "generatedAt": "2026-11-15T05:50:16.538Z",
+        "vehicleId": "E3250",
+        "basis": "reported-speed"
+      }
+    },
+    {
+      "stationName": "氹仔嘉樂庇馬路",
+      "stationCode": "T306",
+      "arrivalEstimate": {
+        "minutes": 32,
+        "generatedAt": "2026-11-15T05:50:16.538Z",
+        "vehicleId": "E3250",
+        "basis": "reported-speed"
+      }
+    },
+    {
+      "stationName": "信虹花園",
+      "stationCode": "T314/2",
+      "arrivalEstimate": {
+        "minutes": 34,
+        "generatedAt": "2026-11-15T05:50:16.538Z",
+        "vehicleId": "E3250",
+        "basis": "reported-speed"
+      }
+    },
+    {
+      "stationName": "湖畔大廈",
+      "stationCode": "T408/6",
+      "arrivalEstimate": {
+        "minutes": 9,
+        "generatedAt": "2026-11-15T05:50:16.538Z",
+        "vehicleId": "E3392",
+        "basis": "reported-speed"
+      }
+    },
+    {
+      "stationName": "海灣花園/海城閣",
+      "stationCode": "T343",
+      "arrivalEstimate": {
+        "minutes": 22,
+        "generatedAt": "2026-11-15T05:50:16.538Z",
+        "vehicleId": "E3392",
+        "basis": "reported-speed"
+      }
+    },
+    {
+      "stationName": "外港碼頭",
+      "stationCode": "M239/1",
+      "arrivalEstimate": {
+        "minutes": 44,
+        "generatedAt": "2026-11-15T05:50:16.538Z",
+        "vehicleId": "E3392",
+        "basis": "reported-speed"
+      }
+    },
+    {
+      "stationName": "友誼馬路/行車天橋",
+      "stationCode": "M254",
+      "arrivalEstimate": null
+    },
+    {
+      "stationName": "羅理基/馬六甲街   ",
+      "stationCode": "M117",
+      "arrivalEstimate": {
+        "minutes": 51,
+        "generatedAt": "2026-11-15T05:50:16.538Z",
+        "vehicleId": "E3250",
+        "basis": "reported-speed"
+      }
+    },
+    {
+      "stationName": "東方拱門",
+      "stationCode": "M155",
+      "arrivalEstimate": {
+        "minutes": 52,
+        "generatedAt": "2026-11-15T05:50:16.538Z",
+        "vehicleId": "E3250",
+        "basis": "reported-speed"
+      }
+    },
+    {
+      "stationName": "俾利喇/高士德",
+      "stationCode": "M92",
+      "arrivalEstimate": {
+        "minutes": 5,
+        "generatedAt": "2026-11-15T05:50:16.538Z",
+        "vehicleId": "E3337",
+        "basis": "reported-speed"
+      }
+    },
+    {
+      "stationName": "愉景花園",
+      "stationCode": "M272",
+      "arrivalEstimate": {
+        "minutes": 7,
+        "generatedAt": "2026-11-15T05:50:16.538Z",
+        "vehicleId": "E3337",
+        "basis": "reported-speed"
+      }
+    },
+    {
+      "stationName": "二龍喉公園",
+      "stationCode": "M61/2",
+      "arrivalEstimate": {
+        "minutes": 9,
+        "generatedAt": "2026-11-15T05:50:16.538Z",
+        "vehicleId": "E3337",
+        "basis": "reported-speed"
+      }
+    },
+    {
+      "stationName": "高勵雅馬路",
+      "stationCode": "T342",
+      "arrivalEstimate": {
+        "minutes": 10,
+        "generatedAt": "2026-11-15T05:50:16.538Z",
+        "vehicleId": "E3250",
+        "basis": "reported-speed"
+      }
+    },
+    {
+      "stationName": "湖畔公園",
+      "stationCode": "T409",
+      "arrivalEstimate": {
+        "minutes": 12,
+        "generatedAt": "2026-11-15T05:50:16.538Z",
+        "vehicleId": "E3250",
+        "basis": "reported-speed"
+      }
+    },
+    {
+      "stationName": "氹仔茵景園",
+      "stationCode": "T313",
+      "arrivalEstimate": {
+        "minutes": 13,
+        "generatedAt": "2026-11-15T05:50:16.538Z",
+        "vehicleId": "E3250",
+        "basis": "reported-speed"
+      }
+    },
+    {
+      "stationName": "氹仔CEM貨倉",
+      "stationCode": "T315",
+      "arrivalEstimate": {
+        "minutes": 14,
+        "generatedAt": "2026-11-15T05:50:16.538Z",
+        "vehicleId": "E3250",
+        "basis": "reported-speed"
+      }
+    },
+    {
+      "stationName": "連貫公路/新濠天地",
+      "stationCode": "T375",
+      "arrivalEstimate": {
+        "minutes": 16,
+        "generatedAt": "2026-11-15T05:50:16.538Z",
+        "vehicleId": "E3250",
+        "basis": "reported-speed"
+      }
+    },
+    {
+      "stationName": "連貫公路/倫敦人",
+      "stationCode": "T380",
+      "arrivalEstimate": {
+        "minutes": 17,
+        "generatedAt": "2026-11-15T05:50:16.538Z",
+        "vehicleId": "E3250",
+        "basis": "reported-speed"
+      }
+    },
+    {
+      "stationName": "連貫公路/巴黎人花園",
+      "stationCode": "T379",
+      "arrivalEstimate": {
+        "minutes": 18,
+        "generatedAt": "2026-11-15T05:50:16.538Z",
+        "vehicleId": "E3250",
+        "basis": "reported-speed"
+      }
+    },
+    {
+      "stationName": "和諧廣場/業興大廈",
+      "stationCode": "C688/2",
+      "arrivalEstimate": {
+        "minutes": 22,
+        "generatedAt": "2026-11-15T05:50:16.538Z",
+        "vehicleId": "E3250",
+        "basis": "reported-speed"
+      }
+    }
+  ],
+  "browserDesktop": {
+    "card": "我嘅候車站\n蝴蝶谷大馬路總站\n約 23 分鐘\n系統估算\n\n最後取得 下午01:50\n巴士 00056 實時位置\n\n下一班車\n\n地圖",
+    "errors": []
+  },
+  "browserMobile": {
+    "width": {
+      "document": 390,
+      "viewport": 390
+    },
+    "card": "我嘅候車站\n蝴蝶谷大馬路總站\n約 17 分鐘\n系統估算\n\n最後取得 下午01:52\n巴士 00056 實時位置\n\n下一班車\n\n地圖"
+  }
+}
