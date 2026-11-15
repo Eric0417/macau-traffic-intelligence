@@ -205,7 +205,7 @@ export function BusPanel({
           <h2>{stop.stationName}</h2>
           <div className="waiting-number">
             <BusArrivalEstimate stop={stop} disabled={Boolean(eta.error) || !eta.meta || metaIsDelayed(eta.meta)} fallback={
-status === "suspended" ? (
+              status === "suspended" ? (
               t("suspended")
             ) : status === "due" ? (
               t("dueAtStop")
@@ -270,7 +270,7 @@ status === "suspended" ? (
                     </span>
                     <span className="stop-wait">
                       <BusArrivalEstimate stop={item} disabled={Boolean(eta.error) || !eta.meta || metaIsDelayed(eta.meta)} fallback={
-itemStatus === "suspended"
+                        itemStatus === "suspended"
                         ? t("suspended")
                         : itemStatus === "due"
                           ? t("dueAtStop")
