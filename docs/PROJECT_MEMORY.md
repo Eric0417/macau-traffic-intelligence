@@ -8,6 +8,8 @@
 
 ## Current State
 
+The native iOS client is in `ios/` (ADR 0024). It targets iOS 26 and uses SwiftUI, MapKit and AVKit with the deployed normalized API. It includes bus lookup, shared local walking/bus planning, all assistant continuation types, voice transcription, itineraries, parking, LRT and city information. Follow-up design requests reduced visible text and changed the controls to a neutral ChatGPT-like style, with Liquid Glass limited to navigation and floating controls. The icon is a monochrome route arrow. Native source/estimate details are disclosed on demand; delay and failure states stay visible. Build, test, installation and physical-device limits are recorded in `docs/qa/native-ios/VERIFICATION.md`.
+
 Version `0.1.0` is a standalone Next.js 16 application with Traditional Chinese, Simplified Chinese and English. The local frontend has an edge-to-edge desktop map, a side panel with bottom navigation, and collapsible guidance. The phone home screen can switch to the map directly. Ordered journeys and cultural day trips were deployed as `5ec14f6` on 2026-11-14. Map space and mistyped place names were revised in `0928d2c`, and phone card sizing in `414b9f4`. The simplified phone navigation and larger controls were deployed as `23c379b`, Render deployment `dep-dbs51req1p3s73ed98gg`. See `docs/qa/mobile-visual-polish/VERIFICATION.md` and the itinerary/map-guide QA folders for the earlier revisions.
 
 The existing deployment is recorded on Render as project `Macau Traffic Intelligence`, environment `production`, at https://macau-traffic-intelligence.onrender.com. The service runs two instances in Singapore with a private Render Key Value instance for cache, locks, circuit state, and rate limiting; autoscaling remains declarative until the workspace is on a Pro plan.
@@ -106,7 +108,7 @@ External data never enters a client component directly. Public contracts are def
 - A local server-side AI key was present on 2026-11-13 (its value was not logged). Common destination requests use local routing and work without the provider. A live local `deepseek-chat` call returned dated traffic announcements on November 13. Publication times are now serialized in UTC+08:00 before provider calls.
 - The DSAT Node certificate-chain failure was reproduced and fixed locally on 2026-11-13 with an exact-origin public intermediate, retaining TLS verification (ADR 0015). News and arrangements now load and poll every minute. Production availability must still be checked after deployment.
 - RSS publication lag and finite item windows remain unknown; the app cannot promise incident completeness or ongoing-event status.
-- Native mobile applications and physical-device frame-rate/battery measurements are outside this web revision. Chromium touch emulation is not a physical iOS Safari test.
+- The native iOS client is now implemented separately in `ios/`. Physical-device frame-rate, battery and field accuracy measurements remain unverified. Chromium touch emulation is not a physical iOS Safari test.
 - DSAT dynamic endpoints are used by official web applications but are not all formally documented. Response fields can change without notice.
 - The Public Security Police border status endpoint is used by its official mobile pages but is not a documented public API. It may change or block server requests; border data remains optional and other modules must continue to work.
 - OpenFreeMap and camera HLS availability are external runtime dependencies.
@@ -129,6 +131,8 @@ External data never enters a client component directly. Public contracts are def
 - `/api/v1/lrt/service` reads current MLM service hours and 17 official timetable links. The September 2026 publisher edition remains visible. These are schedules; no verified public live-train position or arrival endpoint was established in the bounded audit. Existing schematic train animation stays labelled. See `LRT_DATA_AUDIT_2026-11-10.md`.
 
 ## Next Work
+
+- Field-test native location, microphone audio quality, camera playback and touch navigation. Development installation is separate from TestFlight/App Store distribution; distribution privacy declarations and signing require a release review.
 
 - Before release, refresh the dated bus topology snapshot and recheck temporary diversions. Address/landmark geocoding, routed walking links between different platforms, more than one transfer and live service-hour filtering are not implemented. A verified official live LRT interface would be a separate source integration.
 - Obtain a reusable incident feed with event identity, update/resolution fields and publication-delay measurements before promising incident alerts.

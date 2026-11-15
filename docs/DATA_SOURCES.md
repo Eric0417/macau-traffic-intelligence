@@ -35,6 +35,16 @@ This registry is part of the implementation contract. Any source, field, TTL, fa
 - DeepSeek detects the language of user-submitted recordings and returns the transcript. The app identifies the provider beside the microphone and in the API attribution.
 - The public API exposes normalized current views and explicitly dated topology snapshots, not bulk history or raw upstream datasets.
 
+## Native iOS client (2026-11-16)
+
+`ios/` reads the same normalized API and uses the same server adapters, cache TTLs and source fallbacks. No new government endpoint, provider key or raw upstream response enters the app. Source attribution and retrieval time are available in each module's Source disclosure. Delayed data and failures remain visible outside it. Bus estimates expire after 10 seconds with a maximum two-second clock skew; envelope freshness uses the existing TTL plus eight-second grace. Visible route and journey screens poll every two seconds, pause in the background and back off after errors. Current vehicle markers come from each fresh response, rather than reusing old geometry coordinates under a new timestamp.
+
+Apple MapKit supplies the native basemap and retains Apple's built-in attribution. This platform service is separate from the normalized transport feeds, as recorded in ADR 0024. User-opened Apple Maps walking URLs share the displayed endpoints. A relocated stop invalidates a dated walking path if its endpoints no longer agree within three metres; the client then labels the connection as a straight-line estimate. The native app does not animate extrapolated bus motion or infer live LRT trains.
+
+Manual planning downloads the dated normalized bus/walking snapshots and executes the shared deterministic code locally in JavaScriptCore. AI questions, selected destinations, trip drafts and explicitly shared positions use the existing assistant endpoint. Only favorites and interface preferences persist on-device. Native audio uses the same 16 kHz, mono, 16-bit PCM WAV contract, capped at 20 seconds. Temporary clips are removed after upload, cancellation or the next assistant launch; transcription produces editable text before a question is sent. Provider retention remains outside the app's control. AVKit plays the official HLS stream directly, without recording or re-hosting.
+
+Native tests decode captured contracts, check freshness and request encoding, run the actual shared planner bundle, validate moved-stop walking endpoints and exact WAV bytes, and exercise fixture-based UI flows. See `docs/qa/native-ios/VERIFICATION.md` for separate live and physical-device evidence.
+
 ## Adapter notes
 
 - Journey presentation uses the existing normalized ETA API for each selected leg (maximum two). Stop codes, direction, segment chain, count and endpoint geometry must match before a bus line is drawn. Repeated ambiguous paths, missing segments and conflicting transfer coordinates are not joined with invented lines. Official schedules/operating hours remain unverified for bus journeys. `docs/qa/resident-workspace/bus-journey-accuracy.json` records fresh reads of routes 3A, MT5 and 25 and the 30-stop versus 9-stop ranking regression.

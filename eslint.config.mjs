@@ -13,6 +13,7 @@ const eslintConfig = defineConfig([
     "build/**",
     "public/maplibre/**",
     "ios/build/**",
+    "ios/build-device/**",
     "ios/MacauTraffic/Resources/planner.js",
     "next-env.d.ts",
   ]),

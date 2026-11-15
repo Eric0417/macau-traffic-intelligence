@@ -1,0 +1,1 @@
+{"data":{"kind":"location","destination":{"id":"test:stpauls","name":"大三巴牌坊","coordinates":[113.5407,22.1976]}},"meta":{"generatedAt":"2026-11-16T00:00:00Z","updatedAt":"2026-11-16T00:00:00Z","stale":false,"ttlSeconds":0,"source":{"id":"fixture","name":"UI test fixture","url":"https://example.com","text":"Synthetic test data, never a production fallback"}}}

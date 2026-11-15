@@ -2,6 +2,8 @@
 
 Live: https://macau-traffic-intelligence.onrender.com
 
+Native iOS app: [build and feature guide](ios/README.md), [Xcode project](ios/MacauTraffic.xcodeproj), [verification](docs/qa/native-ios/VERIFICATION.md). The SwiftUI client uses the existing backend and requires iOS 26 or newer.
+
 Macau Traffic Intelligence is a resident travel workspace for Macau. It combines road congestion, bridge travel times, official HLS cameras, bus positions and stops-away counts, parking by vehicle type, weather, border status, published traffic announcements and the LRT network.
 
 The application has five primary sections: Travel, Buses, LRT, Parking and AI. Desktop shows a list beside the map. Phones switch between a normal scrolling list and a map, with navigation outside the content. Day/night appearance and favourites stay on the device. Parking location stays in the browser. AI journey planning separately requests location and sends it to the server and configured provider, as disclosed beside the input. The map starts in 2D; optional 3D includes schematic buses, signs and LRT platforms.

@@ -9,17 +9,18 @@ struct ExploreView: View {
     @State private var focus: Coordinate?
     @State private var error: String?
     var body: some View {
-        TransitMap(lines: showTraffic ? roadLines : [], focus: focus)
+        TransitMap(lines: showTraffic ? roadLines : [], focus: focus, controlTopPadding: 170)
             .ignoresSafeArea(edges: .top)
             .safeAreaInset(edge: .top, spacing: 0) {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 5) {
-                        Text(settings.text("澳門", "Macau")).font(.system(.largeTitle, design: .rounded, weight: .bold))
-                        Text(settings.text("城市每一程", "Every way through the city")).font(.subheadline).foregroundStyle(.secondary)
+                        Text(settings.text("澳門", "Macau")).font(.system(.title, weight: .semibold))
                     }
                     Spacer()
-                    if let temperature = weather.data?.temperatureCelsius {
-                        Label("\(Int(temperature))°", systemImage: "thermometer.medium").font(.headline).padding(12).glassEffect()
+                    TimelineView(.periodic(from: .now, by: 5)) { context in
+                        if weather.fresh(at: context.date), let temperature = weather.data?.temperatureCelsius {
+                            Label("\(Int(temperature))°", systemImage: "thermometer.medium").font(.headline).padding(12).glassEffect()
+                        }
                     }
                 }.padding(.horizontal, 24).padding(.top, 12).padding(.bottom, 16)
                 .background(LinearGradient(colors: [Color(.systemBackground).opacity(0.94), Color(.systemBackground).opacity(0)], startPoint: .top, endPoint: .bottom))
@@ -32,19 +33,18 @@ struct ExploreView: View {
                         Spacer()
                         Button {
                             Task { do { focus = try await location.request() } catch { self.error = error.localizedDescription } }
-                        } label: { Image(systemName: "location.fill").frame(width: 42, height: 42) }
-                            .buttonStyle(.glass).disabled(location.locating)
+                        } label: { Image(systemName: "location.fill").frame(width: 44, height: 44) }
+                            .buttonStyle(.plain).glassEffect(.regular.interactive(), in: .circle).disabled(location.locating)
                             .accessibilityLabel(settings.text("顯示目前位置", "Show my location"))
                     }
                     NavigationLink { ManualPlannerView() } label: {
                         HStack(spacing: 14) {
-                            Image(systemName: "magnifyingglass").font(.title3.weight(.medium)).foregroundStyle(.blue)
+                            Image(systemName: "magnifyingglass").font(.title3.weight(.medium)).foregroundStyle(.primary)
                             VStack(alignment: .leading, spacing: 5) {
-                                Text(settings.text("你想去邊？", "Where to?")).font(.title3.weight(.semibold)).foregroundStyle(.primary)
-                                Text(settings.text("地點、街道或巴士站", "Places, streets or bus stops")).font(.subheadline).foregroundStyle(.secondary)
+                                Text(settings.text("去邊？", "Where to?")).font(.title3.weight(.semibold)).foregroundStyle(.primary)
                             }
                             Spacer()
-                            Image(systemName: "arrow.up.right").font(.title3).foregroundStyle(.blue)
+                            Image(systemName: "arrow.up.right").font(.title3).foregroundStyle(.primary)
                         }.padding(22).glassEffect(.regular.interactive(), in: .rect(cornerRadius: 28))
                     }.buttonStyle(.plain).accessibilityIdentifier("explore-search")
                     if showTraffic {

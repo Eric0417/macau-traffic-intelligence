@@ -23,6 +23,7 @@ struct TransitMap: View {
     var pins: [MapPin] = []
     var fitID = "macau"
     var focus: Coordinate?
+    var controlTopPadding: CGFloat = 12
     var onSelect: ((String) -> Void)?
     @State private var position: MapCameraPosition = .region(Self.macau)
     @State private var selection: String?
@@ -40,7 +41,7 @@ struct TransitMap: View {
             }
             UserAnnotation()
         }
-        .mapStyle(.standard(elevation: .realistic, pointsOfInterest: .excludingAll))
+        .mapStyle(.standard(elevation: .realistic, emphasis: .muted, pointsOfInterest: .excludingAll))
         .mapControls { MapCompass(); MapScaleView() }
         .overlay(alignment: .topTrailing) {
             Button {
@@ -49,7 +50,7 @@ struct TransitMap: View {
                 let camera = MapCamera(centerCoordinate: center, distance: tilted ? 6500 : 11000, heading: 0, pitch: tilted ? 55 : 0)
                 withAnimation(reduceMotion ? nil : .smooth) { position = .camera(camera) }
             } label: { Text(tilted ? "2D" : "3D").font(.subheadline.weight(.semibold)).frame(width: 44, height: 44) }
-                .buttonStyle(.glass).padding(12)
+                .buttonStyle(.plain).glassEffect(.regular.interactive(), in: .circle).padding(.horizontal, 16).padding(.top, controlTopPadding)
                 .accessibilityLabel(settings.text("切換地圖角度", "Change map perspective"))
         }
         .onChange(of: selection) { _, value in if let value { onSelect?(value) } }

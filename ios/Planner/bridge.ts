@@ -39,5 +39,6 @@ export function plan(input: string): string {
   return JSON.stringify({ journeys, networkFetchedAt: bus.fetchedAt, walkingMappedAt: walking?.mappedAt });
 }
 export function geometry(input: string): string {
-  return JSON.stringify(buildJourneyMap(JSON.parse(input)));
+  const { locale, ...journey } = JSON.parse(input);
+  return JSON.stringify(buildJourneyMap(journey, locale));
 }

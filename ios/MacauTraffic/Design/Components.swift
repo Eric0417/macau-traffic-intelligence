@@ -6,19 +6,33 @@ struct LivePolling<Value: Codable>: ViewModifier {
     let resource: LiveResource<Value>
     let path: String
     let interval: Double
+    var enabled: Bool = true
     func body(content: Content) -> some View {
         content.onAppear { visible = true }.onDisappear { visible = false }
-            .task(id: "\(visible)-\(phase)-\(path)") {
-                if visible && phase == .active { await resource.poll(path, interval: interval) }
+            .task(id: "\(visible)-\(phase)-\(path)-\(enabled)") {
+                if visible && phase == .active && enabled { await resource.poll(path, interval: interval) }
             }
     }
 }
 extension View {
-    func livePolling<T>(_ resource: LiveResource<T>, path: String, interval: Double) -> some View {
-        modifier(LivePolling(resource: resource, path: path, interval: interval))
+    func livePolling<T>(_ resource: LiveResource<T>, path: String, interval: Double, enabled: Bool = true) -> some View {
+        modifier(LivePolling(resource: resource, path: path, interval: interval, enabled: enabled))
     }
     func readingCard() -> some View {
-        padding(20).background(.background, in: RoundedRectangle(cornerRadius: 24))
+        padding(18).background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 20))
+    }
+    func journeyExpansion(source: String, namespace: Namespace.ID) -> some View {
+        modifier(JourneyExpansion(source: source, namespace: namespace))
+    }
+}
+
+private struct JourneyExpansion: ViewModifier {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    var source: String
+    var namespace: Namespace.ID
+    @ViewBuilder func body(content: Content) -> some View {
+        if reduceMotion { content }
+        else { content.navigationTransition(.zoom(sourceID: source, in: namespace)) }
     }
 }
 
@@ -34,11 +48,17 @@ struct SourceNote: View {
                         Label(settings.text("資料延遲，請重新確認", "Delayed data. Check again."), systemImage: "clock.badge.exclamationmark")
                             .foregroundStyle(.orange)
                     }
-                    HStack(alignment: .top) {
-                        Text(meta.source.name)
-                        Spacer(minLength: 12)
-                        if let date = Timestamp.date(meta.updatedAt) {
-                            Text(settings.text("取得 ", "Retrieved ") + date.formatted(date: .omitted, time: .standard))
+                    DisclosureGroup {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(meta.source.name)
+                            Text(meta.source.text)
+                            if let url = URL(string: meta.source.url) { Link(settings.text("官方來源", "Source website"), destination: url) }
+                        }.frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 6)
+                    } label: {
+                        HStack {
+                            Label(settings.text("資料", "Source"), systemImage: "info.circle")
+                            Spacer(minLength: 12)
+                            if let date = Timestamp.date(meta.updatedAt) { Text(date.formatted(date: .omitted, time: .standard)) }
                         }
                     }
                 }.font(.caption).foregroundStyle(.secondary)
@@ -86,6 +106,7 @@ struct SaveButton: View {
             Image(systemName: settings.saved.contains(where: { $0.id == item.id }) ? "star.fill" : "star")
         }
         .accessibilityLabel(settings.text("收藏", "Save"))
+        .accessibilityValue(settings.saved.contains(where: { $0.id == item.id }) ? settings.text("已收藏", "Saved") : settings.text("未收藏", "Not saved"))
         .sensoryFeedback(.selection, trigger: settings.saved.count)
     }
 }

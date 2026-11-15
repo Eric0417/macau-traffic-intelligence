@@ -1,5 +1,12 @@
 # Changelog
 
+## Native iOS application - 2026-11-16
+
+- Add an iOS 26 SwiftUI client for buses, local journey planning, AI and voice input, multi-stop itineraries, parking, LRT and city information, using the existing backend.
+- Redesign navigation with native gestures, sheets, Liquid Glass controls, neutral buttons and a compact assistant. Move source and estimate explanations behind disclosure controls while retaining visible failure and delay notices.
+- Use MapKit and AVKit, add a monochrome route icon, support three languages, dark appearance and Dynamic Type, and save route directions and stop occurrences on the device.
+- Add native contract, planner and interaction tests, a deliberate production probe, and build instructions in `ios/README.md`. Record installation and verification evidence in `docs/qa/native-ios/VERIFICATION.md`.
+
 ## Find nearby facilities in the AI assistant - 2026-11-16
 
 - Understand whether a question asks for a nearby type of place, a specific destination or directions. Find hospitals, clinics, pharmacies and toilets by category.

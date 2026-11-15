@@ -10,8 +10,19 @@ struct JourneyLeg: Codable, Identifiable {
     var from: JourneyStop; var to: JourneyStop; var fromSequence: Int; var toSequence: Int; var stopCount: Int
     var serviceWindows: [[Int]]?
     var id: String { "\(routeCode):\(direction):\(fromSequence):\(toSequence)" }
+    func endpoint(boarding: Bool, eta: BusETA?) -> Coordinate {
+        let stop = boarding ? from : to
+        guard let eta, eta.routeCode == routeCode, eta.direction == direction else { return stop.coordinates }
+        let matches = eta.stops.filter { $0.stationCode == stop.stationCode && $0.coordinates != nil }
+        return matches.count == 1 ? matches[0].coordinates! : stop.coordinates
+    }
 }
-struct WalkingPath: Codable { var from: Coordinate; var to: Coordinate; var coordinates: [Coordinate]; var meters: Double }
+struct WalkingPath: Codable {
+    var from: Coordinate; var to: Coordinate; var coordinates: [Coordinate]; var meters: Double
+    func matches(from start: Coordinate, to end: Coordinate) -> Bool {
+        from.distance(to: start) <= 3 && to.distance(to: end) <= 3
+    }
+}
 struct Journey: Codable, Identifiable {
     var id: String; var legs: [JourneyLeg]; var accessMeters: Double; var egressMeters: Double; var transferMeters: Double; var totalStops: Int
     var walking: Walks?
@@ -25,6 +36,7 @@ struct JourneySelection: Identifiable {
 }
 struct GeometryInput: Encodable {
     var id: String; var legs: [Leg]; var origin: Coordinate; var destination: Coordinate; var destinationName: String; var walking: Journey.Walks?
+    var locale: String = "zh-Hant"
     struct Leg: Encodable { var leg: JourneyLeg; var eta: BusETA?; var positionsFresh: Bool }
 }
 struct JourneyGeometry: Decodable {

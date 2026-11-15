@@ -21,7 +21,7 @@ struct APIClient {
     }
     func send<T: Decodable>(_ path: String, method: String, body: Data?, contentType: String = "application/json") async throws -> T {
         #if DEBUG
-        if ProcessInfo.processInfo.arguments.contains("--uitesting") {
+        if baseURL == Self.productionURL && (ProcessInfo.processInfo.arguments.contains("--uitesting") || ProcessInfo.processInfo.environment["MACAU_FIXTURES"] == "1") {
             return try FixtureLoader.response(path, body: body)
         }
         #endif
@@ -50,11 +50,13 @@ enum APIError: Error, LocalizedError {
 }
 
 @Observable @MainActor final class LiveResource<Value: Codable> {
+    private let client: APIClient
     private(set) var envelope: Envelope<Value>?
     private(set) var error: String?
     private(set) var loading = false
     private var generation = 0
     private var currentPath: String?
+    init(client: APIClient = .shared) { self.client = client }
     var data: Value? { envelope?.data }
     var meta: SourceMeta? { envelope?.meta }
     func fresh(at now: Date = .now) -> Bool { error == nil && meta.map { !$0.isDelayed(at: now) } == true }
@@ -65,7 +67,7 @@ enum APIError: Error, LocalizedError {
         let current = generation
         loading = envelope == nil
         do {
-            let result: Envelope<Value> = try await APIClient.shared.get(path)
+            let result: Envelope<Value> = try await client.get(path)
             guard !Task.isCancelled, generation == current else { return }
             envelope = result; error = nil
         } catch {
@@ -88,10 +90,21 @@ enum APIError: Error, LocalizedError {
 #if DEBUG
 enum FixtureLoader {
     static func response<T: Decodable>(_ path: String, body: Data?) throws -> T {
-        let name = path.components(separatedBy: "?")[0].replacingOccurrences(of: "/", with: "_")
+        var name = path.components(separatedBy: "?")[0].replacingOccurrences(of: "/", with: "_")
+        if path == "assistant/journeys" {
+            let request = body.flatMap { try? JSONDecoder().decode(AssistantRequest.self, from: $0) }
+            let scenario = ProcessInfo.processInfo.arguments.first { $0.hasPrefix("--scenario=") }?.components(separatedBy: "=").last ?? "journey"
+            switch scenario {
+            case "trip": name = request?.trip == nil ? "assistant_trip_details" : "assistant_itineraries"
+            case "facilities": name = "assistant_facilities"
+            case "choice": name = "assistant_trip_choice"
+            case "traffic": name = "assistant_traffic"
+            default: name = request?.originQuery == nil && request?.origin == nil ? "assistant_location" : "assistant_plans"
+            }
+        }
         guard let url = Bundle.main.url(forResource: name, withExtension: "json", subdirectory: "Fixtures") else { throw APIError.http(503) }
         let data = try Data(contentsOf: url)
-        var object = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+        guard var object = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { throw APIError.invalidResponse }
         if var meta = object["meta"] as? [String: Any] {
             let now = ISO8601DateFormatter().string(from: .now)
             meta["generatedAt"] = now; meta["updatedAt"] = now; object["meta"] = meta

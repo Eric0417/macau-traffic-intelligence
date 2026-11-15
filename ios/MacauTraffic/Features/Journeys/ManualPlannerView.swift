@@ -31,7 +31,7 @@ struct ManualPlannerView: View {
             Section {
                 Button { Task { await plan() } } label: {
                     HStack { Spacer(); if busy { ProgressView() }; Text(settings.text("尋找路線", "Find routes")).fontWeight(.semibold); Spacer() }
-                }.disabled(!ready || origin == nil || destination == nil || busy || origin?.id == destination?.id)
+                }.disabled(!ready || origin == nil || destination == nil || busy || location.locating || origin?.id == destination?.id)
                     .accessibilityIdentifier("plan-manual")
             }
             if !ready && error == nil { ProgressView(settings.text("正在載入路網", "Loading transport network")) }
@@ -155,10 +155,14 @@ struct JourneySummary: View {
                 }
                 Text(journey.legs.first!.from.stationName + " → " + journey.legs.last!.to.stationName).font(.body).foregroundStyle(.primary)
                 Text(settings.text("\(journey.totalStops) 站 · \(max(0, journey.legs.count - 1)) 次轉乘", "\(journey.totalStops) stops · \(max(0, journey.legs.count - 1)) transfers")).font(.subheadline).foregroundStyle(.secondary)
-                if journey.accessMeters + journey.egressMeters > 0 {
-                    Text(settings.text("接駁 \(Int(journey.accessMeters + journey.egressMeters)) m", "Connections \(Int(journey.accessMeters + journey.egressMeters)) m")).font(.caption).foregroundStyle(.secondary)
-                }
+                if journey.accessMeters > 0 { connectionDistance(journey.accessMeters, mapped: journey.walking?.access != nil, start: true) }
+                if journey.egressMeters > 0 { connectionDistance(journey.egressMeters, mapped: journey.walking?.egress != nil, start: false) }
             }
         }.padding(.vertical, 12).frame(maxWidth: .infinity, alignment: .leading)
+    }
+    private func connectionDistance(_ meters: Double, mapped: Bool, start: Bool) -> some View {
+        let endpoint = start ? settings.text("上車前", "Before boarding") : settings.text("落車後", "After alighting")
+        let basis = mapped ? settings.text("地圖步行", "mapped walk") : settings.text("直線接駁", "straight-line connection")
+        return Text("\(endpoint) · \(Int(meters)) m \(basis)").font(.caption).foregroundStyle(.secondary)
     }
 }

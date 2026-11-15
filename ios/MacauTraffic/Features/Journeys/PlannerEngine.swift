@@ -5,23 +5,17 @@ final class PlannerEngine: @unchecked Sendable {
     static let shared = PlannerEngine()
     private let queue = DispatchQueue(label: "com.eric.macautraffic.planner", qos: .userInitiated)
     private var context: JSContext?
-    private var busEdition: String?
-    private var walkingEdition: String?
 
     func configure(bus: Data, walking: Data?) async throws {
         try await perform { context in
-            let busObject = try JSONSerialization.jsonObject(with: bus) as! [String: Any]
-            let walkObject = try walking.map { try JSONSerialization.jsonObject(with: $0) as! [String: Any] }
+            guard let busObject = try JSONSerialization.jsonObject(with: bus) as? [String: Any] else { throw APIError.invalidResponse }
+            let walkObject = try walking.flatMap { try JSONSerialization.jsonObject(with: $0) as? [String: Any] }
             guard let busData = busObject["data"] as? [String: Any] else { throw APIError.invalidResponse }
             let walkData = walkObject?["data"] as? [String: Any]
-            let busEdition = busData["fetchedAt"] as? String
-            let walkEdition = walkData?["mappedAt"] as? String
-            if self.busEdition == busEdition && self.walkingEdition == walkEdition { return }
             let busString = String(data: try JSONSerialization.data(withJSONObject: busData), encoding: .utf8)!
             let walkString = try walkData.map { String(data: try JSONSerialization.data(withJSONObject: $0), encoding: .utf8)! }
             context.objectForKeyedSubscript("NativePlanner")?.invokeMethod("configure", withArguments: [busString, walkString as Any? ?? NSNull()])
             if let exception = context.exception { throw EngineError(message: exception.toString()) }
-            self.busEdition = busEdition; self.walkingEdition = walkEdition
         }
     }
     func call<T: Decodable>(_ method: String, input: String) async throws -> T {

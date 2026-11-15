@@ -22,11 +22,17 @@ struct RootView: View {
             Tab(settings.text("巴士", "Buses"), systemImage: "bus.fill") {
                 NavigationStack { BusListView() }
             }
+            Tab(settings.text("助手", "Assistant"), systemImage: "sparkles") {
+                NavigationStack { AssistantView() }
+            }
+            Tab(settings.text("城市", "City"), systemImage: "building.2.fill") {
+                NavigationStack { CityView() }
+            }
             Tab(settings.text("收藏", "Saved"), systemImage: "star.fill") {
                 NavigationStack { SavedView() }
             }
         }
-        .tint(.blue)
+        .tint(.primary)
         .tabBarMinimizeBehavior(.onScrollDown)
     }
 }

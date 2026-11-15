@@ -1,10 +1,11 @@
 import Foundation
 import CoreLocation
 
-struct Envelope<Value: Codable>: Codable {
+struct Envelope<Value: Decodable>: Decodable {
     var data: Value
     var meta: SourceMeta
 }
+extension Envelope: Encodable where Value: Encodable {}
 
 struct SourceMeta: Codable {
     var generatedAt: String

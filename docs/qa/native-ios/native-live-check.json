@@ -1,0 +1,15 @@
+{
+  "assistantKind" : "plans",
+  "assistantOptions" : 3,
+  "checkedAt" : "2026-11-15T18:08:43Z",
+  "lrtDecoded" : true,
+  "parking" : 95,
+  "personalLocationUsed" : false,
+  "route56Stops" : 24,
+  "routes" : 90,
+  "selectedPublicPlaces" : [
+    "大三巴牌坊",
+    "關閘"
+  ],
+  "transport" : "Native URLSession and production Codable models"
+}

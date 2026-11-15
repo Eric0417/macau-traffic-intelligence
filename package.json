@@ -23,6 +23,7 @@
     "build:lrt": "tsx scripts/build-lrt-network.ts",
     "build:parking": "tsx scripts/build-parking-locations.ts",
     "build:bus-network": "NODE_OPTIONS='--conditions=react-server' tsx scripts/build-bus-network.ts",
+    "build:ios-planner": "node ios/Planner/build.mjs",
     "docs:check": "tsx scripts/check-memory.ts"
   },
   "dependencies": {
@@ -53,6 +54,7 @@
     "@vitejs/plugin-react": "^6.1.1",
     "eslint": "^9",
     "eslint-config-next": "16.4.6",
+    "esbuild": "0.28.2",
     "jsdom": "^30.1.1",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",

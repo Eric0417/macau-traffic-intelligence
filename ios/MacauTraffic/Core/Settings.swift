@@ -6,7 +6,7 @@ enum AppLanguage: String, CaseIterable, Codable {
 }
 
 struct SavedItem: Codable, Identifiable, Equatable {
-    var id: String; var kind: String; var title: String; var routeCode: String?; var direction: Int?; var stationCode: String?
+    var id: String; var kind: String; var title: String; var routeCode: String?; var direction: Int?; var stationCode: String?; var sequence: Int?
 }
 
 @Observable @MainActor final class AppSettings {

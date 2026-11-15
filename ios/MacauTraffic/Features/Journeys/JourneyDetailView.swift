@@ -5,7 +5,7 @@ import SwiftUI
     var errors: Set<String> = []
     var geometry: JourneyGeometry?
     var error: String?
-    func poll(_ selection: JourneySelection) async {
+    func poll(_ selection: JourneySelection, locale: String) async {
         while !Task.isCancelled {
             await withTaskGroup(of: (String, Envelope<BusETA>?).self) { group in
                 for leg in selection.journey.legs {
@@ -20,7 +20,7 @@ import SwiftUI
             do {
                 let input = GeometryInput(id: selection.id, legs: selection.journey.legs.map { leg in
                     .init(leg: leg, eta: envelopes[leg.id]?.data, positionsFresh: !selection.future && !errors.contains(leg.id) && envelopes[leg.id].map { !$0.meta.isDelayed() } == true)
-                }, origin: selection.origin.coordinates, destination: selection.destination.coordinates, destinationName: selection.destination.name, walking: selection.journey.walking)
+                }, origin: selection.origin.coordinates, destination: selection.destination.coordinates, destinationName: selection.destination.name, walking: selection.journey.walking, locale: locale)
                 let value: JourneyGeometry = try await PlannerEngine.shared.call("geometry", input: String(data: JSONEncoder().encode(input), encoding: .utf8)!)
                 if !Task.isCancelled { geometry = value; error = nil }
             } catch { if !Task.isCancelled { self.error = error.localizedDescription } }
@@ -44,6 +44,9 @@ struct JourneyDetailView: View {
                 map.frame(height: 290).listRowInsets(EdgeInsets())
                 Button { expandedMap = true } label: { Label(settings.text("展開地圖", "Expand map"), systemImage: "arrow.up.left.and.arrow.down.right") }
             }
+            if let first = selection.journey.legs.first, selection.origin.coordinates.distance(to: first.endpoint(boarding: true, eta: live.envelopes[first.id]?.data)) > 1 {
+                WalkingConnectionView(from: selection.origin.coordinates, to: first.endpoint(boarding: true, eta: live.envelopes[first.id]?.data), path: selection.journey.walking?.access, title: settings.text("步行前往上車站", "Walk to the boarding stop"))
+            }
             Section {
                 Text(selection.origin.name + " → " + selection.destination.name).font(.title3.weight(.semibold))
                 JourneySummary(journey: selection.journey)
@@ -53,15 +56,30 @@ struct JourneyDetailView: View {
                 Section {
                     HStack { RouteBadge(name: leg.routeName); Text(settings.text("開往 ", "Towards ") + leg.terminalName).font(.headline) }
                     Label(leg.from.stationName + " · " + leg.from.stationCode, systemImage: "arrow.up.circle.fill")
-                    if !selection.future { JourneyBoardingStatus(leg: leg, envelope: live.envelopes[leg.id], failed: live.errors.contains(leg.id)) }
+                    if !selection.future {
+                        if index > 0 { Text(settings.text("以下係查詢當刻資料，唔代表轉乘時可趕到呢班車。", "Status at lookup time. This does not confirm you can catch this connection.")).font(.caption).foregroundStyle(.secondary) }
+                        JourneyBoardingStatus(leg: leg, envelope: live.envelopes[leg.id], failed: live.errors.contains(leg.id))
+                    }
                     Label(leg.to.stationName + " · " + leg.to.stationCode, systemImage: "arrow.down.circle.fill")
                     Text(settings.text("\(leg.stopCount) 站", "\(leg.stopCount) stops")).foregroundStyle(.secondary)
                     if leg.serviceWindows == nil { Text(settings.text("營運時間未核實", "Operating hours unverified")).font(.caption).foregroundStyle(.secondary) }
+                    if let windows = leg.serviceWindows, !windows.isEmpty {
+                        Text(windows.filter { $0.count == 2 }.map { terminalTime($0[0]) + "–" + terminalTime($0[1]) }.joined(separator: " / ")).font(.subheadline)
+                        if let url = URL(string: "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_" + leg.routeName) {
+                            Link(settings.text("官方總站班次時間", "Official terminal timetable"), destination: url).font(.caption)
+                        }
+                    }
                     NavigationLink {
-                        BusDetailView(route: .init(routeName: leg.routeName, routeCode: leg.routeCode, routeType: leg.circular ? 2 : 0, company: .init(id: "", name: "", color: "blue"), hasChange: false, live: true), initialDirection: leg.direction, initialStation: leg.from.stationCode)
+                        ResolvedBusView(code: leg.routeCode, direction: leg.direction, station: leg.from.stationCode)
                     } label: { Text(settings.text("查看呢程巴士", "Inspect this bus leg")) }
                     SourceNote(meta: live.envelopes[leg.id]?.meta, error: live.errors.contains(leg.id) ? "unavailable" : nil)
                 } header: { Text(settings.text("第 \(index + 1) 程", "Leg \(index + 1)")) }
+            }
+            if let last = selection.journey.legs.last, last.endpoint(boarding: false, eta: live.envelopes[last.id]?.data).distance(to: selection.destination.coordinates) > 1 {
+                WalkingConnectionView(from: last.endpoint(boarding: false, eta: live.envelopes[last.id]?.data), to: selection.destination.coordinates, path: selection.journey.walking?.egress, title: settings.text("步行前往目的地", "Walk to the destination"))
+            }
+            if let walk = selection.journey.walking?.direct {
+                WalkingConnectionView(from: selection.origin.coordinates, to: selection.destination.coordinates, path: walk, title: settings.text("步行路線", "Walking route"))
             }
             Section {
                 if let geometry = live.geometry {
@@ -77,7 +95,7 @@ struct JourneyDetailView: View {
         .navigationTitle(settings.text("行程詳情", "Journey")).navigationBarTitleDisplayMode(.inline)
         .toolbar { ToolbarItem(placement: .confirmationAction) { Button(settings.text("完成", "Done")) { dismiss() } } }
         .onAppear { visible = true }.onDisappear { visible = false }
-        .task(id: "\(visible)-\(scenePhase)") { if visible && scenePhase == .active { await live.poll(selection) } }
+        .task(id: "\(visible)-\(scenePhase)-\(settings.language)") { if visible && scenePhase == .active { await live.poll(selection, locale: settings.language.rawValue) } }
         .sheet(isPresented: $expandedMap) {
             NavigationStack {
                 map.navigationTitle(selection.destination.name).navigationBarTitleDisplayMode(.inline)
@@ -95,16 +113,19 @@ struct JourneyDetailView: View {
             return .init(id: "\(index)", coordinates: coordinates, color: item.properties.kind == "walking-path" ? .green : Color(hex: item.properties.color ?? "#8E8E93"), dashed: item.properties.kind == "walk", width: item.properties.width ?? 5)
         }
         let pins: [MapPin] = features.enumerated().compactMap { index, item in
-            guard let coordinate = item.geometry.point, item.properties.kind != "walk-label" else { return nil }
-            if item.properties.kind == "vehicle" {
-                guard let legIndex = item.properties.legIndex, selection.journey.legs.indices.contains(legIndex) else { return nil }
-                let id = selection.journey.legs[legIndex].id
-                guard !live.errors.contains(id), let envelope = live.envelopes[id], !envelope.meta.isDelayed(at: now) else { return nil }
-            }
-            return .init(id: "\(index)", coordinate: coordinate, title: item.properties.label ?? "", symbol: item.properties.kind == "vehicle" ? "bus.fill" : "mappin", color: Color(hex: item.properties.color ?? "#007AFF"))
+            guard let coordinate = item.geometry.point, item.properties.kind != "walk-label", item.properties.kind != "vehicle" else { return nil }
+            return .init(id: "\(index)", coordinate: coordinate, title: item.properties.label ?? "", symbol: "mappin", color: Color(hex: item.properties.color ?? "#007AFF"))
         }
-        return TransitMap(lines: lines, pins: pins, fitID: selection.id + "\(live.geometry != nil)")
+        let vehicles: [MapPin] = selection.future ? [] : selection.journey.legs.flatMap { leg in
+            guard !live.errors.contains(leg.id), let envelope = live.envelopes[leg.id], !envelope.meta.isDelayed(at: now), envelope.data.routeCode == leg.routeCode, envelope.data.direction == leg.direction else { return [MapPin]() }
+            return envelope.data.vehicles.compactMap { vehicle in
+                guard vehicle.positionSource == "feed", let coordinate = vehicle.coordinates else { return nil }
+                return MapPin(id: "vehicle:\(leg.id):\(vehicle.id)", coordinate: coordinate, title: leg.routeName + " · " + vehicle.plate, symbol: "bus.fill")
+            }
+        }
+        return TransitMap(lines: lines, pins: pins + vehicles, fitID: selection.id + "\(live.geometry != nil)")
     }
+    private func terminalTime(_ minutes: Int) -> String { String(format: "%02d:%02d", minutes / 60, minutes % 60) }
 }
 
 struct JourneyBoardingStatus: View {

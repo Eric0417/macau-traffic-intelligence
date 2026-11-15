@@ -12,6 +12,8 @@ SwiftUI owns every screen. The deterministic bus and pedestrian search functions
 
 Use native tab bars, toolbars, sheets, SF Symbols and system typography. Liquid Glass belongs to controls and navigation; reading surfaces use system backgrounds. Respect Dynamic Type, Reduce Motion and Reduce Transparency.
 
+The user's follow-up requests the ChatGPT iOS interaction style and less visible text. Use neutral buttons, a compact assistant, native push/back and sheet transitions, and a matched expansion from a selected journey. Keep detailed attribution, estimate explanations and privacy policy available through disclosures/settings; keep current failures, suspensions and stale-data notices visible.
+
 Only favourites, language and appearance persist. AI prompts, responses, drafts and location stay in memory. Location is requested after an explicit action. The AI screen explains provider sharing before a location-assisted request. Recordings require microphone permission, are limited to 20 seconds, and are deleted after transcription or cancellation. Audio is sent only to the existing transcription endpoint.
 
 Poll visible modules only, cancel requests when a view disappears, pause in the background, and keep source retrieval time separate from publication time. A failed or aged bus response hides live estimates and markers. Unknown values remain unknown. LRT has no live train claim.
