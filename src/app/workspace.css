@@ -632,6 +632,11 @@
 .trip-stop-number { display: grid; place-items: center; flex: 0 0 28px; height: 28px; margin-left: -29px; border-radius: 50%; color: var(--tint-ink); background: var(--tint-soft); border: 1px solid var(--tint); font-size: 12px; }
 .itinerary-stops p, .itinerary-results > p, .trip-details > p { font-size: 13px; line-height: 1.8; margin: 8px 0; }
 .itinerary-connection { margin: 14px 0 0 8px; }
+.trip-recommendation { padding: 12px 0; }
+.trip-connection-steps { margin: 8px 0; padding-left: 20px; font-size: 13px; line-height: 1.8; overflow-wrap: anywhere; }
+.trip-connection-steps li + li { margin-top: 8px; }
+.trip-other-connections { border-top: 1px solid var(--line); }
+.trip-plan-summary { white-space: pre-line; }
 .trip-connection-option { display: grid; gap: 6px; width: 100%; margin: 8px 0; padding: 12px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: var(--surface-2); text-align: left; font-size: 12px; line-height: 1.7; }
 .trip-connection-option:hover { border-color: var(--tint); }
 .trip-connection-option strong { font-size: 13px; }

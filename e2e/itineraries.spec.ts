@@ -15,6 +15,29 @@ const plans = (trip = draft): ItineraryPlans => ({ kind: "itineraries", draft: t
 const envelope = (data: unknown) => ({ data, meta: meta({ id: "assistant", name: "AI", url: "https://example.com" }) });
 test.beforeEach(async ({ page }) => { await mockDashboard(page); });
 
+test("shows a complete bus recommendation with alternatives collapsed", async ({ page, isMobile }) => {
+  const result = plans();
+  result.options[0].reason = "先搭56號去石排灣，再乘接駁巴士到下一站。";
+  const section = result.options[0].sections[0];
+  section.journeys.unshift({ id: "bus56", legs: [{ routeName: "56", routeCode: "00056", direction: 0, terminalName: "蝴蝶谷大馬路總站", circular: false,
+    from: { stationCode: "M61", stationName: "二龍喉公園", coordinates: section.from.coordinates }, to: { stationCode: "C688/1", stationName: "和諧廣場/業興大廈", coordinates: section.to.coordinates }, fromSequence: 0, toSequence: 12, stopCount: 12 }],
+    accessMeters: 160, egressMeters: 250, transferMeters: 0, totalStops: 12 });
+  await page.route("**/api/v1/assistant/journeys", route => route.fulfill({ json: envelope(result) }));
+  await page.goto("/");
+  await page.locator("#home-question").fill("幫我安排整套巴士路線");
+  await page.locator(".home-ai form").getByRole("button").click();
+  const itinerary = page.getByRole("region", { name: "完整行程" });
+  await expect(itinerary.getByText(result.options[0].reason, { exact: true })).toBeVisible();
+  await expect(itinerary.locator(".trip-connection-steps")).toContainText("二龍喉公園");
+  await expect(itinerary.locator(".trip-connection-steps")).toContainText("和諧廣場/業興大廈");
+  const alternatives = itinerary.locator(".trip-other-connections");
+  await expect(alternatives).not.toHaveAttribute("open", "");
+  await expect(alternatives.locator(".trip-connection-option")).not.toBeVisible();
+  await page.screenshot({ path: `docs/qa/assistant-routing/${isMobile ? "mobile" : "desktop"}-complete-plan.png` });
+  await alternatives.locator("summary").click();
+  await expect(alternatives.locator(".trip-connection-option")).toBeVisible();
+});
+
 test("ordered destinations keep separate connections, open the second map and remain editable", async ({ page, isMobile }) => {
   const requests: Array<{ trip?: TripDraft }> = [];
   await page.route("**/api/v1/assistant/journeys", route => {

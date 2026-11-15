@@ -4,6 +4,7 @@ import * as cache from "@/server/cache";
 import { planAssistantJourney } from "@/server/sources/assistant-journeys";
 import type { BusNetwork } from "@/lib/bus-journey";
 import type { WalkingNetwork } from "@/lib/walking-network";
+import { placesFor } from "@/server/sources/journey-places";
 
 const places = [
   { id: "school", name: "澳門培正中學", coordinates: [113.548, 22.201] as [number, number], aliases: [], context: "" },
@@ -16,6 +17,13 @@ function sources() {
   vi.spyOn(cache, "readSource").mockImplementation(async source => ({ result: { data: source.id === "bus-network" ? bus : walking, stale: false, updatedAt: bus.fetchedAt } }) as never);
 }
 afterEach(() => vi.restoreAllMocks());
+
+it("distinguishes identically named places using their nearby official stops", () => {
+  const duplicatePlaces = places.slice(0, 2).map(p => ({ ...p, name: "石排灣" }));
+  const routes: BusNetwork["routes"] = [{ routeCode: "56", routeName: "56", direction: 0, circular: false, company: { id: "a", name: "巴士", color: "orange" }, stops: duplicatePlaces.map((p, i) => ({ stationCode: `C${i}`, stationName: `附近站${i}`, coordinates: p.coordinates })) }];
+  const choices = placesFor("石排灣", { ...bus, routes }, { ...walking, places: duplicatePlaces });
+  expect(choices.map(c => c.nearbyStop)).toEqual(["附近站0 (C0)", "附近站1 (C1)"]);
+});
 
 it("uses a known destination alias without normalizing an unused misspelled alias", async () => {
   sources();

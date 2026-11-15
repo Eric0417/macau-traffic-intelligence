@@ -4,13 +4,18 @@ import type { AssistantPlace } from "@/lib/assistant-journey";
 import { searchBusStops, type BusNetwork } from "@/lib/bus-journey";
 import { searchJourneyPlaces, type WalkingNetwork } from "@/lib/walking-network";
 import { callAssistantProvider } from "./assistant";
+import { distanceMeters } from "@/lib/resident-tools";
 
 const normalize = (name: string) => name.toLocaleLowerCase().replace(/[\s\p{P}]/gu, "");
 
 export function placesFor(query: string, bus: BusNetwork, walking: WalkingNetwork, includeRelated = false): AssistantPlace[] {
   const places = searchJourneyPlaces(walking.places, query);
   const exact = places.filter(p => [p.name, ...p.aliases].some(n => normalize(n) === normalize(query)));
-  if (exact.length && !includeRelated) return exact.map(({ id, name, coordinates }) => ({ id, name, coordinates }));
+  if (exact.length && !includeRelated) return exact.map(({ id, name, coordinates }) => {
+    if (exact.filter(p => p.name === name).length < 2) return { id, name, coordinates };
+    const nearest = bus.routes.flatMap(r => r.stops).map(s => ({ stop: s, distance: distanceMeters(coordinates, s.coordinates) })).sort((a, b) => a.distance - b.distance)[0];
+    return { id, name, coordinates, nearbyStop: nearest && nearest.distance <= 500 ? `${nearest.stop.stationName} (${nearest.stop.stationCode})` : undefined };
+  });
   const stops = searchBusStops(bus, query).map(s => ({ id: `stop:${s.stationCode}`, name: `${s.stationName} (${s.stationCode})`, coordinates: s.coordinates }));
   const exactStop = stops.find(s => s.id.toUpperCase() === `stop:${query}`.toUpperCase());
   return exactStop ? [exactStop] : [...places.map(({ id, name, coordinates }) => ({ id, name, coordinates })), ...stops].slice(0, 8);

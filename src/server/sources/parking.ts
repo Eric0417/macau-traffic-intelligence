@@ -101,6 +101,9 @@ export function parseParkingHtml(html: string) {
             : "unknown";
 
       if (!id || !name) return null;
+      const availability = availabilityForRow(element);
+      // DSAT also uses the generic car icon for coach-only loading areas.
+      if (/重型/.test(name)) availability.lightVehicle = null;
 
       return parkingFacilitySchema.parse({
         id,
@@ -108,7 +111,7 @@ export function parseParkingHtml(html: string) {
         updatedAt: macauIso(updatedText),
         areaStatus,
         coordinates: parkingLocations.locations[id]?.coordinates ?? null,
-        availability: availabilityForRow(element),
+        availability,
       });
     })
     .get()

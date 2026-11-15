@@ -4,6 +4,7 @@ import * as cache from "@/server/cache";
 import { planAssistantJourney } from "@/server/sources/assistant-journeys";
 import type { BusNetwork } from "@/lib/bus-journey";
 import type { WalkingNetwork } from "@/lib/walking-network";
+import { journeyCandidates } from "@/server/sources/journey-candidates";
 
 const from = { stationCode: "M1", stationName: "起點站", coordinates: [113.55, 22.19] as [number, number] };
 const to = { stationCode: "M2", stationName: "目的地站", coordinates: [113.56, 22.19] as [number, number] };
@@ -13,6 +14,30 @@ function sources(suspended: string[] = []) {
   vi.spyOn(cache, "readSource").mockImplementation(async source => ({ result: { data: source.id === "bus-network" ? network : source.id === "walking-network" ? walking : suspended, stale: false, updatedAt: network.fetchedAt, ttlSeconds: 60, attribution: { id: source.id, name: source.name, url: source.url, text: source.attribution } } }) as never);
 }
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
+
+it("routes an extracted destination to planning even when labelled as traffic", async () => {
+  sources();
+  vi.spyOn(assistant, "callAssistantProvider").mockResolvedValue(JSON.stringify({ intent: "traffic", destinationQueries: ["澳門體育館"] }));
+  expect((await planAssistantJourney({ question: "澳門體育館有咩巴士去？", locale: "zh-Hant" })).data.kind).toBe("location");
+});
+
+it("finds another bus after the first six route options have suspended stops", async () => {
+  const buses = { ...network, routes: Array.from({ length: 7 }, (_, i) => ({ ...network.routes[0], routeName: String(i + 1), routeCode: String(i + 1) })) };
+  vi.spyOn(cache, "readSource").mockImplementation(async source => ({ result: { data: source.id === "bus-diversion-7" ? [] : ["M1"], stale: false } }) as never);
+  const evidence = await journeyCandidates(buses, walking, { id: "start", name: "起點", coordinates: from.coordinates }, walking.places[0], "zh-Hant", 600);
+  expect(evidence.candidates.some(c => c.legs[0]?.routeName === "7")).toBe(true);
+});
+
+it("finds daytime buses to Seac Pai Van from the checked-in Macau place and route snapshots", async () => {
+  const { busNetworkSource } = await import("@/server/sources/bus-network");
+  const snapshot = (await import("../data/walking-network.json")).default as unknown as WalkingNetwork;
+  const buses = await busNetworkSource.load();
+  const origin = snapshot.places.find(p => p.id === "a530867064")!;
+  const destination = snapshot.places.find(p => p.id === "n2805421749")!;
+  const evidence = await journeyCandidates(buses, snapshot, origin, destination, "zh-Hant", 720, undefined, false);
+  expect(evidence.candidates.some(c => c.legs.length === 1 && c.legs[0].routeName === "56")).toBe(true);
+  expect(evidence.candidates.some(c => c.legs.some(l => l.routeName.startsWith("N")))).toBe(false);
+});
 
 it("asks the model to resolve a destination and requests location before planning", async () => {
   sources();

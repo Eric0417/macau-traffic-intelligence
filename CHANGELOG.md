@@ -2,6 +2,12 @@
 
 All notable user-visible and architectural changes are recorded here.
 
+## Assistant transport and nearby answers - 2026-11-15
+
+- Treat destination bus questions such as “石排灣有咩巴士去？” as journeys. Preserve a direct bus candidate and search again after excluding suspended stops, so a truncated candidate list does not leave only walking.
+- Let the model recommend the complete multi-stop journey, with boarding, transfer and alighting steps visible and other connections collapsed. Check later ordered connections against the departure period plus stays; travel durations remain unknown.
+- Answer nearby parking and bus-stop questions using device location or a typed landmark, with distances and dated source evidence. Keep zero, unknown and delayed parking counts distinct. Coach-only loading areas are excluded from ordinary parking suggestions, and their generic car icon is no longer interpreted as private-car spaces.
+
 ## Desktop navigation layout - 2026-11-14
 
 - Keep all five tabs inside the centered navigation bar on narrow desktop windows.

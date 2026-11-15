@@ -62,7 +62,7 @@ export function ItineraryPanel({ result, busy, onContinue, onJourney, onSelect, 
       else if (result.field === "end") { draft.endId = place.id; draft.endQuery = place.name; }
       else draft.stops[result.field] = { ...draft.stops[result.field], query: place.name, placeId: place.id };
       onContinue(draft);
-    }}>{place.name}</button>)}
+    }}>{place.name}{place.nearbyStop ? ` · ${label("近", "近", "near")} ${place.nearbyStop}` : ""}</button>)}
     <form className="trip-form" onSubmit={event => {
       event.preventDefault();
       const query = String(new FormData(event.currentTarget).get("place") ?? "").trim();
@@ -85,13 +85,28 @@ export function ItineraryPanel({ result, busy, onContinue, onJourney, onSelect, 
       itineraryStops: chosen.stops, sectionLabel: `${sectionIndex + 1}/${chosen.sections.length} · ${section.from.name} → ${section.to.name}` });
   };
   const totalStay = option.stops.reduce((sum, s) => sum + s.stayMinutes, 0);
+  const connection = (sectionIndex: number, journeyIndex: number) => {
+    const section = option.sections[sectionIndex], journey = section.journeys[journeyIndex];
+    const first = journey.legs[0], last = journey.legs.at(-1);
+    return <div key={journey.id} className="trip-recommendation">
+      {journeyIndex === 0 ? <p className="eyebrow">{label("建議接駁", "建议接驳", "Recommended connection")}</p> : null}
+      {first ? <ol className="trip-connection-steps">
+        <li>{label("前往", "前往", "Go to")} {first.from.stationName} ({first.from.stationCode}) · {journey.accessMeters} m</li>
+        {journey.legs.map((leg, i) => <li key={i}>{i > 0 ? `${label("喺", "在", "At")} ${leg.from.stationName} (${leg.from.stationCode}) ${label("轉乘", "换乘", "transfer to")} ` : label("乘搭", "乘搭", "Take ")}{leg.routeName} · {label("往", "往", "towards")} {leg.terminalName} · {leg.stopCount} {label("站後喺", "站后在", "stops to")} {leg.to.stationName} ({leg.to.stationCode}) {label("落車", "下车", "alight")}</li>)}
+        <li>{label("前往", "前往", "Continue to")} {section.to.name} · {journey.egressMeters} m{last && !journey.walking?.egress && journey.egressMeters > 0 ? ` (${label("直線估算", "直线估算", "straight-line estimate")})` : ""}</li>
+      </ol> : <p>{label("步行到", "步行到", "Walk to")} {section.to.name} · {journey.accessMeters} m</p>}
+      {first && !journey.walking?.access && journey.accessMeters > 0 ? <p className="quiet-copy">{label("上車接駁距離為直線估算，請核對現場步行路徑。", "上车接驳距离为直线估算，请核对现场步行路径。", "Boarding access is a straight-line estimate; check the walking path.")}</p> : null}
+      <button type="button" className="trip-connection-option" onClick={() => show(option, sectionIndex, journeyIndex)}>{label("查看呢段交通及地圖", "查看这段交通和地图", "View this connection and map")}</button>
+    </div>;
+  };
   return <section className="panel-section itinerary-results" aria-label={label("完整行程", "完整行程", "Complete itineraries")}>
-    <h2>{result.draft.mode === "day" ? label("揀一個一日遊方案", "选一个一日游方案", "Choose a day trip") : label("你嘅多站行程", "你的多站行程", "Your ordered journey")}</h2>
+    <h2>{label("AI 幫你安排好嘅行程", "AI 帮你安排好的行程", "Your complete AI itinerary")}</h2>
     {result.draft.date ? <p className="quiet-copy">{result.draft.date} · {result.draft.startTime}–{result.draft.endTime} · {label("澳門時間", "澳门时间", "Macau time")}</p> : null}
     {result.draft.mode === "day" ? <p className="quiet-copy">{label("到訪時段係建議，交通耗時未核實；唔係預計到達時間。", "到访时段为建议，交通耗时未核实，并非预计到达时间。", "Visit times are planning targets. Transport durations are unverified; these are not predicted arrivals.")}</p> : null}
     {result.options.length > 1 ? <div className="trip-alternatives">{result.options.map((item, index) => <button type="button" key={item.id} className="assistant-option" aria-pressed={index === selected} onClick={() => { setSelected(index); setEditing(false); onSelect(itineraryDraft(result, item)); onClearMap(); }}>
       <strong>{index + 1}. {item.title}</strong><span>{item.reason}</span><small>{item.stops.filter(s => s.visit).map(s => s.name).join(" → ")}</small>
-    </button>)}</div> : <p>{option.reason}</p>}
+    </button>)}</div> : null}
+    <p className="trip-plan-summary">{option.reason}</p>
     <div className="trip-actions">
       <button type="button" className="primary-action" onClick={() => { const index = option.sections.findIndex(s => s.journeys.length); if (index >= 0) show(option, index); }} disabled={!option.sections.some(s => s.journeys.length)}>{label("查看行程地圖", "查看行程地图", "View itinerary map")}</button>
       <button type="button" className="text-action" onClick={() => { setEditStops(itineraryDraft(result, option).stops); setEditing(!editing); }}>{label("修改地點及停留時間", "修改地点和停留时间", "Edit places and stays")}</button>
@@ -113,11 +128,8 @@ export function ItineraryPanel({ result, busy, onContinue, onJourney, onSelect, 
       {stop.sourceUrl ? <p className="quiet-copy"><a href={stop.sourceUrl} target="_blank" rel="noreferrer">{label("官方參觀資料", "官方参观资料", "Official visitor information")}</a> · {stop.hours} · {label("核對", "核对", "Checked")} {stop.checkedAt}</p> : null}
       {option.sections[index] ? <div className="itinerary-connection">
         <p className="eyebrow">{label("前往下一站", "前往下一站", "Continue to the next stop")}</p>
-        {option.sections[index].journeys.map((journey, journeyIndex) => <button type="button" className="trip-connection-option" key={journey.id} onClick={() => show(option, index, journeyIndex)}>
-          <strong>{journey.legs.length ? journey.legs.map(l => `${l.routeName} → ${l.to.stationName}`).join(" · ") : label("全程步行", "全程步行", "Walk")}</strong>
-          <span>{label("步行／接駁距離", "步行／接驳距离", "Walking / access distance")} {Math.round(journey.accessMeters + journey.egressMeters + journey.transferMeters)} m{journey.legs.length ? ` · ${journey.totalStops} ${label("個站", "个站", "stops")}` : ""}</span>
-          <span>{label("查看呢段交通及地圖", "查看这段交通和地图", "View this connection and map")}</span>
-        </button>)}
+        {option.sections[index].journeys.length ? connection(index, 0) : null}
+        {option.sections[index].journeys.length > 1 ? <details className="trip-other-connections"><summary>{label("其他接駁選項", "其他接驳选项", "Other connections")}</summary>{option.sections[index].journeys.slice(1).map((_, j) => connection(index, j + 1))}</details> : null}
         {!option.sections[index].journeys.length ? <p className="data-warning" role="status">{option.sections[index].warnings.at(-1)}</p> : <details><summary>{label("接駁資料說明", "接驳资料说明", "Connection notes")}</summary>{option.sections[index].warnings.map(w => <p className="quiet-copy" key={w}>{w}</p>)}</details>}
       </div> : null}
     </li>)}</ol>

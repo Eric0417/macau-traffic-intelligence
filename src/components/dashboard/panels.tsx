@@ -402,8 +402,9 @@ export function AssistantPanel({
         setEntry({ question, answer: body.data }); onShowGuide?.(); onAction?.(body.data.action ?? null);
         return;
       }
-      if (data.kind === "location" || data.kind === "trip-location") {
-        payload = data.kind === "location" ? { ...payload, destinationId: data.destination.id } : { ...payload, trip: data.draft };
+      if (data.kind === "location" || data.kind === "trip-location" || data.kind === "nearby-location") {
+        if (data.kind === "location") payload = { ...payload, destinationId: data.destination.id };
+        if (data.kind === "trip-location") payload = { ...payload, trip: data.draft };
         if (data.kind === "trip-location") setActiveTrip(data.draft);
         setPending(payload); setResult(data); setLocating(true);
         try {
@@ -418,6 +419,10 @@ export function AssistantPanel({
         } finally { setLocating(false); }
         setPending(payload);
         data = await sendJourney();
+      }
+      if (data.kind === "nearby") {
+        setActiveTrip(undefined); setResult(data);
+        return;
       }
       setResult(data);
       if ("draft" in data) { setPending({ ...payload, trip: data.draft }); setActiveTrip(data.kind === "itineraries" ? itineraryDraft(data, data.options[0]) : data.draft); }
@@ -450,10 +455,10 @@ export function AssistantPanel({
         {!entry ? <div className="assistant-suggestions">{[label("我想去澳門運動場", "我想去澳门运动场", "I want to go to Macau Stadium"), label("由培正去澳門運動場，再去媽閣", "从培正去澳门运动场，再去妈阁", "From Pui Ching to Macau Stadium, then A-Ma Temple"), label("幫我安排傳統文化一日遊", "帮我安排传统文化一日游", "Plan a traditional culture day trip")].map(suggestion => <button type="button" key={suggestion} disabled={busy} onClick={() => void ask(suggestion)}>{suggestion}</button>)}</div> : null}
         {result?.kind === "choose" && pending ? <div className="assistant-place-choices">
           <p>{result.field === "origin" ? label("請揀出發地點", "请选择出发地点", "Choose your origin") : label("你想去邊一個地點？", "你想去哪个地点？", "Which destination do you mean?")}</p>
-          {result.choices.map(place => <button type="button" key={place.id} disabled={busy} onClick={() => void ask(pending.question, { ...pending, [result.field === "origin" ? "originId" : "destinationId"]: place.id })}>{place.name}</button>)}
+          {result.choices.map(place => <button type="button" key={place.id} disabled={busy} onClick={() => void ask(pending.question, { ...pending, [result.field === "origin" ? "originId" : "destinationId"]: place.id })}>{place.name}{place.nearbyStop ? ` · ${label("近", "近", "near")} ${place.nearbyStop}` : ""}</button>)}
         </div> : null}
         {result?.kind === "clarify" ? <p className="data-warning" role="status">{result.message}</p> : null}
-        {(locationFailed || (result?.kind === "clarify" && pending?.destinationId)) && pending ? <div className="assistant-location-fallback">
+        {(locationFailed || result?.kind === "clarify") && pending ? <div className="assistant-location-fallback">
           {locationFailed ? <p role="status">{label("未能取得位置。可以重試，或者輸入出發地點。", "未能获取位置。可以重试，或者输入出发地点。", "Location unavailable. Retry or enter your starting point.")}</p> : null}
           {locationFailed ? <button className="text-action" type="button" disabled={busy} onClick={() => void ask(pending.question, { ...pending, origin: undefined, originQuery: undefined, originId: undefined, trip: pending.trip ? { ...pending.trip, originQuery: undefined, originId: undefined } : undefined })}>{label("重試定位", "重试定位", "Retry location")}</button> : null}
           <form onSubmit={event => { event.preventDefault(); void ask(pending.question, { ...pending, origin: undefined, originQuery: originDraft, originId: undefined, trip: pending.trip ? { ...pending.trip, originQuery: originDraft, originId: undefined } : undefined }); }}>
@@ -467,6 +472,11 @@ export function AssistantPanel({
       {result && "draft" in result ? <ItineraryPanel key={result.kind === "itineraries" ? result.generatedAt : JSON.stringify(result.draft)} result={result} busy={busy}
         onContinue={trip => { if (pending) void ask(pending.question, { ...pending, trip, previousTrip: undefined }); }}
         onJourney={onJourney} onSelect={setActiveTrip} onClearMap={onStart} /> : null}
+      {result?.kind === "nearby" ? <section className="panel-section" aria-label={label("附近交通資訊", "附近交通信息", "Nearby transport information")}>
+        <h2>{label("附近交通資訊", "附近交通信息", "Nearby transport information")}</h2>
+        <p className="assistant-answer">{result.answer.answer}</p>
+        <ul className="assistant-context">{result.answer.contextSummary.map(item => <li key={item}>{item}</li>)}</ul>
+      </section> : null}
       {result?.kind === "plans" ? <section className="panel-section assistant-options" aria-label={label("AI 行程方案", "AI 行程方案", "AI journey options")}>
         <p className="eyebrow">{result.origin.name} → {result.destination.name}</p>
         <h2>{label("AI 幫你比較咗以下方案", "AI 帮你比较了以下方案", "Your AI journey options")}</h2>

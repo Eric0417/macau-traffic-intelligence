@@ -27,6 +27,10 @@ const parkingHtml = `
 `;
 
 describe("loadParking", () => {
+  it("does not label the publisher's generic car icon as private-car spaces in a coach-only facility", () => {
+    const html = parkingHtml.replace("下環街市", "塔石廣場地下上落客區(重型客車)");
+    expect(parseParkingHtml(html)[0].availability.lightVehicle).toBeNull();
+  });
   it("keeps an unparseable publisher timestamp unknown", () => {
     const rows = parseParkingHtml(parkingHtml.replaceAll(/2026-10-02 \d{2}:\d{2}:\d{2}/g, "未提供"));
     expect(rows.every((row) => row.updatedAt === null)).toBe(true);

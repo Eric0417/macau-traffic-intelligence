@@ -17,6 +17,17 @@ const network = (routes: BusJourneyRoute[]): BusNetwork => ({
 const endpoint = (stationCode: string) => ({ stationCode });
 
 describe("local bus journey search", () => {
+  it("keeps a direct bus available for comparison when six shorter transfers rank ahead", () => {
+    const data = network([
+      route("56", [stop("A"), stop("B"), stop("C"), stop("D")]),
+      route("8", [stop("T"), stop("D")]),
+      ...Array.from({ length: 6 }, (_, i) => route(String(20 + i), [stop("A"), stop("T")])),
+    ]);
+    const result = planBusJourneys(data, endpoint("A"), endpoint("D"));
+    expect(result).toHaveLength(6);
+    expect(result.some(j => j.legs.length === 1 && j.legs[0].routeName === "56")).toBe(true);
+  });
+
   it("filters both legs using the Macau departure time and ranks reviewed hours ahead of unknown hours", () => {
     const night = { ...route("N2", [stop("T"), stop("D")]), serviceWindows: [[0, 360]] as [number, number][] };
     const late = { ...route("101", [stop("A"), stop("T")]), serviceWindows: [[360, 120]] as [number, number][] };

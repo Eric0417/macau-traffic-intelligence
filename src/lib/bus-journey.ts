@@ -29,6 +29,7 @@ export type BusJourneyEndpoint = { stationCode: string } | { coordinates: Coordi
 export interface BusJourneyOptions {
   includeNearbyStops?: boolean;
   departureMinute?: number;
+  unavailableStops?: ReadonlyMap<string, ReadonlySet<string>>;
   walking?: {
     access?: (coordinates: Coordinates) => WalkingPath | null;
     egress?: (coordinates: Coordinates) => WalkingPath | null;
@@ -143,8 +144,10 @@ export function planBusJourneys(network: BusNetwork, origin: BusJourneyEndpoint,
     if (options.departureMinute !== undefined && route.serviceWindows &&
         !coversDeparture(route.serviceWindows, options.departureMinute)) continue;
     for (let from = 0; from < route.stops.length - 1; from += 1) {
+      if (options.unavailableStops?.get(route.routeName)?.has(route.stops[from].stationCode)) continue;
       const access = starts.get(route.stops[from].stationCode);
       for (let to = from + 1; to < route.stops.length; to += 1) {
+        if (options.unavailableStops?.get(route.routeName)?.has(route.stops[to].stationCode)) continue;
         const egress = ends.get(route.stops[to].stationCode);
         if (access === undefined && egress === undefined) continue;
         const item = leg(route, from, to);
@@ -176,13 +179,18 @@ export function planBusJourneys(network: BusNetwork, origin: BusJourneyEndpoint,
     (a.accessMeters + a.egressMeters) - (b.accessMeters + b.egressMeters) ||
     a.legs.length - b.legs.length || a.id.localeCompare(b.id, "en", { numeric: true }));
   const seen = new Set<string>();
-  return plans.filter((plan) => {
+  const distinct = plans.filter((plan) => {
     const buses = plan.legs.map((item) => `${item.routeCode}:${item.direction}`).join("|");
     const key = buses;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
-  }).slice(0, MAX_JOURNEYS).map((plan) => {
+  });
+  const selected = distinct.slice(0, MAX_JOURNEYS);
+  // Keep a direct option for comparison even when shorter transfers fill the list.
+  const direct = distinct.find(plan => plan.legs.length === 1);
+  if (direct && !selected.some(plan => plan.legs.length === 1)) selected[selected.length - 1] = direct;
+  return selected.map((plan) => {
     if (!options.walking) return plan;
     const access = accessPaths.get(plan.legs[0].from.stationCode);
     const egress = egressPaths.get(plan.legs.at(-1)!.to.stationCode);
