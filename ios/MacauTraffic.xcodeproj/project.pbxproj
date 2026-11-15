@@ -1,0 +1,534 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 54;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		050B1C5CB18AF01276D5F0B5 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10AE00D31599476B0F67136 /* Models.swift */; };
+		1476020C19690F2BD2CC92ED /* planner.js in Resources */ = {isa = PBXBuildFile; fileRef = B2C062573E0BF93A688BDCCF /* planner.js */; };
+		1EDADCAD2A19BE5E8A4933E5 /* PlannerEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9CC42C3C39211E0992F483F /* PlannerEngine.swift */; };
+		31F570976FA469F6ED6913A6 /* Fixtures in Resources */ = {isa = PBXBuildFile; fileRef = 032287D88F5D91BFB5987047 /* Fixtures */; };
+		3450662FAE163BF7AD5363D1 /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15E58F2E6143CF1201522206 /* Settings.swift */; };
+		35B0EBAF5518DCCB738A58EF /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06C6C6D23C36758C4FFE50A8 /* APIClient.swift */; };
+		514F483B29F3E84592220B5A /* TransitMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9765403F358FC1390BA86ED1 /* TransitMap.swift */; };
+		579D2929FEC0BBD50EC53037 /* SavedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3968728EA201E8E457582122 /* SavedView.swift */; };
+		646964850DE784C1621D9F3A /* AVKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 15C0E0C55C651C14BC740B84 /* AVKit.framework */; };
+		6D282826C39F26953ACBFE2D /* MacauTrafficApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6343FCA5A62417AF270A138 /* MacauTrafficApp.swift */; };
+		75EADF29D84C776F341587C9 /* ExploreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B426754DD8A6BA958DDD1456 /* ExploreView.swift */; };
+		76F5CBA29181009EDCD5E9F4 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9B384BF925ADA2B52D2C9337 /* Assets.xcassets */; };
+		91519ED92BFE21DF6A5F2BAD /* ContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F9878C15DEC5226D32C92D0 /* ContractTests.swift */; };
+		95829767B1DF9A186CAF6664 /* LocationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1158E9DCB47310E73E62FD27 /* LocationService.swift */; };
+		99A50C3DB2FDEC21E5BC623B /* MapKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 602C5E11B45762BF991D8521 /* MapKit.framework */; };
+		9A43E771624616BBC113CB2F /* JourneyModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8440D0F8CDFCC9AFB8AA7D36 /* JourneyModels.swift */; };
+		BB39502329A8B308502103F6 /* Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD57B266F3B3AB0BA968872B /* Components.swift */; };
+		BEDB82F061E46A7A95F9987D /* ManualPlannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA660655A15CE628D1801DD3 /* ManualPlannerView.swift */; };
+		CCFC356F773EBFACDBFDE874 /* JourneyDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E07C486772D40253368F82 /* JourneyDetailView.swift */; };
+		EA4BE2A5CDF3C8A37E15561F /* NavigationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3251846819074BCE6A6A0042 /* NavigationTests.swift */; };
+		EC6FC50A269C0AEAD09AFCDB /* JavaScriptCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DE9894FD609DAFB8DF12BBAD /* JavaScriptCore.framework */; };
+		F4C75590D25B8349BE861A53 /* BusViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09634682ED45702136721308 /* BusViews.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		26C8EE2002267A622C2C1B73 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = FCD56CA0786865A686DA887D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F6F65B68242F4EEEE64BC827;
+			remoteInfo = MacauTraffic;
+		};
+		A463221C2C0D263C2B7ECE96 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = FCD56CA0786865A686DA887D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F6F65B68242F4EEEE64BC827;
+			remoteInfo = MacauTraffic;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		032287D88F5D91BFB5987047 /* Fixtures */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Fixtures; path = MacauTraffic/Resources/Fixtures; sourceTree = SOURCE_ROOT; };
+		06C6C6D23C36758C4FFE50A8 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
+		09634682ED45702136721308 /* BusViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BusViews.swift; sourceTree = "<group>"; };
+		1158E9DCB47310E73E62FD27 /* LocationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationService.swift; sourceTree = "<group>"; };
+		15C0E0C55C651C14BC740B84 /* AVKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVKit.framework; path = System/Library/Frameworks/AVKit.framework; sourceTree = SDKROOT; };
+		15E58F2E6143CF1201522206 /* Settings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Settings.swift; sourceTree = "<group>"; };
+		3251846819074BCE6A6A0042 /* NavigationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationTests.swift; sourceTree = "<group>"; };
+		3968728EA201E8E457582122 /* SavedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedView.swift; sourceTree = "<group>"; };
+		4C14BC63F07C4511C67849A7 /* MacauTraffic.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = MacauTraffic.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		5F9878C15DEC5226D32C92D0 /* ContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContractTests.swift; sourceTree = "<group>"; };
+		602C5E11B45762BF991D8521 /* MapKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MapKit.framework; path = System/Library/Frameworks/MapKit.framework; sourceTree = SDKROOT; };
+		625C2C1A7059F223EE84014E /* MacauTrafficTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = MacauTrafficTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		8440D0F8CDFCC9AFB8AA7D36 /* JourneyModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneyModels.swift; sourceTree = "<group>"; };
+		97591EC3148DC2BFE3D82FB6 /* MacauTrafficUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = MacauTrafficUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		9765403F358FC1390BA86ED1 /* TransitMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransitMap.swift; sourceTree = "<group>"; };
+		9B384BF925ADA2B52D2C9337 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		B2C062573E0BF93A688BDCCF /* planner.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = planner.js; sourceTree = "<group>"; };
+		B426754DD8A6BA958DDD1456 /* ExploreView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExploreView.swift; sourceTree = "<group>"; };
+		C9CC42C3C39211E0992F483F /* PlannerEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlannerEngine.swift; sourceTree = "<group>"; };
+		CD57B266F3B3AB0BA968872B /* Components.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components.swift; sourceTree = "<group>"; };
+		D10AE00D31599476B0F67136 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		DE9894FD609DAFB8DF12BBAD /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
+		E6343FCA5A62417AF270A138 /* MacauTrafficApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacauTrafficApp.swift; sourceTree = "<group>"; };
+		F1E07C486772D40253368F82 /* JourneyDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneyDetailView.swift; sourceTree = "<group>"; };
+		FA660655A15CE628D1801DD3 /* ManualPlannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManualPlannerView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		7EB3241D0155C881A93B05A4 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				99A50C3DB2FDEC21E5BC623B /* MapKit.framework in Frameworks */,
+				EC6FC50A269C0AEAD09AFCDB /* JavaScriptCore.framework in Frameworks */,
+				646964850DE784C1621D9F3A /* AVKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		16435CBEBBCCEB885966A84B = {
+			isa = PBXGroup;
+			children = (
+				032287D88F5D91BFB5987047 /* Fixtures */,
+				D5B697CCD0CA66FD2BF770FA /* MacauTraffic */,
+				76C739077FD1F6F04DF450DA /* Tests */,
+				DB03C2B9730BB98F2329DE9D /* UITests */,
+				2D34D25097181AF6C1B65128 /* Frameworks */,
+				3643E6CA8A12ECCDCD3634D1 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		2D34D25097181AF6C1B65128 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				15C0E0C55C651C14BC740B84 /* AVKit.framework */,
+				DE9894FD609DAFB8DF12BBAD /* JavaScriptCore.framework */,
+				602C5E11B45762BF991D8521 /* MapKit.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		3643E6CA8A12ECCDCD3634D1 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				4C14BC63F07C4511C67849A7 /* MacauTraffic.app */,
+				625C2C1A7059F223EE84014E /* MacauTrafficTests.xctest */,
+				97591EC3148DC2BFE3D82FB6 /* MacauTrafficUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		6591C385F5B001D1468911B2 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				9B384BF925ADA2B52D2C9337 /* Assets.xcassets */,
+				B2C062573E0BF93A688BDCCF /* planner.js */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		740AEEA2C42D1E34CB2E6F79 /* Journeys */ = {
+			isa = PBXGroup;
+			children = (
+				F1E07C486772D40253368F82 /* JourneyDetailView.swift */,
+				8440D0F8CDFCC9AFB8AA7D36 /* JourneyModels.swift */,
+				FA660655A15CE628D1801DD3 /* ManualPlannerView.swift */,
+				C9CC42C3C39211E0992F483F /* PlannerEngine.swift */,
+			);
+			path = Journeys;
+			sourceTree = "<group>";
+		};
+		76C739077FD1F6F04DF450DA /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				5F9878C15DEC5226D32C92D0 /* ContractTests.swift */,
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
+		78C01899DA624F8436E82445 /* Design */ = {
+			isa = PBXGroup;
+			children = (
+				CD57B266F3B3AB0BA968872B /* Components.swift */,
+				9765403F358FC1390BA86ED1 /* TransitMap.swift */,
+			);
+			path = Design;
+			sourceTree = "<group>";
+		};
+		917771E5780EEFFFEF6531F5 /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				06C6C6D23C36758C4FFE50A8 /* APIClient.swift */,
+				1158E9DCB47310E73E62FD27 /* LocationService.swift */,
+				D10AE00D31599476B0F67136 /* Models.swift */,
+				15E58F2E6143CF1201522206 /* Settings.swift */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		93E0741497C141EC2696BB6C /* Bus */ = {
+			isa = PBXGroup;
+			children = (
+				09634682ED45702136721308 /* BusViews.swift */,
+			);
+			path = Bus;
+			sourceTree = "<group>";
+		};
+		B8589FDF4549ED597923A46A /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				B426754DD8A6BA958DDD1456 /* ExploreView.swift */,
+				3968728EA201E8E457582122 /* SavedView.swift */,
+				93E0741497C141EC2696BB6C /* Bus */,
+				740AEEA2C42D1E34CB2E6F79 /* Journeys */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		D5B697CCD0CA66FD2BF770FA /* MacauTraffic */ = {
+			isa = PBXGroup;
+			children = (
+				E6343FCA5A62417AF270A138 /* MacauTrafficApp.swift */,
+				917771E5780EEFFFEF6531F5 /* Core */,
+				78C01899DA624F8436E82445 /* Design */,
+				B8589FDF4549ED597923A46A /* Features */,
+				6591C385F5B001D1468911B2 /* Resources */,
+			);
+			path = MacauTraffic;
+			sourceTree = "<group>";
+		};
+		DB03C2B9730BB98F2329DE9D /* UITests */ = {
+			isa = PBXGroup;
+			children = (
+				3251846819074BCE6A6A0042 /* NavigationTests.swift */,
+			);
+			path = UITests;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		262B9DDA8EB4984751DD6815 /* MacauTrafficUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4FB22076969F31C59C4DD73A /* Build configuration list for PBXNativeTarget "MacauTrafficUITests" */;
+			buildPhases = (
+				D20F1C082E42A7979772267E /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				7AB792A4DAEC27B49BC95983 /* PBXTargetDependency */,
+			);
+			name = MacauTrafficUITests;
+			productName = MacauTrafficUITests;
+			productReference = 97591EC3148DC2BFE3D82FB6 /* MacauTrafficUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		F5C684B368DF99FBCEB08854 /* MacauTrafficTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 76F6F1632A9E6D6A6C4EFD8A /* Build configuration list for PBXNativeTarget "MacauTrafficTests" */;
+			buildPhases = (
+				862B63573BDED7DFA8B8D119 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				7B072EE4595FA08D0251D4D9 /* PBXTargetDependency */,
+			);
+			name = MacauTrafficTests;
+			productName = MacauTrafficTests;
+			productReference = 625C2C1A7059F223EE84014E /* MacauTrafficTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		F6F65B68242F4EEEE64BC827 /* MacauTraffic */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 2B8F4F3B2800B7D67032AA4D /* Build configuration list for PBXNativeTarget "MacauTraffic" */;
+			buildPhases = (
+				6F02BBB8E0E0E6902797F48E /* Sources */,
+				3CFD37126B4597F1CF1B18D8 /* Resources */,
+				7EB3241D0155C881A93B05A4 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = MacauTraffic;
+			productName = MacauTraffic;
+			productReference = 4C14BC63F07C4511C67849A7 /* MacauTraffic.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		FCD56CA0786865A686DA887D /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					262B9DDA8EB4984751DD6815 = {
+						ProvisioningStyle = Automatic;
+						TestTargetID = F6F65B68242F4EEEE64BC827;
+					};
+					F5C684B368DF99FBCEB08854 = {
+						ProvisioningStyle = Automatic;
+					};
+					F6F65B68242F4EEEE64BC827 = {
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = A824908277E4F0231C1F385C /* Build configuration list for PBXProject "MacauTraffic" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 16435CBEBBCCEB885966A84B;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				F6F65B68242F4EEEE64BC827 /* MacauTraffic */,
+				F5C684B368DF99FBCEB08854 /* MacauTrafficTests */,
+				262B9DDA8EB4984751DD6815 /* MacauTrafficUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		3CFD37126B4597F1CF1B18D8 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				76F5CBA29181009EDCD5E9F4 /* Assets.xcassets in Resources */,
+				31F570976FA469F6ED6913A6 /* Fixtures in Resources */,
+				1476020C19690F2BD2CC92ED /* planner.js in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		6F02BBB8E0E0E6902797F48E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				35B0EBAF5518DCCB738A58EF /* APIClient.swift in Sources */,
+				F4C75590D25B8349BE861A53 /* BusViews.swift in Sources */,
+				BB39502329A8B308502103F6 /* Components.swift in Sources */,
+				75EADF29D84C776F341587C9 /* ExploreView.swift in Sources */,
+				CCFC356F773EBFACDBFDE874 /* JourneyDetailView.swift in Sources */,
+				9A43E771624616BBC113CB2F /* JourneyModels.swift in Sources */,
+				95829767B1DF9A186CAF6664 /* LocationService.swift in Sources */,
+				6D282826C39F26953ACBFE2D /* MacauTrafficApp.swift in Sources */,
+				BEDB82F061E46A7A95F9987D /* ManualPlannerView.swift in Sources */,
+				050B1C5CB18AF01276D5F0B5 /* Models.swift in Sources */,
+				1EDADCAD2A19BE5E8A4933E5 /* PlannerEngine.swift in Sources */,
+				579D2929FEC0BBD50EC53037 /* SavedView.swift in Sources */,
+				3450662FAE163BF7AD5363D1 /* Settings.swift in Sources */,
+				514F483B29F3E84592220B5A /* TransitMap.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		862B63573BDED7DFA8B8D119 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				91519ED92BFE21DF6A5F2BAD /* ContractTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D20F1C082E42A7979772267E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EA4BE2A5CDF3C8A37E15561F /* NavigationTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		7AB792A4DAEC27B49BC95983 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F6F65B68242F4EEEE64BC827 /* MacauTraffic */;
+			targetProxy = 26C8EE2002267A622C2C1B73 /* PBXContainerItemProxy */;
+		};
+		7B072EE4595FA08D0251D4D9 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F6F65B68242F4EEEE64BC827 /* MacauTraffic */;
+			targetProxy = A463221C2C0D263C2B7ECE96 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		40BC9112F5D937C7F53D750F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				INFOPLIST_KEY_CFBundleDisplayName = "澳門出行";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.navigation";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "按你選擇的位置功能，尋找附近車站、停車場或規劃行程。";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "錄製最多 20 秒的問題，經 DeepSeek 轉成可編輯文字。";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = com.eric.macautraffic;
+			};
+			name = Release;
+		};
+		55C2794CF21BC94506FDC15D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		5D29235953D8ED5608847C59 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = com.eric.macautraffic.uitests;
+				TEST_TARGET_NAME = MacauTraffic;
+			};
+			name = Release;
+		};
+		84D4BAC644D9106EF6C5B2D6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = com.eric.macautraffic.tests;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MacauTraffic.app/MacauTraffic";
+			};
+			name = Release;
+		};
+		8CD31E295B597BF0BD09543A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = com.eric.macautraffic.tests;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MacauTraffic.app/MacauTraffic";
+			};
+			name = Debug;
+		};
+		9E7F34F08F5AEFE3F887C605 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				INFOPLIST_KEY_CFBundleDisplayName = "澳門出行";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.navigation";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "按你選擇的位置功能，尋找附近車站、停車場或規劃行程。";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "錄製最多 20 秒的問題，經 DeepSeek 轉成可編輯文字。";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = com.eric.macautraffic;
+			};
+			name = Debug;
+		};
+		AD5CE6707FF9A45901E34B8A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = com.eric.macautraffic.uitests;
+				TEST_TARGET_NAME = MacauTraffic;
+			};
+			name = Debug;
+		};
+		ECCAEF13E83082C05346DAB2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		2B8F4F3B2800B7D67032AA4D /* Build configuration list for PBXNativeTarget "MacauTraffic" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9E7F34F08F5AEFE3F887C605 /* Debug */,
+				40BC9112F5D937C7F53D750F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		4FB22076969F31C59C4DD73A /* Build configuration list for PBXNativeTarget "MacauTrafficUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AD5CE6707FF9A45901E34B8A /* Debug */,
+				5D29235953D8ED5608847C59 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		76F6F1632A9E6D6A6C4EFD8A /* Build configuration list for PBXNativeTarget "MacauTrafficTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8CD31E295B597BF0BD09543A /* Debug */,
+				84D4BAC644D9106EF6C5B2D6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		A824908277E4F0231C1F385C /* Build configuration list for PBXProject "MacauTraffic" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				ECCAEF13E83082C05346DAB2 /* Debug */,
+				55C2794CF21BC94506FDC15D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = FCD56CA0786865A686DA887D /* Project object */;
+}
