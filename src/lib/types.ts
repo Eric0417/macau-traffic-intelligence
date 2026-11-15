@@ -78,7 +78,24 @@ export interface BusRoute {
   live: boolean;
 }
 
+export interface BusArrivalEstimate {
+  minutes: number;
+  generatedAt: string;
+  vehicleId: string;
+  basis: "reported-speed" | "observed-speed";
+}
+
+export interface BusPositionPrediction {
+  segmentIndex: number;
+  distanceAlongSegment: number;
+  speedKph: number;
+  anchorAt: string;
+  validUntil: string;
+  basis: "reported-speed" | "observed-speed";
+}
+
 export interface BusEtaStop {
+  arrivalEstimate?: BusArrivalEstimate | null;
   sequence: number;
   stationCode: string;
   stationName: string;
@@ -108,6 +125,8 @@ export interface BusVehicle {
   coordinates: [number, number] | null;
   bearing: number | null;
   positionSource?: "feed" | "stop";
+  predictionAnchorAt?: string;
+  prediction?: BusPositionPrediction | null;
   estimated: boolean;
 }
 

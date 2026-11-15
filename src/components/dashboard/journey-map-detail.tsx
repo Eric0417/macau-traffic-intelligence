@@ -11,6 +11,7 @@ import { distanceMeters } from "@/lib/resident-tools";
 import { JOURNEY_COLORS } from "./journey-map";
 import { walkingPathBetween, type WalkingPath } from "@/lib/walking-network";
 import { walkingNavigationUrl } from "@/lib/walking-navigation";
+import { BusArrivalEstimate } from "./bus-arrival-estimate";
 import { SourceNote } from "./panels";
 
 export interface SelectedJourney {
@@ -90,6 +91,7 @@ export function JourneyMapDetail({ selected, states, missingLegs, uncertainTrans
         const vehicles = eta && state.meta && !metaIsDelayed(state.meta) && !state.error
           ? eta.vehicles.filter((vehicle) => vehicle.positionSource === "feed" && vehicle.coordinates)
           : [];
+        const boardingStop = eta?.stops.find(stop => stop.stationCode === leg.from.stationCode);
         return <li className="journey-step" key={`${leg.routeCode}:${leg.direction}`} style={{ borderLeft: `3px solid ${JOURNEY_COLORS[index % JOURNEY_COLORS.length]}` }}>
           {index ? <p className="quiet-copy">{uncertainTransfers.includes(index) ? transferWarning : `${c.transfer} · ${leg.from.stationCode}`}</p> : null}
           <h3><span className="journey-route-number">{leg.routeName}</span> {leg.circular ? (locale === "en" ? "Circular route" : locale === "zh-Hans" ? "循环线" : "循環線") : `${c.toward} ${leg.terminalName}`}</h3>
@@ -102,6 +104,9 @@ export function JourneyMapDetail({ selected, states, missingLegs, uncertainTrans
             </a> · {leg.serviceWindows.map(([start, end]) => `${terminalTime(start)}–${terminalTime(end)}`).join(" / ")}
           </p> : null}
           {suspended ? <p className="data-warning">{c.suspended}</p> : null}
+          {index === 0 && !selected.sectionLabel && boardingStop ? <p className="quiet-copy">
+            <BusArrivalEstimate stop={boardingStop} disabled={!state.meta || metaIsDelayed(state.meta) || Boolean(state.error)} />
+          </p> : null}
           {vehicles.length ? <details>
             <summary>{positionTitle} ({vehicles.length})</summary>
             <ul>{vehicles.map((vehicle) => <li key={vehicle.id}>

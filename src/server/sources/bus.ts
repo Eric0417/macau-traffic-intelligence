@@ -3,11 +3,13 @@ import * as cheerio from "cheerio";
 import { z } from "zod";
 import { busEtaSchema, busRouteSchema } from "@/lib/contracts";
 import type {
+  BusEta,
   BusCompany,
   BusEtaStop,
   BusRouteSegment,
   BusVehicle,
 } from "@/lib/types";
+import { predictBusArrivals } from "@/lib/bus-prediction";
 import { createDsatToken } from "@/server/dsat-token";
 import { fetchJson, fetchText } from "@/server/http";
 import { readSource } from "@/server/cache";
@@ -479,7 +481,7 @@ function stopCodeAtCoordinate(
   return best?.stationCode ?? null;
 }
 
-export async function loadBusEta(routeCodeValue: string, direction: 0 | 1) {
+export async function loadBusEta(routeCodeValue: string, direction: 0 | 1, previous?: BusEta): Promise<BusEta> {
   const code = routeCodeValue.toUpperCase().padStart(5, "0");
   const routesRead = await readSource(busRoutesSource);
   const route = routesRead?.result.data.find((item) => item.routeCode === code);
@@ -634,8 +636,8 @@ export async function loadBusEta(routeCodeValue: string, direction: 0 | 1) {
   }
 
   // The official stop page counts the stops remaining before the next bus
-  // reaches a stop (0 means a bus is heading to that stop). DSAT publishes no
-  // per-stop arrival minutes, so this is the countdown the app shows.
+  // reaches a stop (0 means a bus is heading to that stop). Keep this count
+  // separate from our speed-and-traffic arrival estimate.
   const approachedSequences = vehicles
     .filter((vehicle) => stopByCode.has(vehicle.stationCode))
     .map((vehicle) => vehicle.stationSequence);
@@ -656,7 +658,7 @@ export async function loadBusEta(routeCodeValue: string, direction: 0 | 1) {
     return best === null ? stop : { ...stop, stopsAway: best };
   });
 
-  return busEtaSchema.parse({
+  const normalized = busEtaSchema.parse({
     routeName: route.routeName,
     routeCode: route.routeCode,
     direction,
@@ -665,4 +667,20 @@ export async function loadBusEta(routeCodeValue: string, direction: 0 | 1) {
     routeSegments,
     diversion: { suspendedStops },
   });
+  return busEtaSchema.parse(predictBusArrivals(normalized, route.routeType === 2, Date.now(), previous));
+}
+
+export function busEtaSource(routeCode: string, direction: 0 | 1): SourceDefinition<BusEta> {
+  const normalizedCode = routeCode.toUpperCase().padStart(5, "0");
+  return {
+    id: `bus-eta-${normalizedCode}-${direction}`,
+    cacheVersion: "system-prediction-v1",
+    name: `巴士 ${normalizedCode} 實時位置`,
+    url: "https://bis.dsat.gov.mo:37812/macauweb/",
+    attribution: "交通事務局巴士報站資料；到站分鐘及推算位置為本網站系統估算",
+    envKey: "SOURCE_BUS_ENABLED",
+    ttlSeconds: 2, staleTtlSeconds: 60,
+    schema: busEtaSchema,
+    load: previous => loadBusEta(normalizedCode, direction, previous ? busEtaSchema.parse(previous.data) : undefined),
+  };
 }

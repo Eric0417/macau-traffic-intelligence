@@ -2,122 +2,15 @@ import type { BusRouteSegment, BusVehicle } from "@/lib/types";
 import type { BusLivery } from "@/components/dashboard/bus-3d-layer";
 import { TRANSIT_DISPLAY_SCALE } from "./transit-display";
 
-export type LngLat = [number, number];
+import { metersBetween, pathLengths, bearingBetween, pointAtDistance, projectOnPath, type LngLat, type PathPoint } from "@/lib/route-geometry";
+export { metersBetween, pathLengths, bearingBetween, pointAtDistance, projectOnPath, type LngLat, type PathPoint } from "@/lib/route-geometry";
 
-const METERS_PER_DEGREE_LAT = 111_320;
 const POINT_EPSILON_DEGREES = 1e-9;
 const CLOSED_LOOP_RADIUS_METERS = 120;
-// The marker glides between feed estimates instead of dead-reckoning ahead of
-// them. Peak speed stays inside a plausible bus range so a coarse ETA step
-// cannot teleport the vehicle across the route.
-const MIN_FORWARD_SPEED = 6; // 21.6 km/h
-const MAX_FORWARD_SPEED = 20; // 72 km/h
+const MIN_FORWARD_SPEED = 6;
+const MAX_FORWARD_SPEED = 20;
 const MIN_BACKWARD_SPEED = 1.2;
 const MAX_BACKWARD_SPEED = 5;
-
-export function metersBetween(a: LngLat, b: LngLat): number {
-  const latRadians = ((a[1] + b[1]) / 2) * (Math.PI / 180);
-  const metersPerDegreeLng = METERS_PER_DEGREE_LAT * Math.cos(latRadians);
-  const dx = (b[0] - a[0]) * metersPerDegreeLng;
-  const dy = (b[1] - a[1]) * METERS_PER_DEGREE_LAT;
-  return Math.hypot(dx, dy);
-}
-
-export function pathLengths(path: LngLat[]): number[] {
-  const lengths = [0];
-  for (let index = 1; index < path.length; index += 1) {
-    lengths.push(lengths[index - 1] + metersBetween(path[index - 1], path[index]));
-  }
-  return lengths;
-}
-
-export function bearingBetween(a: LngLat, b: LngLat): number {
-  const latitude = ((a[1] + b[1]) / 2) * (Math.PI / 180);
-  const east = (b[0] - a[0]) * Math.cos(latitude);
-  return (
-    ((Math.atan2(east, b[1] - a[1]) * 180) / Math.PI + 360) % 360
-  );
-}
-
-export interface PathPoint {
-  coordinates: LngLat;
-  bearing: number;
-}
-
-export function pointAtDistance(
-  path: LngLat[],
-  lengths: number[],
-  distance: number,
-): PathPoint {
-  if (path.length === 0) return { coordinates: [0, 0], bearing: 0 };
-  if (path.length === 1 || lengths[lengths.length - 1] === 0) {
-    return { coordinates: path[0], bearing: 0 };
-  }
-
-  const target = Math.max(0, Math.min(distance, lengths[lengths.length - 1]));
-  for (let index = 1; index < path.length; index += 1) {
-    if (lengths[index] < target) continue;
-    const segmentLength = lengths[index] - lengths[index - 1];
-    const ratio = segmentLength === 0 ? 0 : (target - lengths[index - 1]) / segmentLength;
-    const from = path[index - 1];
-    const to = path[index];
-    return {
-      coordinates: [
-        from[0] + (to[0] - from[0]) * ratio,
-        from[1] + (to[1] - from[1]) * ratio,
-      ],
-      bearing: bearingBetween(from, to),
-    };
-  }
-
-  const last = path[path.length - 1];
-  return {
-    coordinates: last,
-    bearing: bearingBetween(path[path.length - 2], last),
-  };
-}
-
-export function projectOnPath(
-  path: LngLat[],
-  lengths: number[],
-  point: LngLat,
-): number {
-  if (path.length < 2) return 0;
-  let bestDistance = 0;
-  let bestDelta = Number.POSITIVE_INFINITY;
-
-  for (let index = 1; index < path.length; index += 1) {
-    const from = path[index - 1];
-    const to = path[index];
-    const latRadians = ((from[1] + to[1]) / 2) * (Math.PI / 180);
-    const metersPerDegreeLng = METERS_PER_DEGREE_LAT * Math.cos(latRadians);
-    const segmentX = (to[0] - from[0]) * metersPerDegreeLng;
-    const segmentY = (to[1] - from[1]) * METERS_PER_DEGREE_LAT;
-    const pointX = (point[0] - from[0]) * metersPerDegreeLng;
-    const pointY = (point[1] - from[1]) * METERS_PER_DEGREE_LAT;
-    const lengthSquared = segmentX * segmentX + segmentY * segmentY;
-    const ratio =
-      lengthSquared === 0
-        ? 0
-        : Math.max(
-            0,
-            Math.min(1, (pointX * segmentX + pointY * segmentY) / lengthSquared),
-          );
-    const projectedDistance =
-      lengths[index - 1] + Math.sqrt(lengthSquared) * ratio;
-    const projectedPoint: LngLat = [
-      from[0] + (to[0] - from[0]) * ratio,
-      from[1] + (to[1] - from[1]) * ratio,
-    ];
-    const distanceFromPoint = metersBetween(projectedPoint, point);
-    if (distanceFromPoint < bestDelta) {
-      bestDelta = distanceFromPoint;
-      bestDistance = projectedDistance;
-    }
-  }
-
-  return bestDistance;
-}
 
 export interface RoutePathSegment {
   fromStationCode: string;
@@ -252,6 +145,7 @@ export interface BusMotion {
   peakForward: number;
   peakBackward: number;
   at: number;
+  prediction?: { anchor: number; end: number; speed: number; startedAt: number; until: number };
 }
 
 export interface BusMotionState {
@@ -286,6 +180,11 @@ interface PursuitState {
 // official estimate with a bounded speed, so a coarse ETA step anywhere on the
 // route can only change the direction of travel, never the position.
 function pursue(motion: BusMotion, now: number): PursuitState {
+  if (motion.prediction) {
+    const prediction = motion.prediction;
+    const seconds = Math.max(0, Math.min(now, prediction.until) - prediction.startedAt) / 1000;
+    motion.target = Math.min(prediction.end, prediction.anchor + prediction.speed * seconds);
+  }
   let remaining = Math.max(0, (now - motion.at) / 1_000);
   if (remaining > 60) {
     // The tab or the machine was away long enough that gliding from the stale
@@ -334,7 +233,11 @@ export function createBusMotion(
   previous?: BusMotion | null,
 ): BusMotion | null {
   const segmentIndex = segmentIndexForVehicle(route, vehicle);
-  const anchor = vehicleAnchorDistance(route, vehicle);
+  const forecast = vehicle.prediction;
+  const segment = route.segments[segmentIndex];
+  const anchor = forecast && forecast.segmentIndex === segmentIndex && segment
+    ? segment.start + forecast.distanceAlongSegment
+    : vehicleAnchorDistance(route, vehicle);
   if (anchor === null || segmentIndex < 0) return null;
 
   const sameRoute = Boolean(previous && previous.routeKey === routeKey);
@@ -355,7 +258,12 @@ export function createBusMotion(
 
   const feedSpeed = (vehicle.speedKph ?? 0) / 3.6;
 
-  return {
+  const lapOffset = target - anchor;
+  const prediction = forecast && forecast.segmentIndex === segmentIndex ? {
+    anchor: target, end: segment.start + segment.length + lapOffset,
+    speed: forecast.speedKph / 3.6, startedAt: Date.parse(forecast.anchorAt), until: Date.parse(forecast.validUntil),
+  } : undefined;
+  const motion: BusMotion = {
     id: vehicle.id,
     livery,
     plate: vehicle.plate,
@@ -375,7 +283,17 @@ export function createBusMotion(
       Math.max(MIN_BACKWARD_SPEED, feedSpeed * 0.6),
     ),
     at: now,
+    prediction,
   };
+  pursue(motion, now);
+  if (!sameRoute) motion.distance = motion.target;
+  return motion;
+}
+
+export function busMotionIsActive(motion: BusMotion, now: number): boolean {
+  return motion.distance !== motion.target || motion.speed !== 0 || Boolean(
+    motion.prediction && now < motion.prediction.until && motion.target < motion.prediction.end,
+  );
 }
 
 export function advanceBusMotion(motion: BusMotion, now: number): BusMotionState {

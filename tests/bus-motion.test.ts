@@ -317,3 +317,18 @@ describe("bus motion", () => {
     ).toBeNull();
   });
 });
+
+it("advances a system estimate by speed, then freezes before the next stop", () => {
+  const route = buildRoutePath([segmentA, segmentB]);
+  const now = Date.parse("2026-11-15T05:00:00Z");
+  const bus = vehicle({ prediction: { segmentIndex: 0, distanceAlongSegment: 200, speedKph: 18, anchorAt: new Date(now).toISOString(), validUntil: new Date(now + 15_000).toISOString(), basis: "reported-speed" } });
+  const motion = createBusMotion(bus, route, "3:0", "tcm", now)!;
+  const start = advanceBusMotion(motion, now);
+  for (let t = 250; t <= 30_000; t += 250) advanceBusMotion(motion, now+t);
+  const end = advanceBusMotion(motion, now + 90_000);
+  expect(metersBetween(start.coordinates, end.coordinates)).toBeCloseTo(75, 0);
+  expect(motion.target).toBeCloseTo(275);
+  const nearStop = createBusMotion(vehicle({ prediction: { ...bus.prediction!, distanceAlongSegment: route.segments[0].length - 10 } }), route, "3:0", "tcm", now)!;
+  advanceBusMotion(nearStop, now + 90_000);
+  expect(nearStop.target).toBe(route.segments[0].length);
+});

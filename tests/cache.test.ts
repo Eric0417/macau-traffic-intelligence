@@ -73,3 +73,16 @@ describe("source cache", () => {
     expect((await readSource(source))?.result.data.value).toBe(1);
   });
 });
+
+it("passes the previous normalized snapshot to a source refresh", async () => {
+  const load = vi.fn().mockResolvedValue({ value: 7 });
+  const source: SourceDefinition<{ value: number }> = {
+    id: "prediction-history", name: "Test", url: "https://example.com", attribution: "Test",
+    envKey: "TEST_SOURCE_ENABLED", ttlSeconds: -1, staleTtlSeconds: 120,
+    schema: z.object({ value: z.number() }), load,
+  };
+  await readSource(source);
+  const stale = await readSource(source);
+  await stale?.refresh?.();
+  expect(load.mock.calls[1][0]?.data).toEqual({ value: 7 });
+});

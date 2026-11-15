@@ -1,8 +1,6 @@
 import { z } from "zod";
-import type { SourceDefinition } from "@/server/source";
 import { handleSource } from "@/server/api-handler";
-import { loadBusEta } from "@/server/sources/bus";
-import { busEtaSchema } from "@/lib/contracts";
+import { busEtaSource } from "@/server/sources/bus";
 
 const querySchema = z.object({
   direction: z.coerce.number().int().min(0).max(1).default(0),
@@ -26,17 +24,7 @@ export async function GET(
 
   const normalizedCode = routeCode.toUpperCase();
   const direction = parsed.data.direction as 0 | 1;
-  const source: SourceDefinition<Awaited<ReturnType<typeof loadBusEta>>> = {
-    id: `bus-eta-${normalizedCode}-${direction}`,
-    name: `巴士 ${normalizedCode} 實時位置`,
-    url: "https://bis.dsat.gov.mo:37812/macauweb/",
-    attribution: "交通事務局巴士報站公開實時資料",
-    envKey: "SOURCE_BUS_ENABLED",
-    ttlSeconds: 2,
-    staleTtlSeconds: 60,
-    schema: busEtaSchema,
-    load: () => loadBusEta(normalizedCode, direction),
-  };
+  const source = busEtaSource(normalizedCode, direction);
 
   return handleSource(source, request);
 }

@@ -1,5 +1,12 @@
 # Changelog
 
+## System bus arrival and position estimates - 2026-11-15
+
+- Add labelled arrival minutes from route distance, speed and segment congestion. Correct vehicles paired to the previous segment when their feed coordinate has already moved past the reported stop.
+- Advance estimated map positions for at most 15 seconds, capped at the next stop. Frozen data, stopped buses and missing inputs do not trigger indefinite movement or invented departure times.
+- Show predictions in bus stop details and the first boarding step; expose labelled current estimates to the AI assistant. Keep stop counts when a prediction is unavailable. The model has not been calibrated against observed arrivals.
+
+
 All notable user-visible and architectural changes are recorded here.
 
 ## Bus access, transfers and taxi alternatives - 2026-11-15

@@ -68,7 +68,15 @@ export const busRouteSchema = z.object({
   live: z.boolean(),
 });
 
+export const busArrivalEstimateSchema = z.object({
+  minutes: z.number().int().positive(),
+  generatedAt: z.string().datetime(),
+  vehicleId: z.string(),
+  basis: z.enum(["reported-speed", "observed-speed"]),
+});
+
 export const busEtaStopSchema = z.object({
+  arrivalEstimate: busArrivalEstimateSchema.nullable().optional(),
   sequence: z.number().int().nonnegative(),
   stationCode: z.string(),
   stationName: z.string(),
@@ -93,6 +101,15 @@ export const busVehicleSchema = z.object({
   coordinates: z.tuple([z.number(), z.number()]).nullable(),
   bearing: z.number().nullable(),
   positionSource: z.enum(["feed", "stop"]).optional(),
+  predictionAnchorAt: z.string().datetime().optional(),
+  prediction: z.object({
+    segmentIndex: z.number().int().nonnegative(),
+    distanceAlongSegment: z.number().nonnegative(),
+    speedKph: z.number().positive().max(70),
+    anchorAt: z.string().datetime(),
+    validUntil: z.string().datetime(),
+    basis: z.enum(["reported-speed", "observed-speed"]),
+  }).nullable().optional(),
   estimated: z.boolean(),
 });
 

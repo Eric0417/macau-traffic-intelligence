@@ -1,5 +1,8 @@
 # Project Memory
 
+- 2026-11-15: Added explicit system bus arrival estimates and bounded position extrapolation (ADR 0020). Minutes use official route geometry, reported/observed speed and congestion; parameters are uncalibrated. Vehicle-to-segment matching now checks incoming and outgoing segments. Forecasts stop at 15 seconds/the next stop, and arrival minutes are withheld for stopped or frozen vehicles. Bus panel, first boarding step and general assistant share these estimates. Production deployment verification is recorded in `docs/qa/bus-prediction/VERIFICATION.md` when complete.
+
+
 ## Current State
 
 Version `0.1.0` is a standalone Next.js 16 application with Traditional Chinese, Simplified Chinese and English. The trip workspace has horizontal desktop navigation, a left input/option panel, a wide map and collapsible guidance, plus mobile list/map switching and bottom navigation. Ordered journeys and cultural day trips were deployed as `5ec14f6` on 2026-11-14. Map space and mistyped place names were revised in `0928d2c`, and phone card sizing in `414b9f4`. The simplified phone navigation and larger controls are live as `23c379b`, Render deployment `dep-dbs51req1p3s73ed98gg`. See `docs/qa/mobile-visual-polish/VERIFICATION.md` for the latest checks, and the itinerary/map-guide QA folders for the earlier revisions.

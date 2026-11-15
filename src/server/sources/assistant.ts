@@ -1,3 +1,4 @@
+import { usableArrivalEstimate } from "@/lib/bus-prediction";
 import "server-only";
 import { z } from "zod";
 import {
@@ -5,7 +6,6 @@ import {
   ASSISTANT_DEFAULT_MODEL,
   sourceEnabled,
 } from "@/lib/config";
-import { busEtaSchema } from "@/lib/contracts";
 import type {
   BorderStatus,
   BridgeTime,
@@ -23,9 +23,8 @@ import type {
   WeatherSnapshot,
 } from "@/lib/types";
 import { readSource, type SourceRead } from "@/server/cache";
-import type { SourceDefinition } from "@/server/source";
 import { sources } from "@/server/sources";
-import { loadBusEta } from "@/server/sources/bus";
+import { busEtaSource } from "@/server/sources/bus";
 
 export interface AssistantFocus {
   routeCode: string;
@@ -104,6 +103,7 @@ export interface LearningSnapshot {
       nextStops: Array<{
         stationName: string;
         stopsAway: number | null;
+        arrivalEstimate: BusEta["stops"][number]["arrivalEstimate"];
         trafficStatus: string;
       }>;
       stops: string[];
@@ -442,10 +442,11 @@ function summariseLrtNotices(
 }
 
 export const BUS_POSITION_NOTE =
-  "Live bus positions are the official report's own estimated coordinates for each plate; they are not GPS readings. nextStops lists how many stops remain before the next bus reaches each stop, where 0 means a bus is heading to that stop; DSAT publishes no per-stop arrival minutes. Direction 0 is the outbound trip and direction 1 is the return trip.";
+  "Bus coordinates are upstream estimates, not measured GPS. arrivalEstimate contains this website’s speed-and-traffic model minutes, not official arrival times. State that they are system estimates and may change; never invent minutes or convert stopsAway to time. Position extrapolation is limited to 15 seconds and the next stop. Direction 0 is outbound and 1 is return.";
 
 function summariseBusSlice(
   eta: BusEta,
+  fresh = true,
 ): NonNullable<LearningSnapshot["bus"]>["liveRoutes"][number] {
   const segmentTraffic = { normal: 0, slow: 0, congested: 0, unknown: 0 };
   for (const segment of eta.routeSegments) {
@@ -463,9 +464,10 @@ function summariseBusSlice(
       speedKph: vehicle.speedKph,
       lowFloor: vehicle.lowFloor,
     })),
-    nextStops: eta.stops.slice(0, 8).map((stop) => ({
+    nextStops: eta.stops.map((stop) => ({
       stationName: stop.stationName,
       stopsAway: stop.stopsAway,
+      arrivalEstimate: fresh ? usableArrivalEstimate(stop) : null,
       trafficStatus: stop.trafficStatus,
     })),
     stops: eta.stops.map((stop) => stop.stationName),
@@ -474,20 +476,6 @@ function summariseBusSlice(
   };
 }
 
-function busEtaSourceDefinition(slice: AssistantFocus): SourceDefinition<BusEta> {
-  const normalizedCode = slice.routeCode.toUpperCase();
-  return {
-    id: `bus-eta-${normalizedCode}-${slice.direction}`,
-    name: `Bus ${normalizedCode} live positions`,
-    url: "https://bis.dsat.gov.mo:37812/macauweb/",
-    attribution: "DSAT public bus report data",
-    envKey: "SOURCE_BUS_ENABLED",
-    ttlSeconds: 10,
-    staleTtlSeconds: 60,
-    schema: busEtaSchema,
-    load: () => loadBusEta(normalizedCode, slice.direction),
-  };
-}
 
 export async function buildLearningSnapshot(
   locale: Locale,
@@ -574,14 +562,14 @@ export async function buildLearningSnapshot(
   }
 
   const busReads = await Promise.all(
-    uniqueWanted.map((slice) => readSource(busEtaSourceDefinition(slice))),
+    uniqueWanted.map((slice) => readSource(busEtaSource(slice.routeCode, slice.direction))),
   );
   for (const read of busReads) {
     if (read?.refresh) refreshes.push(read.refresh);
   }
   const liveRoutes = busReads
     .filter((read): read is SourceRead<BusEta> => Boolean(read))
-    .map((read) => summariseBusSlice(read.result.data));
+    .map((read) => summariseBusSlice(read.result.data, Date.now() - Date.parse(read.result.updatedAt) <= 10_000));
 
   const place = question ? extractPlaceQuery(question) : null;
   let placeCheck: NonNullable<LearningSnapshot["bus"]>["placeCheck"] = null;
@@ -685,6 +673,7 @@ export function buildAssistantMessages(
     "When the snapshot cannot explain why something happens, say which extra data or field observation would be needed instead of guessing a cause.",
     "The snapshot may include roads.mentionedSegments (each with a segment count, status breakdown, and total length), roads.congestedSegments, roads.slowSegments, and bus.liveRoutes. Use them for questions about a specific road, bus route, bus position, or route traffic.",
     "For bus answers, name the stop each bus is approaching and always state that positions are the official bus report's own estimates, not GPS. When one route is named, bus.liveRoutes carries both directions: call direction 0 the outbound trip and direction 1 the return trip, and never invent destination or terminal names that are not written in the snapshot.",
+    "Only bus.liveRoutes[].nextStops[].arrivalEstimate supplies arrival minutes. Label those as uncalibrated system estimates, never as official times or guaranteed connections. A missing estimate means insufficient current data, not no bus service.",
     "bus.liveRoutes[].nextStops[].stopsAway is the number of stops remaining before the next bus reaches that stop, where 0 means a bus is heading to it. It is a stop count, not minutes; never convert it to a time.",
     "bus.liveRoutes[].stops lists every stop of that route in order. When asked whether a route serves a place, decide yes or no from the stop list and answer that in the first sentence; only then name the relevant stops. If the place is not in the list, say it is not served and do not imply otherwise.",
     "If bus.placeCheck is present, its served value is the authoritative answer to whether that route serves the place. The system adds an opening line with that value, so confirm it and never contradict it. Keep the reply to at most three short sentences: the served value, up to three nearby stops from the stop list, and a next step.",

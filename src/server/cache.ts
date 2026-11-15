@@ -185,7 +185,8 @@ async function refreshSource<T>(source: SourceDefinition<T>, backend: CacheBacke
   if (!acquired) return;
 
   try {
-    const data = source.schema.parse(await source.load());
+    const previous = await backend.get<T>(`${CACHE_PREFIX}:source:${source.id}${source.cacheVersion ? `:${source.cacheVersion}` : ""}`);
+    const data = source.schema.parse(await source.load(previous ?? undefined));
     await backend.set(
       `${CACHE_PREFIX}:source:${source.id}${source.cacheVersion ? `:${source.cacheVersion}` : ""}`,
       { data, updatedAt: new Date().toISOString() },
@@ -255,7 +256,7 @@ export async function readSource<T>(source: SourceDefinition<T>): Promise<Source
   }
 
   try {
-    const data = source.schema.parse(await source.load());
+    const data = source.schema.parse(await source.load(cached ?? undefined));
     const updatedAt = new Date().toISOString();
     await backend.set(key, { data, updatedAt }, source.staleTtlSeconds);
     await backend.clearFailure(`${CACHE_PREFIX}:failure:${source.id}`);

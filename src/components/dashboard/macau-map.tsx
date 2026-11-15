@@ -29,6 +29,7 @@ import type {
 import type { BusLivery } from "@/components/dashboard/bus-3d-layer";
 import {
   advanceBusMotion,
+  busMotionIsActive,
   buildRoutePath,
   createBusMotion,
   pathLengths,
@@ -1210,15 +1211,14 @@ export function MacauMap({
       true,
     );
 
-    const moving = () => motions.some((motion) => motion.distance !== motion.target || motion.speed !== 0);
+    const moving = () => motions.some((motion) => busMotionIsActive(motion, Date.now()));
     if (reducedMotion || !mapVisible || !moving()) return;
     let frame = 0;
     let disposed = false;
     let lastFrame = 0;
     const frameInterval = window.matchMedia("(pointer: coarse)").matches ? 1000 / 30 : 1000 / 60;
-    // Glide each bus toward the newest official estimate along the official
-    // polyline. Corrections are speed-limited, so a coarse ETA step changes
-    // direction or distance smoothly instead of teleporting the marker.
+    // Follow the bounded system prediction, correcting smoothly when a new
+    // official position arrives. Without a prediction, glide to the feed anchor.
     const tick = () => {
       frame = 0;
       if (disposed) return;

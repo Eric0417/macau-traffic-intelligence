@@ -265,7 +265,7 @@ describe("bus sources", () => {
 
     const eta = await loadBusEta("00003", 0);
 
-    expect(eta.vehicles).toEqual([
+    expect(eta.vehicles).toMatchObject([
       {
         id: "E5054",
         plate: "AD2767",

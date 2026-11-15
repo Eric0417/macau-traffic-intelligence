@@ -1900,3 +1900,6 @@ textarea:focus-visible {
     backdrop-filter: none;
   }
 }
+
+.bus-arrival-estimate { display: inline-flex; flex-direction: column; gap: 0.15rem; line-height: 1.2; }
+.bus-arrival-estimate small { font-size: 0.72rem; font-weight: 400; opacity: 0.8; }

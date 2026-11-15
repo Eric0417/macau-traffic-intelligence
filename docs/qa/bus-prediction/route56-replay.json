@@ -1,0 +1,159 @@
+{
+  "vehicles": [
+    {
+      "plate": "AA6356",
+      "reportedSegment": 5,
+      "matched": 6,
+      "prediction": {
+        "segmentIndex": 6,
+        "distanceAlongSegment": 0.5154994171484474,
+        "speedKph": 2,
+        "anchorAt": "2026-11-15T05:29:00.243Z",
+        "validUntil": "2026-11-15T05:29:15.243Z",
+        "basis": "reported-speed"
+      }
+    },
+    {
+      "plate": "AA2961",
+      "reportedSegment": 9,
+      "matched": 10,
+      "prediction": {
+        "segmentIndex": 10,
+        "distanceAlongSegment": 182.6645360670303,
+        "speedKph": 17,
+        "anchorAt": "2026-11-15T05:29:00.243Z",
+        "validUntil": "2026-11-15T05:29:15.243Z",
+        "basis": "reported-speed"
+      }
+    },
+    {
+      "plate": "AA3054",
+      "reportedSegment": 14,
+      "matched": 15,
+      "prediction": {
+        "segmentIndex": 15,
+        "distanceAlongSegment": 5770.496395654375,
+        "speedKph": 28,
+        "anchorAt": "2026-11-15T05:29:00.243Z",
+        "validUntil": "2026-11-15T05:29:15.243Z",
+        "basis": "reported-speed"
+      }
+    },
+    {
+      "plate": "AA7406",
+      "reportedSegment": 14,
+      "matched": 15,
+      "prediction": {
+        "segmentIndex": 15,
+        "distanceAlongSegment": 5753.477314288978,
+        "speedKph": 28,
+        "anchorAt": "2026-11-15T05:29:00.243Z",
+        "validUntil": "2026-11-15T05:29:15.243Z",
+        "basis": "reported-speed"
+      }
+    },
+    {
+      "plate": "AA7402",
+      "reportedSegment": 24,
+      "matched": 0,
+      "prediction": null
+    }
+  ],
+  "stops": [
+    {
+      "stop": "蝴蝶谷大馬路總站",
+      "estimate": 14
+    },
+    {
+      "stop": "和諧廣場/樂群樓",
+      "estimate": 15
+    },
+    {
+      "stop": "連貫公路/新濠影匯",
+      "estimate": 18
+    },
+    {
+      "stop": "連貫公路/巴黎人",
+      "estimate": 19
+    },
+    {
+      "stop": "連貫公路/威尼斯人",
+      "estimate": 21
+    },
+    {
+      "stop": "氹仔嘉樂庇馬路",
+      "estimate": 22
+    },
+    {
+      "stop": "信虹花園",
+      "estimate": 23
+    },
+    {
+      "stop": "湖畔大廈",
+      "estimate": 13
+    },
+    {
+      "stop": "海灣花園/海城閣",
+      "estimate": 26
+    },
+    {
+      "stop": "外港碼頭",
+      "estimate": 37
+    },
+    {
+      "stop": "友誼馬路/行車天橋"
+    },
+    {
+      "stop": "羅理基/馬六甲街   ",
+      "estimate": 2
+    },
+    {
+      "stop": "東方拱門",
+      "estimate": 4
+    },
+    {
+      "stop": "俾利喇/高士德",
+      "estimate": 9
+    },
+    {
+      "stop": "愉景花園",
+      "estimate": 10
+    },
+    {
+      "stop": "二龍喉公園",
+      "estimate": 12
+    },
+    {
+      "stop": "高勵雅馬路",
+      "estimate": 2
+    },
+    {
+      "stop": "湖畔公園",
+      "estimate": 3
+    },
+    {
+      "stop": "氹仔茵景園",
+      "estimate": 4
+    },
+    {
+      "stop": "氹仔CEM貨倉",
+      "estimate": 5
+    },
+    {
+      "stop": "連貫公路/新濠天地",
+      "estimate": 7
+    },
+    {
+      "stop": "連貫公路/倫敦人",
+      "estimate": 8
+    },
+    {
+      "stop": "連貫公路/巴黎人花園",
+      "estimate": 9
+    },
+    {
+      "stop": "和諧廣場/業興大廈",
+      "estimate": 13
+    }
+  ]
+}

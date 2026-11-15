@@ -12,7 +12,7 @@ export interface SourceDefinition<T> {
   ttlSeconds: number;
   staleTtlSeconds: number;
   schema: z.ZodType<T>;
-  load: () => Promise<T>;
+  load: (previous?: { data: unknown; updatedAt: string }) => Promise<T>;
 }
 
 export interface SourceData<T> {

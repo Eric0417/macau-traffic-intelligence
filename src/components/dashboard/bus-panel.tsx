@@ -8,6 +8,8 @@ import { stopKey, stopStatus } from "@/lib/resident-tools";
 import type { BusEta, BusRoute } from "@/lib/types";
 import type { LiveJsonResult } from "@/components/use-live-json";
 import type { Favorite } from "./use-resident-preferences";
+import { BusArrivalEstimate } from "./bus-arrival-estimate";
+import { metaIsDelayed } from "@/lib/live-status";
 import { SourceNote } from "./panels";
 
 export function BusPanel({
@@ -202,7 +204,8 @@ export function BusPanel({
           <div className="eyebrow">{c.selectedStop}</div>
           <h2>{stop.stationName}</h2>
           <div className="waiting-number">
-            {status === "suspended" ? (
+            <BusArrivalEstimate stop={stop} disabled={Boolean(eta.error) || !eta.meta || metaIsDelayed(eta.meta)} fallback={
+status === "suspended" ? (
               t("suspended")
             ) : status === "due" ? (
               t("dueAtStop")
@@ -213,7 +216,8 @@ export function BusPanel({
               </>
             ) : (
               c.noBus
-            )}
+            )
+            } />
           </div>
           <SourceNote meta={eta.meta} />
           {eta.error ? <p role="status">{c.delayed}</p> : null}
@@ -265,13 +269,15 @@ export function BusPanel({
                       <small>{item.stationCode}</small>
                     </span>
                     <span className="stop-wait">
-                      {itemStatus === "suspended"
+                      <BusArrivalEstimate stop={item} disabled={Boolean(eta.error) || !eta.meta || metaIsDelayed(eta.meta)} fallback={
+itemStatus === "suspended"
                         ? t("suspended")
                         : itemStatus === "due"
                           ? t("dueAtStop")
                           : itemStatus === "waiting"
                             ? `${item.stopsAway} ${t("stopsShort")}`
-                            : "–"}
+                            : "–"
+                      } />
                     </span>
                   </button>
                 </li>
