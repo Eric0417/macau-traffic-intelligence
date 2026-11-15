@@ -1,4 +1,4 @@
-import { usableArrivalEstimate } from "@/lib/bus-prediction";
+import { usableArrivalEstimate, usableArrivalStatus } from "@/lib/bus-prediction";
 import "server-only";
 import { z } from "zod";
 import {
@@ -104,6 +104,7 @@ export interface LearningSnapshot {
         stationName: string;
         stopsAway: number | null;
         arrivalEstimate: BusEta["stops"][number]["arrivalEstimate"];
+        arrivalStatus: BusEta["stops"][number]["arrivalStatus"];
         trafficStatus: string;
       }>;
       stops: string[];
@@ -468,6 +469,7 @@ function summariseBusSlice(
       stationName: stop.stationName,
       stopsAway: stop.stopsAway,
       arrivalEstimate: fresh ? usableArrivalEstimate(stop) : null,
+      arrivalStatus: fresh ? usableArrivalStatus(stop) : null,
       trafficStatus: stop.trafficStatus,
     })),
     stops: eta.stops.map((stop) => stop.stationName),
@@ -673,7 +675,7 @@ export function buildAssistantMessages(
     "When the snapshot cannot explain why something happens, say which extra data or field observation would be needed instead of guessing a cause.",
     "The snapshot may include roads.mentionedSegments (each with a segment count, status breakdown, and total length), roads.congestedSegments, roads.slowSegments, and bus.liveRoutes. Use them for questions about a specific road, bus route, bus position, or route traffic.",
     "For bus answers, name the stop each bus is approaching and always state that positions are the official bus report's own estimates, not GPS. When one route is named, bus.liveRoutes carries both directions: call direction 0 the outbound trip and direction 1 the return trip, and never invent destination or terminal names that are not written in the snapshot.",
-    "Only bus.liveRoutes[].nextStops[].arrivalEstimate supplies arrival minutes. Label those as uncalibrated system estimates, never as official times or guaranteed connections. A missing estimate means insufficient current data, not no bus service.",
+    "Only bus.liveRoutes[].nextStops[].arrivalEstimate supplies arrival minutes. Label those as uncalibrated system estimates, never as official times or guaranteed connections. A missing estimate means insufficient current data, not no bus service. arrivalStatus updating means the nearest bus cannot currently be timed; near-stop means its estimated position is near the stop and its reported speed is zero, not confirmed arrival. Do not replace it with minutes for a later bus. nextBus marks a changed arrival or vehicle; disclose that change.",
     "bus.liveRoutes[].nextStops[].stopsAway is the number of stops remaining before the next bus reaches that stop, where 0 means a bus is heading to it. It is a stop count, not minutes; never convert it to a time.",
     "bus.liveRoutes[].stops lists every stop of that route in order. When asked whether a route serves a place, decide yes or no from the stop list and answer that in the first sentence; only then name the relevant stops. If the place is not in the list, say it is not served and do not imply otherwise.",
     "If bus.placeCheck is present, its served value is the authoritative answer to whether that route serves the place. The system adds an opening line with that value, so confirm it and never contradict it. Keep the reply to at most three short sentences: the served value, up to three nearby stops from the stop list, and a next step.",

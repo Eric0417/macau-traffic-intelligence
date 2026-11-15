@@ -229,7 +229,7 @@ describe("bus motion", () => {
     expect(metersBetween(previous.coordinates, anchor.coordinates)).toBeLessThan(2);
   });
 
-  it("eases a backward correction instead of snapping back", () => {
+  it("holds position when a new report moves backwards", () => {
     const route = buildRoutePath([segmentA, segmentB]);
     const first = createBusMotion(
       vehicle({ coordinates: [113.565, 22.19] }),
@@ -250,12 +250,9 @@ describe("bus motion", () => {
 
     const atPoll = advanceBusMotion(corrected, polledAt);
     const oneSecond = advanceBusMotion(corrected, polledAt + 1_000);
-    // 36 km/h feed speed allows at most 5 m/s while correcting backwards.
-    expect(metersBetween(atPoll.coordinates, oneSecond.coordinates)).toBeLessThan(6);
-
-    // Backward speed stays gentle, and the correction finishes eventually.
+    expect(metersBetween(atPoll.coordinates, oneSecond.coordinates)).toBeLessThan(0.01);
     const settled = advanceBusMotion(corrected, polledAt + 300_000);
-    expect(settled.coordinates[0]).toBeCloseTo(113.557, 3);
+    expect(metersBetween(atPoll.coordinates, settled.coordinates)).toBeLessThan(0.01);
   });
 
   it("continues forward when a loop route starts another lap", () => {
@@ -331,4 +328,37 @@ it("advances a system estimate by speed, then freezes before the next stop", () 
   const nearStop = createBusMotion(vehicle({ prediction: { ...bus.prediction!, distanceAlongSegment: route.segments[0].length - 10 } }), route, "3:0", "tcm", now)!;
   advanceBusMotion(nearStop, now + 90_000);
   expect(nearStop.target).toBe(route.segments[0].length);
+});
+
+it("preserves source segment indices when a zero-length segment is omitted", () => {
+  const route = buildRoutePath([{ ...segmentA, coordinates: [segmentA.coordinates[0], segmentA.coordinates[0]] }, segmentA, segmentB]);
+  const anchor = vehicleAnchorDistance(route, vehicle({ segmentIndex: 1 }));
+  expect(anchor).toBeCloseTo(route.segments[0].length / 2, 1);
+});
+
+it("brakes at a frozen target even if the preceding frame had forward speed", () => {
+  const route = buildRoutePath([segmentA, segmentB]);
+  const motion = createBusMotion(vehicle(), route, "3:0", "tcm", 0)!;
+  motion.speed = 10;
+  motion.target = motion.distance;
+  const start = motion.distance;
+  for (let t = 100; t <= 5000; t += 100) advanceBusMotion(motion, t);
+  expect(motion.distance).toBe(start);
+  expect(motion.speed).toBe(0);
+});
+
+it("keeps the same lap while repeated polls arrive before the marker reaches the terminal", () => {
+  const route = buildRoutePath([segmentA, segmentB, segmentC]);
+  const time = new Date(0).toISOString();
+  const finishing = vehicle({ stationCode: "A", segmentIndex: 2, coordinates: [113.552,22.19], tracking: {
+    segmentIndex: 2, distanceAlongSegment: route.segments[2].length - 200, progress: route.total - 200,
+    observedAt: time, updatedAt: time, startedAt: time, speedKph: 36,
+  }});
+  const first = createBusMotion(finishing, route, "3:0", "tcm", 0)!;
+  const starting = vehicle({ coordinates: [113.551,22.19], tracking: { ...finishing.tracking!, segmentIndex: 0, distanceAlongSegment: 100, progress: route.total + 100 } });
+  const second = createBusMotion(starting, route, "3:0", "tcm", 10_000, first)!;
+  const target = second.target;
+  const third = createBusMotion(starting, route, "3:0", "tcm", 12_000, second)!;
+  expect(third.target).toBe(target);
+  expect(third.target).toBeGreaterThan(third.distance);
 });

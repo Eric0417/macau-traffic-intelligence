@@ -69,6 +69,9 @@ export const busRouteSchema = z.object({
 });
 
 export const busArrivalEstimateSchema = z.object({
+  arrivalAt: z.string().datetime().optional(),
+  stopProgress: z.number().nonnegative().optional(),
+  nextBus: z.boolean().optional(),
   minutes: z.number().int().positive(),
   generatedAt: z.string().datetime(),
   vehicleId: z.string(),
@@ -76,6 +79,14 @@ export const busArrivalEstimateSchema = z.object({
 });
 
 export const busEtaStopSchema = z.object({
+  arrivalStatus: z.object({
+    state: z.enum(["near-stop", "updating"]),
+    vehicleId: z.string(),
+    generatedAt: z.string().datetime(),
+    since: z.string().datetime(),
+    stopProgress: z.number().nonnegative().optional(),
+    nextBus: z.boolean().optional(),
+  }).nullable().optional(),
   arrivalEstimate: busArrivalEstimateSchema.nullable().optional(),
   sequence: z.number().int().nonnegative(),
   stationCode: z.string(),
@@ -101,6 +112,15 @@ export const busVehicleSchema = z.object({
   coordinates: z.tuple([z.number(), z.number()]).nullable(),
   bearing: z.number().nullable(),
   positionSource: z.enum(["feed", "stop"]).optional(),
+  tracking: z.object({
+    segmentIndex: z.number().int().nonnegative(),
+    distanceAlongSegment: z.number().nonnegative(),
+    progress: z.number().nonnegative(),
+    observedAt: z.string().datetime(),
+    updatedAt: z.string().datetime(),
+    startedAt: z.string().datetime(),
+    speedKph: z.number().nonnegative().max(70).nullable(),
+  }).nullable().optional(),
   predictionAnchorAt: z.string().datetime().optional(),
   prediction: z.object({
     segmentIndex: z.number().int().nonnegative(),

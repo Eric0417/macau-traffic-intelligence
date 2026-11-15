@@ -79,6 +79,9 @@ export interface BusRoute {
 }
 
 export interface BusArrivalEstimate {
+  arrivalAt?: string;
+  stopProgress?: number;
+  nextBus?: boolean;
   minutes: number;
   generatedAt: string;
   vehicleId: string;
@@ -94,7 +97,27 @@ export interface BusPositionPrediction {
   basis: "reported-speed" | "observed-speed";
 }
 
+export interface BusArrivalStatus {
+  state: "near-stop" | "updating";
+  vehicleId: string;
+  generatedAt: string;
+  since: string;
+  stopProgress?: number;
+  nextBus?: boolean;
+}
+
+export interface BusVehicleTracking {
+  segmentIndex: number;
+  distanceAlongSegment: number;
+  progress: number;
+  observedAt: string;
+  updatedAt: string;
+  startedAt: string;
+  speedKph: number | null;
+}
+
 export interface BusEtaStop {
+  arrivalStatus?: BusArrivalStatus | null;
   arrivalEstimate?: BusArrivalEstimate | null;
   sequence: number;
   stationCode: string;
@@ -125,6 +148,7 @@ export interface BusVehicle {
   coordinates: [number, number] | null;
   bearing: number | null;
   positionSource?: "feed" | "stop";
+  tracking?: BusVehicleTracking | null;
   predictionAnchorAt?: string;
   prediction?: BusPositionPrediction | null;
   estimated: boolean;

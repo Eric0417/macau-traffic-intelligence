@@ -1,5 +1,8 @@
 # Project Memory
 
+- 2026-11-15: Bus stability correction (ADR 0021): cache version `system-prediction-v2` tracks forward route progress, filters moving speed and same-arrival times, and retains the nearest bus as stationary/updating when minutes cannot be estimated. Stop passage needs 20 m position clearance; changed arrivals are labelled. Map corrections cannot reverse or coast past a frozen target. A 40-response route 56 replay and boundary tests cover the reported defects. Deployment verification is recorded in `docs/qa/bus-stability/VERIFICATION.md`; minute accuracy against actual arrivals remains unmeasured.
+
+
 - 2026-11-15: Added explicit system bus arrival estimates and bounded position extrapolation (ADR 0020). Minutes use official route geometry, reported/observed speed and congestion; parameters are uncalibrated. Vehicle-to-segment matching now checks incoming and outgoing segments. Forecasts stop at 15 seconds/the next stop, and arrival minutes are withheld for stopped or frozen vehicles. Bus panel, first boarding step and general assistant share these estimates. Render deployment `dep-dbskfck9v7es73c192k0` is live with `d204264`. Typecheck, lint, 210 unit tests and production build passed; desktop/mobile production checks showed labelled minutes and no phone overflow. See `docs/qa/bus-prediction/VERIFICATION.md`.
 
 

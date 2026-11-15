@@ -674,7 +674,7 @@ export function busEtaSource(routeCode: string, direction: 0 | 1): SourceDefinit
   const normalizedCode = routeCode.toUpperCase().padStart(5, "0");
   return {
     id: `bus-eta-${normalizedCode}-${direction}`,
-    cacheVersion: "system-prediction-v1",
+    cacheVersion: "system-prediction-v2",
     name: `巴士 ${normalizedCode} 實時位置`,
     url: "https://bis.dsat.gov.mo:37812/macauweb/",
     attribution: "交通事務局巴士報站資料；到站分鐘及推算位置為本網站系統估算",

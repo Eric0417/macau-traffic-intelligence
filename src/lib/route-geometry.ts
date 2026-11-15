@@ -67,6 +67,7 @@ export function projectOnPath(
   path: LngLat[],
   lengths: number[],
   point: LngLat,
+  range?: { min: number; max: number },
 ): number {
   if (path.length < 2) return 0;
   let bestDistance = 0;
@@ -82,12 +83,16 @@ export function projectOnPath(
     const pointX = (point[0] - from[0]) * metersPerDegreeLng;
     const pointY = (point[1] - from[1]) * METERS_PER_DEGREE_LAT;
     const lengthSquared = segmentX * segmentX + segmentY * segmentY;
+    const length = Math.sqrt(lengthSquared);
+    if (range && (lengths[index] < range.min || lengths[index - 1] > range.max)) continue;
+    const minRatio = range && length ? Math.max(0, (range.min - lengths[index - 1]) / length) : 0;
+    const maxRatio = range && length ? Math.min(1, (range.max - lengths[index - 1]) / length) : 1;
     const ratio =
       lengthSquared === 0
         ? 0
         : Math.max(
-            0,
-            Math.min(1, (pointX * segmentX + pointY * segmentY) / lengthSquared),
+            minRatio,
+            Math.min(maxRatio, (pointX * segmentX + pointY * segmentY) / lengthSquared),
           );
     const projectedDistance =
       lengths[index - 1] + Math.sqrt(lengthSquared) * ratio;

@@ -1,5 +1,11 @@
 # Changelog
 
+## Stable bus estimates and forward map movement - 2026-11-15
+
+- Keep the nearest bus selected when its time is uncertain. Show stationary or updating status, and label a changed bus instead of silently replacing a one-minute arrival with a later service.
+- Filter speed and arrival timestamps, retain matched route progress when coordinates expire, and require position clearance before confirming passage of a stop.
+- Stop reverse marker animation and coasting beyond a frozen target. Preserve source indices when empty route segments are omitted. Add recorded route 56 sequence tests and desktop/phone status checks.
+
 ## System bus arrival and position estimates - 2026-11-15
 
 - Add labelled arrival minutes from route distance, speed and segment congestion. Correct vehicles paired to the previous segment when their feed coordinate has already moved past the reported stop.

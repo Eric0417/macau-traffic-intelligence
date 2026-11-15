@@ -9,10 +9,9 @@ const POINT_EPSILON_DEGREES = 1e-9;
 const CLOSED_LOOP_RADIUS_METERS = 120;
 const MIN_FORWARD_SPEED = 6;
 const MAX_FORWARD_SPEED = 20;
-const MIN_BACKWARD_SPEED = 1.2;
-const MAX_BACKWARD_SPEED = 5;
 
 export interface RoutePathSegment {
+  sourceIndex: number;
   fromStationCode: string;
   toStationCode: string;
   path: LngLat[];
@@ -52,7 +51,7 @@ export function buildRoutePath(routeSegments: BusRouteSegment[]): RoutePath {
     lengths.push(total);
   };
 
-  for (const segment of routeSegments) {
+  for (const [sourceIndex, segment] of routeSegments.entries()) {
     if (segment.coordinates.length < 2) continue;
     const segmentLengths = pathLengths(segment.coordinates);
     const length = segmentLengths[segmentLengths.length - 1];
@@ -64,6 +63,7 @@ export function buildRoutePath(routeSegments: BusRouteSegment[]): RoutePath {
       append(segment.coordinates[index]);
     }
     segments.push({
+      sourceIndex,
       fromStationCode: segment.fromStationCode,
       toStationCode: segment.toStationCode,
       path: segment.coordinates,
@@ -91,8 +91,9 @@ export function buildRoutePath(routeSegments: BusRouteSegment[]): RoutePath {
 function segmentIndexForVehicle(route: RoutePath, vehicle: BusVehicle): number {
   const segments = route.segments;
   const declared = vehicle.segmentIndex;
-  if (typeof declared === "number" && declared >= 0 && declared < segments.length) {
-    return declared;
+  if (typeof declared === "number") {
+    const index = segments.findIndex(segment => segment.sourceIndex === declared);
+    if (index >= 0) return index;
   }
 
   // Fallback for cached payloads from before segmentIndex existed: mirror the
@@ -140,10 +141,13 @@ export interface BusMotion {
   distance: number;
   /** Official estimate the marker moves toward, unwrapped across loop laps. */
   target: number;
-  /** Signed speed along the route in metres per second. */
+  /** Forward speed along the route in metres per second. */
   speed: number;
   peakForward: number;
-  peakBackward: number;
+  trackingStartedAt?: string;
+  trackedProgress?: number;
+  sourceSegmentIndex: number;
+  lap: number;
   at: number;
   prediction?: { anchor: number; end: number; speed: number; startedAt: number; until: number };
 }
@@ -176,15 +180,15 @@ interface PursuitState {
   speed: number;
 }
 
-// A speed-limited pursuit controller. The displayed distance moves toward the
-// official estimate with a bounded speed, so a coarse ETA step anywhere on the
-// route can only change the direction of travel, never the position.
+// Follow accepted forward progress. If an update trails the drawn position,
+// wait for it to catch up instead of driving backwards along the road.
 function pursue(motion: BusMotion, now: number): PursuitState {
   if (motion.prediction) {
     const prediction = motion.prediction;
     const seconds = Math.max(0, Math.min(now, prediction.until) - prediction.startedAt) / 1000;
     motion.target = Math.min(prediction.end, prediction.anchor + prediction.speed * seconds);
   }
+  motion.target = Math.max(motion.distance, motion.target);
   let remaining = Math.max(0, (now - motion.at) / 1_000);
   if (remaining > 60) {
     // The tab or the machine was away long enough that gliding from the stale
@@ -197,9 +201,13 @@ function pursue(motion: BusMotion, now: number): PursuitState {
   while (remaining > 0) {
     const step = Math.min(remaining, INTEGRATION_STEP_SECONDS);
     const gap = motion.target - motion.distance;
+    if (gap <= 0) {
+      motion.speed = 0;
+      break;
+    }
     const desired = Math.min(
       motion.peakForward,
-      Math.max(-motion.peakBackward, gap / RESPONSE_SECONDS),
+      Math.max(0, gap / RESPONSE_SECONDS),
     );
     motion.speed +=
       (desired - motion.speed) * (1 - Math.exp(-step / SPEED_SMOOTHING_SECONDS));
@@ -209,8 +217,7 @@ function pursue(motion: BusMotion, now: number): PursuitState {
       motion.speed = 0;
     } else {
       const next = motion.distance + motion.speed * step;
-      const passedTarget =
-        (gap > 0 && next >= motion.target) || (gap < 0 && next <= motion.target);
+      const passedTarget = next >= motion.target;
       if (passedTarget) {
         motion.distance = motion.target;
         motion.speed = 0;
@@ -232,15 +239,19 @@ export function createBusMotion(
   now: number,
   previous?: BusMotion | null,
 ): BusMotion | null {
+  if (vehicle.tracking === null) return null;
   const segmentIndex = segmentIndexForVehicle(route, vehicle);
   const forecast = vehicle.prediction;
   const segment = route.segments[segmentIndex];
-  const anchor = forecast && forecast.segmentIndex === segmentIndex && segment
-    ? segment.start + forecast.distanceAlongSegment
-    : vehicleAnchorDistance(route, vehicle);
+  const track = vehicle.tracking;
+  const anchor = track && segment && track.segmentIndex === segment.sourceIndex
+    ? segment.start + track.distanceAlongSegment
+    : forecast && segment && forecast.segmentIndex === segment.sourceIndex
+      ? segment.start + forecast.distanceAlongSegment
+      : vehicleAnchorDistance(route, vehicle);
   if (anchor === null || segmentIndex < 0) return null;
 
-  const sameRoute = Boolean(previous && previous.routeKey === routeKey);
+  const sameRoute = Boolean(previous && previous.routeKey === routeKey && previous.plate === vehicle.plate && previous.trackingStartedAt === track?.startedAt && now - previous.at <= 60_000);
   let distance = anchor;
   let speed = 0;
   if (previous && sameRoute) {
@@ -250,16 +261,21 @@ export function createBusMotion(
   }
 
   let target = anchor;
+  let lap = previous && sameRoute ? previous.lap : 0;
   if (previous && sameRoute && route.closed) {
     // The vehicle started another lap at the same terminal. Keep advancing
     // along the loop instead of snapping back to the first segment.
-    while (target + route.total / 2 < distance) target += route.total;
+    const confirmedLap = track && previous.trackedProgress !== undefined
+      ? track.progress >= previous.trackedProgress && track.segmentIndex < previous.sourceSegmentIndex
+      : segment.sourceIndex < previous.sourceSegmentIndex && distance % route.total > route.total * .9 && anchor < route.total * .1;
+    if (confirmedLap) lap++;
+    target += lap * route.total;
   }
 
   const feedSpeed = (vehicle.speedKph ?? 0) / 3.6;
 
   const lapOffset = target - anchor;
-  const prediction = forecast && forecast.segmentIndex === segmentIndex ? {
+  const prediction = forecast && forecast.segmentIndex === segment.sourceIndex ? {
     anchor: target, end: segment.start + segment.length + lapOffset,
     speed: forecast.speedKph / 3.6, startedAt: Date.parse(forecast.anchorAt), until: Date.parse(forecast.validUntil),
   } : undefined;
@@ -278,10 +294,10 @@ export function createBusMotion(
       MAX_FORWARD_SPEED,
       Math.max(MIN_FORWARD_SPEED, feedSpeed * 1.4),
     ),
-    peakBackward: Math.min(
-      MAX_BACKWARD_SPEED,
-      Math.max(MIN_BACKWARD_SPEED, feedSpeed * 0.6),
-    ),
+    trackingStartedAt: track?.startedAt,
+    trackedProgress: track?.progress,
+    sourceSegmentIndex: segment.sourceIndex,
+    lap,
     at: now,
     prediction,
   };
