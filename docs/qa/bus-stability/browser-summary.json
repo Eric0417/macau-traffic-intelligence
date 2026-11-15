@@ -1,0 +1,18 @@
+[
+  {
+    "name": "desktop",
+    "text": "我嘅候車站\n蝴蝶谷大馬路總站\n到站時間更新中\n暫未能估算分鐘\n\n最後取得 下午02:20\n巴士 00056 實時位置\n\n下一班車\n\n地圖",
+    "overflow": false,
+    "pageErrors": [],
+    "vehicles": 4,
+    "tracked": 4
+  },
+  {
+    "name": "phone",
+    "text": "我嘅候車站\n蝴蝶谷大馬路總站\n到站時間更新中\n暫未能估算分鐘\n\n最後取得 下午02:20\n巴士 00056 實時位置\n\n下一班車\n\n地圖",
+    "overflow": false,
+    "pageErrors": [],
+    "vehicles": 4,
+    "tracked": 4
+  }
+]

@@ -1,0 +1,29 @@
+{
+  "routes": {
+    "00056/eta?direction=0": {
+      "snapshots": 16,
+      "tracked": 64,
+      "estimates": 352,
+      "uncertain": 16,
+      "reverseProgress": 0,
+      "silentSwitch": 0
+    },
+    "00025/eta?direction=0": {
+      "snapshots": 16,
+      "tracked": 258,
+      "estimates": 600,
+      "uncertain": 184,
+      "reverseProgress": 0,
+      "silentSwitch": 0
+    },
+    "00003/eta?direction=1": {
+      "snapshots": 16,
+      "tracked": 48,
+      "estimates": 63,
+      "uncertain": 65,
+      "reverseProgress": 0,
+      "silentSwitch": 0
+    }
+  },
+  "errors": []
+}
