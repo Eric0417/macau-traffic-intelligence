@@ -304,3 +304,17 @@ it("still reads the LRT network when a rider asks about a line", async () => {
   await buildLearningSnapshot("zh-Hant", { question: "石排灣線有幾多個站？" });
   expect(read.mock.calls.some(([source]) => source.id === "lrt-network")).toBe(true);
 });
+
+it("aborts the provider fetch when a native request is cancelled", async () => {
+  vi.stubEnv("ASSISTANT_API_KEY", "fixture");
+  const cancellation = new AbortController();
+  let upstreamSignal: AbortSignal | undefined;
+  vi.stubGlobal("fetch", vi.fn((_url, init: RequestInit) => new Promise((_resolve, reject) => {
+    upstreamSignal = init.signal as AbortSignal;
+    upstreamSignal.addEventListener("abort", () => reject(upstreamSignal!.reason), { once: true });
+  })));
+  const response = callAssistantProvider([{ role: "user", content: "fixture" }], true, cancellation.signal);
+  cancellation.abort();
+  await expect(response).rejects.toMatchObject({ name: "AbortError" });
+  expect(upstreamSignal?.aborted).toBe(true);
+});

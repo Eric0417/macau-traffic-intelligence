@@ -64,7 +64,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { answer, refreshes } = await askLearningAssistant(parsed.data);
+    const { answer, refreshes } = await askLearningAssistant({ ...parsed.data, signal: request.signal });
     for (const refresh of refreshes) after(refresh);
 
     const body: ApiEnvelope<LearningAssistantAnswer> = {

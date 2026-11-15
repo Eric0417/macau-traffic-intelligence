@@ -28,7 +28,7 @@ struct SavedView: View {
         .navigationTitle(settings.text("收藏", "Saved"))
         .toolbar { Button { showSettings = true } label: { Image(systemName: "gearshape") }.accessibilityLabel(settings.text("設定", "Settings")) }
         .livePolling(routes, path: "bus/routes", interval: 21_600)
-        .sheet(isPresented: $showSettings) { SettingsView() }
+        .sheet(isPresented: $showSettings) { NavigationStack { SettingsView() } }
     }
 }
 
@@ -37,8 +37,7 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     var body: some View {
         @Bindable var settings = settings
-        NavigationStack {
-            Form {
+        Form {
                 Section {
                     Picker(settings.text("語言", "Language"), selection: $settings.language) { ForEach(AppLanguage.allCases, id: \.self) { Text($0.name).tag($0) } }
                     Picker(settings.text("外觀", "Appearance"), selection: $settings.appearance) {
@@ -48,7 +47,7 @@ struct SettingsView: View {
                     }
                 }
                 Section(settings.text("資料與私隱", "Data and privacy")) {
-                    Text(settings.text("澳門出行係獨立應用，並非澳門政府官方程式。交通資料來自 DSAT、SMG、MLM、FSM；步行及輕軌幾何包含 OpenStreetMap 資料。", "Macau Traffic is an independent application, not an official government app. Transport data comes from DSAT, SMG, MLM and FSM. Walking and LRT geometry include OpenStreetMap data."))
+                    Text(settings.text("Macao Move 係獨立應用，並非澳門政府官方程式。交通資料來自 DSAT、SMG、MLM、FSM；步行及輕軌幾何包含 OpenStreetMap 資料。", "Macao Move is an independent application, not an official government app. Transport data comes from DSAT, SMG, MLM and FSM. Walking and LRT geometry include OpenStreetMap data."))
                     Text(settings.text("手動行程計算喺裝置內執行。AI 問題、你選擇分享嘅位置及目的地會傳送到應用伺服器及 AI 供應商。語音錄音會交由 DeepSeek 轉寫；你可以先編輯文字再傳送。暫存錄音會喺完成、取消或下次開啟助手時刪除。對話同位置唔會存入裝置記錄；供應商保留政策由供應商決定。", "Manual journey calculation runs on this device. AI questions, destinations and locations you choose to share are sent to the app server and AI provider. DeepSeek transcribes voice clips for you to edit before sending. Temporary recordings are deleted after completion, cancellation or the next assistant launch. Conversations and locations are not saved on this device. Provider retention follows the provider's policy."))
                     Link("© OpenStreetMap contributors · ODbL", destination: URL(string: "https://www.openstreetmap.org/copyright")!)
                     Link(settings.text("交通事務局", "DSAT"), destination: URL(string: "https://www.dsat.gov.mo")!)
@@ -57,6 +56,5 @@ struct SettingsView: View {
             }
             .navigationTitle(settings.text("設定", "Settings")).navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button(settings.text("完成", "Done")) { dismiss() } } }
-        }
     }
 }

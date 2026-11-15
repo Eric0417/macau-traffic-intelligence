@@ -1,22 +1,22 @@
-# Macau Traffic for iOS
+# Macao Move for iOS
 
 Native SwiftUI client for iPhone and iPad, requiring iOS 26 or newer. Open `MacauTraffic.xcodeproj` and run the `MacauTraffic` scheme. The checked-in project needs no CocoaPods or Swift package download. This revision was built with Xcode 27.2.
 
-The interface uses system navigation, interactive back gestures, sheets, MapKit and AVKit. Controls use a neutral palette and Liquid Glass; route and congestion colors keep their transport meaning. The user requested the restrained controls and transitions of the ChatGPT iOS app. Explanatory copy is behind disclosure controls. The icon is an original monochrome route arrow generated with GPT Image and exported as an opaque 1024-pixel PNG.
+The interface uses system navigation, interactive back gestures, sheets, MapKit and AVKit. Controls use a neutral palette and Liquid Glass; route and congestion colors keep their transport meaning. The design combines Not Boring’s single focal element and large numerals with ChatGPT’s restrained composer. Explanatory copy is behind disclosure controls. The icon is an original monochrome route arrow generated with GPT Image and exported as an opaque 1024-pixel PNG.
 
 ## Modules
 
 | Area | Native behavior |
 | --- | --- |
-| Explore | Apple map, monitored road overlays, explicit location action, manual journey search |
+| Explore | Apple map, batched road overlays, repeatable location and 3D controls, selected journey with draggable details |
 | Buses | Full catalogue, route/direction search, stops, suspensions, estimated arrivals, official vehicle estimates, speeds, congestion and saved routes/stops |
 | Manual planner | Local place/stop search, pedestrian graph, direct buses and up to three transfers, exact shared geometry validation |
 | Assistant | Destination and origin choices, typed/location origins, nearby facilities, traffic answers, ordered trips, day-trip alternatives and editable visits |
-| Voice | Permission-based recording up to 20 seconds, PCM WAV upload, editable transcript, cancellation and temporary-file cleanup |
+| Voice | Recording up to 20 seconds, actual sound-level waveform, PCM WAV upload, editable transcript and cancellation |
 | City | Seven parking categories, LRT lines/stations/timetables, roads, bridges, weather, border conditions, notices, news, cameras and source status |
 | Saved and settings | Route direction and stop occurrence preserved; local favorites; Traditional Chinese, Simplified Chinese and English; system/light/dark appearance |
 
-The app reads the existing production `/api/v1/` API. No source token or AI key ships in the client. Government adapters and caching remain in the Next.js server. Manual routing uses the website's pure routing functions bundled into JavaScriptCore on a background queue. No WebView is used.
+The assistant streams checked candidates before AI comparison finishes. Selecting a route opens and fits it on the home map. The app reads the existing production `/api/v1/` API. No source token or AI key ships in the client. Government adapters and caching remain in the Next.js server. Manual routing uses the website's pure routing functions bundled into JavaScriptCore on a background queue. No WebView is used.
 
 MapKit replaces the web basemap. Apple Maps walking links disclose endpoint sharing. Native map markers replace the web's animated 3D bus models; positions use the official feed without client extrapolation. LRT timetables are not live train positions. Arrival estimates retain their uncalibrated-system-estimate label.
 

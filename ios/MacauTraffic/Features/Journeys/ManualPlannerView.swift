@@ -3,6 +3,7 @@ import SwiftUI
 struct ManualPlannerView: View {
     @Environment(AppSettings.self) private var settings
     @Environment(LocationService.self) private var location
+    @Environment(AppNavigation.self) private var navigation
     @State private var origin: Place?
     @State private var destination: Place?
     @State private var choosing: String?
@@ -13,7 +14,6 @@ struct ManualPlannerView: View {
     @State private var walkingUnavailable = false
     @State private var result: ManualPlan?
     @State private var searchedAt: Date?
-    @State private var selected: JourneySelection?
     var body: some View {
         List {
             Section {
@@ -47,7 +47,7 @@ struct ManualPlannerView: View {
                     if result.journeys.isEmpty { Text(settings.text("現有路網未找到方案。呢個結果唔代表冇巴士服務。", "No match in the available network. This does not establish that no bus service exists.")) }
                     ForEach(result.journeys) { journey in
                         Button {
-                            if let origin, let destination { selected = .init(journey: journey, origin: origin, destination: destination, networkFetchedAt: result.networkFetchedAt, walkingMappedAt: result.walkingMappedAt) }
+                            if let origin, let destination { navigation.apply(.init(journey: journey, origin: origin, destination: destination, networkFetchedAt: result.networkFetchedAt, walkingMappedAt: result.walkingMappedAt)) }
                         } label: { JourneySummary(journey: journey) }
                     }
                 } header: { Text(settings.text("出行方案", "Journey options")) }
@@ -67,7 +67,6 @@ struct ManualPlannerView: View {
                 result = nil; choosing = nil
             }
         }
-        .sheet(item: $selected) { selection in NavigationStack { JourneyDetailView(selection: selection) } }
     }
     private func endpointButton(_ place: Place?, field: String, symbol: String, placeholder: String) -> some View {
         Button { choosing = field } label: {

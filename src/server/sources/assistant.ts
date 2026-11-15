@@ -1,4 +1,5 @@
 import { usableArrivalEstimate, usableArrivalStatus } from "@/lib/bus-prediction";
+import { metaIsDelayed } from "@/lib/live-status";
 import "server-only";
 import { z } from "zod";
 import {
@@ -492,17 +493,7 @@ export async function buildLearningSnapshot(
   const focus = options.focus;
   const needsLrtNetwork = /輕軌|轻轨|列車|列车|地鐵|地铁|氹仔[線线]|石排[灣湾][線线]|[橫横]琴[線线]|\b(?:lrt|light rail|train|metro|taipa line|seac pai van line|hengqin line)\b/i.test(question);
 
-  const [
-    roads,
-    bridges,
-    weather,
-    parking,
-    borders,
-    notices,
-    lrtNotices,
-    lrtNetwork,
-    officialNews,
-  ] = await Promise.all([
+  const baseReadsPromise = Promise.all([
     readSource(sources.roads),
     readSource(sources.bridges),
     readSource(sources.weather),
@@ -513,6 +504,56 @@ export async function buildLearningSnapshot(
     needsLrtNetwork ? readSource(sources.lrtNetwork) : Promise.resolve(null),
     readSource(sources.officialNews),
   ]);
+
+  const busRelated = Boolean(focus) || (question ? looksBusRelated(question) : false);
+  const busReadsPromise = (async () => {
+    let catalog: BusRoute[] | null = null;
+    let catalogRead: SourceRead<BusRoute[]> | null = null;
+    if (busRelated) {
+      catalogRead = await readSource(sources.busRoutes);
+      if (catalogRead) {
+        catalog = catalogRead.result.data;
+        if (catalogRead.refresh) refreshes.push(catalogRead.refresh);
+      }
+    }
+    const matchedRoutes = catalog ? matchNamedRoutes(question, catalog) : [];
+    const wanted: AssistantFocus[] = [];
+    if (focus) wanted.push(focus);
+    for (const route of matchedRoutes) {
+      const directions: Array<0 | 1> = matchedRoutes.length > 1 ? [0] : [0, 1];
+      for (const direction of directions) {
+        wanted.push({ routeCode: route.routeCode, direction });
+      }
+    }
+    const uniqueWanted: AssistantFocus[] = [];
+    const seenWanted = new Set<string>();
+    for (const slice of wanted) {
+      const key = `${slice.routeCode.toUpperCase()}-${slice.direction}`;
+      if (seenWanted.has(key)) continue;
+      seenWanted.add(key);
+      uniqueWanted.push({
+        routeCode: slice.routeCode.toUpperCase(),
+        direction: slice.direction,
+      });
+      if (uniqueWanted.length >= 3) break;
+    }
+    const busReads = await Promise.all(
+      uniqueWanted.map((slice) => readSource(busEtaSource(slice.routeCode, slice.direction))),
+    );
+    return { catalog, catalogRead, matchedRoutes, busReads };
+  })();
+  const [baseValues, { catalog, catalogRead, matchedRoutes, busReads }] = await Promise.all([baseReadsPromise, busReadsPromise]);
+  const [
+    roads,
+    bridges,
+    weather,
+    parking,
+    borders,
+    notices,
+    lrtNotices,
+    lrtNetwork,
+    officialNews,
+  ] = baseValues;
 
   const baseReads: Array<SourceRead<unknown> | null> = [
     roads,
@@ -529,43 +570,6 @@ export async function buildLearningSnapshot(
     if (read?.refresh) refreshes.push(read.refresh);
   }
 
-  const busRelated =
-    Boolean(focus) || (question ? looksBusRelated(question) : false);
-  let catalog: BusRoute[] | null = null;
-  let catalogRead: SourceRead<BusRoute[]> | null = null;
-  if (busRelated) {
-    catalogRead = await readSource(sources.busRoutes);
-    if (catalogRead) {
-      catalog = catalogRead.result.data;
-      if (catalogRead.refresh) refreshes.push(catalogRead.refresh);
-    }
-  }
-  const matchedRoutes = catalog ? matchNamedRoutes(question, catalog) : [];
-
-  const wanted: AssistantFocus[] = [];
-  if (focus) wanted.push(focus);
-  for (const route of matchedRoutes) {
-    const directions: Array<0 | 1> = matchedRoutes.length > 1 ? [0] : [0, 1];
-    for (const direction of directions) {
-      wanted.push({ routeCode: route.routeCode, direction });
-    }
-  }
-  const uniqueWanted: AssistantFocus[] = [];
-  const seenWanted = new Set<string>();
-  for (const slice of wanted) {
-    const key = `${slice.routeCode.toUpperCase()}-${slice.direction}`;
-    if (seenWanted.has(key)) continue;
-    seenWanted.add(key);
-    uniqueWanted.push({
-      routeCode: slice.routeCode.toUpperCase(),
-      direction: slice.direction,
-    });
-    if (uniqueWanted.length >= 3) break;
-  }
-
-  const busReads = await Promise.all(
-    uniqueWanted.map((slice) => readSource(busEtaSource(slice.routeCode, slice.direction))),
-  );
   for (const read of busReads) {
     if (read?.refresh) refreshes.push(read.refresh);
   }
@@ -612,8 +616,9 @@ export async function buildLearningSnapshot(
     else if (station) action = { kind: "lrt", lineRef: station.lines[0] };
   }
 
+  const generatedAt = new Date().toISOString();
   const snapshot: LearningSnapshot = {
-    generatedAt: new Date().toISOString(),
+    generatedAt,
     weather: summariseWeather(weather?.result.data ?? null),
     bridges: summariseBridges(bridges?.result.data ?? null, locale),
     roads: summariseRoads(roads?.result.data ?? null, locale, question),
@@ -622,7 +627,10 @@ export async function buildLearningSnapshot(
     notices: summariseNotices(notices?.result.data ?? null),
     officialNews: officialNews?.result.data.items.slice(0, 8).map(({ title, publishedAt, url }) => ({ title, publishedAt, url })) ?? null,
     newsFeedStatus: officialNews?.result.data.feeds.map(({ name, available }) => ({ name, available })) ?? null,
-    sourceStatus: [...baseReads, catalogRead, ...busReads].flatMap((read) => read ? [{ id: read.result.attribution.id, name: read.result.attribution.name, updatedAt: read.result.updatedAt, stale: read.result.stale }] : []),
+    sourceStatus: [...baseReads, catalogRead, ...busReads].flatMap((read) => read ? [{
+      id: read.result.attribution.id, name: read.result.attribution.name, updatedAt: read.result.updatedAt,
+      stale: read.result.stale || metaIsDelayed({ ...read.result, generatedAt, source: read.result.attribution }),
+    }] : []),
     lrtNotices: summariseLrtNotices(lrtNotices?.result.data ?? null),
     bus: busRelated
       ? {
@@ -736,7 +744,9 @@ export function assistantConfigured(): boolean {
 export async function callAssistantProvider(
   messages: Array<{ role: "system" | "user"; content: string }>,
   json = false,
+  signal?: AbortSignal,
 ): Promise<string> {
+  signal?.throwIfAborted();
   const apiKey = process.env.ASSISTANT_API_KEY;
   if (!apiKey) throw new Error("assistant_unconfigured");
 
@@ -759,7 +769,7 @@ export async function callAssistantProvider(
       ...(json ? { response_format: { type: "json_object" } } : {}),
       stream: false,
     }),
-    signal: AbortSignal.timeout(Number.isFinite(timeoutMs) ? timeoutMs : 25_000),
+    signal: AbortSignal.any([AbortSignal.timeout(Number.isFinite(timeoutMs) ? timeoutMs : 25_000), ...(signal ? [signal] : [])]),
   });
 
   if (!response.ok) {
@@ -932,6 +942,7 @@ export async function askLearningAssistant(params: {
   question: string;
   locale: Locale;
   focus?: AssistantFocus;
+  signal?: AbortSignal;
 }): Promise<AssistantAnswerResult> {
   const { snapshot, refreshes, action } = await buildLearningSnapshot(
     params.locale,
@@ -939,6 +950,7 @@ export async function askLearningAssistant(params: {
   );
   const modelAnswer = await callAssistantProvider(
     buildAssistantMessages(params.question, params.locale, snapshot),
+    false, params.signal,
   );
   const placeCheck = snapshot.bus?.placeCheck;
   const checkedRoute = snapshot.bus?.matchedRoutes[0]?.route;

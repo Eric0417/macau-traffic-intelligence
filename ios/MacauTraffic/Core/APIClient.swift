@@ -19,6 +19,35 @@ struct APIClient {
     func post<Body: Encodable, Result: Decodable>(_ path: String, body: Body) async throws -> Result {
         try await send(path, method: "POST", body: JSONEncoder().encode(body))
     }
+    func journey(_ body: AssistantRequest, receive: @escaping @MainActor (AssistantStreamEvent) -> Void) async throws -> Envelope<AssistantResult> {
+        #if DEBUG
+        if baseURL == Self.productionURL && (ProcessInfo.processInfo.arguments.contains("--uitesting") || ProcessInfo.processInfo.environment["MACAU_FIXTURES"] == "1") {
+            return try await post("assistant/journeys", body: body)
+        }
+        #endif
+        var request = URLRequest(url: baseURL.appendingPathComponent("assistant/journeys"), cachePolicy: .reloadIgnoringLocalCacheData)
+        request.httpMethod = "POST"; request.httpBody = try JSONEncoder().encode(body)
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/x-ndjson", forHTTPHeaderField: "Accept")
+        let (bytes, response) = try await session.bytes(for: request)
+        guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        guard (200..<300).contains(http.statusCode) else { throw APIError.http(http.statusCode) }
+        if http.mimeType != "application/x-ndjson" {
+            var data = Data()
+            for try await byte in bytes { try Task.checkCancellation(); data.append(byte) }
+            return try JSONDecoder().decode(Envelope<AssistantResult>.self, from: data)
+        }
+        for try await line in bytes.lines where !line.isEmpty {
+            try Task.checkCancellation()
+            let event = try JSONDecoder().decode(AssistantStreamEvent.self, from: Data(line.utf8))
+            switch event {
+            case .complete(let envelope): return envelope
+            case .failure: throw APIError.http(502)
+            default: await receive(event)
+            }
+        }
+        throw APIError.invalidResponse
+    }
     func send<T: Decodable>(_ path: String, method: String, body: Data?, contentType: String = "application/json") async throws -> T {
         #if DEBUG
         if baseURL == Self.productionURL && (ProcessInfo.processInfo.arguments.contains("--uitesting") || ProcessInfo.processInfo.environment["MACAU_FIXTURES"] == "1") {

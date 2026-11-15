@@ -12,6 +12,11 @@ import Observation
     var pending: AssistantRequest?
     var activeTrip: TripDraft?
     var busy = false
+    var cancelled = false
+    var startedAt: Date?
+    var answeringTraffic = false
+    var planningPhase = "understanding"
+    var preview = false
     var error: String?
     private var task: Task<Void, Never>?
     private var generation = 0
@@ -26,13 +31,23 @@ import Observation
         task?.cancel(); generation += 1
         let current = generation
         pending = request; currentQuestion = request.question; busy = true; error = nil; result = nil; answer = nil; meta = nil
+        cancelled = false; startedAt = .now; answeringTraffic = false; preview = false; planningPhase = "understanding"
         task = Task {
             defer { if generation == current { busy = false } }
             do {
-                let response: Envelope<AssistantResult> = try await client.post("assistant/journeys", body: request)
+                let response = try await client.journey(request) { [weak self] event in
+                    guard let self, generation == current, busy else { return }
+                    switch event {
+                    case .phase(let phase): planningPhase = phase
+                    case .candidates(let plans): result = .plans(plans); preview = true; activeTrip = nil
+                    default: break
+                    }
+                }
                 try Task.checkCancellation()
                 guard generation == current else { return }
+                preview = false
                 if case .traffic = response.data {
+                    answeringTraffic = true
                     let response: Envelope<TrafficAnswer> = try await client.post("assistant", body: TrafficQuestion(question: request.question, locale: request.locale))
                     try Task.checkCancellation()
                     guard generation == current else { return }
@@ -113,5 +128,10 @@ import Observation
     func clear() {
         task?.cancel(); generation += 1; busy = false
         draft = ""; currentQuestion = ""; result = nil; answer = nil; pending = nil; activeTrip = nil; error = nil; meta = nil
+        cancelled = false; startedAt = nil; preview = false
+    }
+    func cancel() {
+        task?.cancel(); generation += 1; busy = false; cancelled = true
+        if draft.isEmpty { draft = currentQuestion }
     }
 }

@@ -10,7 +10,7 @@ import {
   assistantProviderOrigin,
 } from "@/server/sources/assistant";
 
-import { planAssistantJourney } from "@/server/sources/assistant-journeys";
+import { planAssistantJourney, type JourneyPlanningEvent } from "@/server/sources/assistant-journeys";
 import type { AssistantJourneyResult } from "@/lib/assistant-journey";
 
 export async function POST(request: Request) {
@@ -65,33 +65,51 @@ export async function POST(request: Request) {
     );
   }
 
+  const envelope = (data: AssistantJourneyResult): ApiEnvelope<AssistantJourneyResult> => ({
+    data,
+    meta: {
+      generatedAt: new Date().toISOString(), updatedAt: new Date().toISOString(), stale: false, ttlSeconds: 0,
+      source: { id: "assistant", name: `AI assistant (${assistantModelName()})`, url: assistantProviderOrigin(), text: "Model-ranked journeys grounded in dated transport data" },
+    },
+  });
+  if (request.headers.get("accept")?.includes("application/x-ndjson")) {
+    let connected = true;
+    const cancellation = new AbortController();
+    const signal = AbortSignal.any([request.signal, cancellation.signal]);
+    const scheduled = new Set<() => Promise<void>>();
+    const scheduleRefresh = (refresh: () => Promise<void>) => {
+      if (!scheduled.has(refresh)) { scheduled.add(refresh); after(refresh); }
+    };
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        const emit = (event: JourneyPlanningEvent | { type: "complete"; envelope: ApiEnvelope<AssistantJourneyResult> } | { type: "error"; error: string }) => {
+          if (connected) controller.enqueue(encoder.encode(JSON.stringify(event) + "\n"));
+        };
+        void (async () => {
+          try {
+            const { data, refreshes } = await planAssistantJourney(parsed.data, emit, { signal, scheduleRefresh });
+            for (const refresh of refreshes) scheduleRefresh(refresh);
+            emit({ type: "complete", envelope: envelope(data) });
+          } catch {
+            emit({ type: "error", error: "assistant_unavailable" });
+          } finally {
+            if (connected) controller.close();
+            connected = false;
+          }
+        })();
+      },
+      cancel() { connected = false; cancellation.abort(); },
+    });
+    return new Response(stream, { headers: { "Content-Type": "application/x-ndjson; charset=utf-8", "Cache-Control": "no-store, no-transform", "X-Accel-Buffering": "no" } });
+  }
   try {
     const { data, refreshes } = await planAssistantJourney(parsed.data);
     for (const refresh of refreshes) after(refresh);
-
-    const body: ApiEnvelope<AssistantJourneyResult> = {
-      data,
-      meta: {
-        generatedAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        stale: false,
-        ttlSeconds: 0,
-        source: {
-          id: "assistant",
-          name: `AI assistant (${assistantModelName()})`,
-          url: assistantProviderOrigin(),
-          text: "Model-ranked journeys grounded in dated transport data",
-        },
-      },
-    };
-
-    return Response.json(body, { headers: { "Cache-Control": "no-store" } });
+    return Response.json(envelope(data), { headers: { "Cache-Control": "no-store" } });
   } catch {
     return Response.json(
-      {
-        error: "assistant_unavailable",
-        message: "The AI assistant is temporarily unavailable.",
-      },
+      { error: "assistant_unavailable", message: "The AI assistant is temporarily unavailable." },
       { status: 502, headers: { "Cache-Control": "no-store" } },
     );
   }

@@ -2,44 +2,86 @@ import SwiftUI
 
 struct CityView: View {
     @Environment(AppSettings.self) private var settings
+    @Environment(\.dynamicTypeSize) private var typeSize
     @State private var weather = LiveResource<Weather>()
     var body: some View {
-        List {
-            Section {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 28) {
                 NavigationLink { WeatherView() } label: {
-                    HStack(alignment: .center, spacing: 20) {
-                        Image(systemName: "cloud.sun.fill").symbolRenderingMode(.monochrome).font(.system(size: 44))
-                        VStack(alignment: .leading, spacing: 7) {
-                            Text(settings.text("澳門天氣", "Macau weather")).font(.headline)
-                            Text(weather.data?.temperatureCelsius.map { "\(Int($0))°" } ?? "—").font(.system(.largeTitle, design: .rounded, weight: .medium))
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text(settings.text("澳門天氣", "Macau weather")).font(.subheadline.weight(.medium))
+                            Spacer()
+                            Image(systemName: "arrow.up.right").font(.subheadline)
+                        }.foregroundStyle(.secondary)
+                        HStack(alignment: .bottom) {
+                            Text(weather.data?.temperatureCelsius.map { "\(Int($0))°" } ?? "—")
+                                .font(.system(size: 100, weight: .bold, design: .rounded)).tracking(-7).lineLimit(1).minimumScaleFactor(0.65).contentTransition(.numericText())
+                            Spacer()
+                            if !typeSize.isAccessibilitySize, let humidity = weather.data?.humidityPercent {
+                                VStack(alignment: .trailing, spacing: 4) {
+                                    Text("\(Int(humidity))%").font(.system(.title2, design: .rounded, weight: .semibold))
+                                    Text(settings.text("濕度", "Humidity")).font(.caption).foregroundStyle(.secondary)
+                                }.padding(.bottom, 18)
+                            }
                         }
-                        Spacer()
-                        if let humidity = weather.data?.humidityPercent { Text("\(Int(humidity))%\n" + settings.text("濕度", "Humidity")).font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.trailing) }
-                    }.padding(.vertical, 12)
-                }
+                        if typeSize.isAccessibilitySize, let humidity = weather.data?.humidityPercent {
+                            Text(settings.text("濕度", "Humidity") + " \(Int(humidity))%").font(.title3).fixedSize(horizontal: false, vertical: true)
+                        }
+                    }.padding(24).background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 30))
+                }.buttonStyle(PressFeedbackStyle())
                 if let warning = weather.data?.warnings.first(where: \.active) {
                     Label(warning.text, systemImage: "exclamationmark.triangle.fill").font(.subheadline).foregroundStyle(.orange)
                 }
-                SourceNote(meta: weather.meta, error: weather.error)
+                TimelineView(.periodic(from: .now, by: 2)) { context in
+                    if weather.error != nil || weather.meta?.isDelayed(at: context.date) == true { Text(settings.text("天氣資料延遲", "Weather data delayed")).font(.caption).foregroundStyle(.orange) }
+                }
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: typeSize.isAccessibilitySize ? 1 : 2), spacing: 12) {
+                    NavigationLink { LRTView() } label: { CityTile(title: settings.text("輕軌", "Light rail"), symbol: "tram.fill", color: .teal) }
+                    NavigationLink { ParkingView() } label: { CityTile(title: settings.text("泊車", "Parking"), symbol: "parkingsign", color: TransitStyle.accent) }
+                    NavigationLink { NoticesView() } label: { CityTile(title: settings.text("消息", "Updates"), symbol: "text.bubble.fill", color: .orange) }
+                    NavigationLink { CamerasView() } label: { CityTile(title: settings.text("鏡頭", "Cameras"), symbol: "video.fill", color: .primary) }
+                }.buttonStyle(PressFeedbackStyle())
+                VStack(spacing: 0) {
+                    NavigationLink { TrafficView() } label: { CityRow(title: settings.text("道路與大橋", "Roads and bridges"), symbol: "car.side.fill") }
+                    Divider().padding(.leading, 52)
+                    NavigationLink { BordersView() } label: { CityRow(title: settings.text("口岸", "Border crossings"), symbol: "door.left.hand.open") }
+                    Divider().padding(.leading, 52)
+                    NavigationLink { ManualPlannerView() } label: { CityRow(title: settings.text("行程規劃", "Journey planner"), symbol: "point.topleft.down.to.point.bottomright.curvepath") }
+                    Divider().padding(.leading, 52)
+                    NavigationLink { SourceStatusView() } label: { CityRow(title: settings.text("資料來源", "Sources"), symbol: "info.circle") }
+                }.buttonStyle(.plain)
+            }.padding(20)
+        }.background(Color(.systemGroupedBackground))
+        .navigationTitle(settings.text("城市", "City"))
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                NavigationLink { SavedView() } label: { Image(systemName: "star") }.accessibilityLabel(settings.text("收藏", "Saved"))
             }
-            Section(settings.text("出行方式", "Getting around")) {
-                NavigationLink { LRTView() } label: { CityRow(title: settings.text("輕軌", "Light rail"), symbol: "tram.fill") }
-                NavigationLink { ParkingView() } label: { CityRow(title: settings.text("泊車", "Parking"), symbol: "parkingsign") }
-                NavigationLink { ManualPlannerView() } label: { CityRow(title: settings.text("行程規劃", "Journey planner"), symbol: "point.topleft.down.to.point.bottomright.curvepath") }
-            }
-            Section(settings.text("城市資訊", "Around the city")) {
-                NavigationLink { TrafficView() } label: { CityRow(title: settings.text("道路與大橋", "Roads and bridges"), symbol: "car.side.fill") }
-                NavigationLink { NoticesView() } label: { CityRow(title: settings.text("交通消息", "Transport updates"), symbol: "text.bubble.fill") }
-                NavigationLink { CamerasView() } label: { CityRow(title: settings.text("交通鏡頭", "Traffic cameras"), symbol: "video.fill") }
-                NavigationLink { BordersView() } label: { CityRow(title: settings.text("口岸", "Border crossings"), symbol: "door.left.hand.open") }
-            }
-            Section {
-                NavigationLink { SourceStatusView() } label: { Label(settings.text("資料來源與服務狀態", "Sources and service status"), systemImage: "info.circle") }
+            ToolbarItem(placement: .topBarTrailing) {
+                NavigationLink { SettingsView() } label: { Image(systemName: "slider.horizontal.3") }.accessibilityLabel(settings.text("設定", "Settings"))
             }
         }
-        .navigationTitle(settings.text("城市", "City"))
         .livePolling(weather, path: "weather", interval: 60)
         .refreshable { await weather.load("weather") }
+    }
+}
+
+private struct CityTile: View {
+    var title: String
+    var symbol: String
+    var color: Color
+    var body: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            Image(systemName: symbol).font(.system(size: 32, weight: .semibold)).foregroundStyle(color)
+                .shadow(color: color.opacity(0.16), radius: 0, y: 3)
+            HStack {
+                Text(title).font(.headline)
+                Spacer()
+                Image(systemName: "arrow.up.right").font(.caption.weight(.medium)).foregroundStyle(.secondary)
+            }
+        }.padding(20).frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 26))
     }
 }
 
@@ -49,7 +91,9 @@ struct CityRow: View {
         HStack(spacing: 16) {
             Image(systemName: symbol).font(.title3).foregroundStyle(.primary).frame(width: 36, height: 42)
             Text(title).font(.body)
-        }.padding(.vertical, 5)
+            Spacer()
+            Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
+        }.padding(.vertical, 5).contentShape(Rectangle())
     }
 }
 

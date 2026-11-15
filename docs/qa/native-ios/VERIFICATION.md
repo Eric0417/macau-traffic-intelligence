@@ -1,37 +1,48 @@
-# Native iOS verification
+# Macao Move native verification
 
-Checked on 2026-11-16. Build 1.0.0 (3), bundle `com.eric.macautraffic`, minimum iOS 26. Xcode 27.2 built the simulator and development-signed device application. The native client uses the existing deployed backend; this change did not deploy the website.
+Checked on 2026-11-16. Build 1.0.0 (4), bundle `com.eric.macautraffic`, minimum iOS 26. Xcode 27.2. Build 3 was rejected after physical use: its earlier fixture tests missed repeated location, camera continuity, full-size traffic overlays and route application. This report describes the replacement and its specific checks.
 
-## Automated checks
+## Reported interactions
 
-- `npm run typecheck`, `npm run lint`, `npm test`: passed, 41 test files and 247 tests. Generated native build folders are excluded from lint.
-- `npm run docs:check`: passed for the existing source registry and engineering memory.
-- iPhone 17 Pro simulator, iOS 26.5: 18 XCTest unit tests and 10 XCUITest flows passed. Coverage includes coordinates and null values, contract decoding, freshness/clock skew/suspensions, route changes that fail, request body privacy, rate limits, saved directions/stop occurrences, WAV bytes, shared JavaScriptCore routing, corrected snapshots and moved stops.
-- Phone UI flows cover route search, stop details and saving, parking/LRT, typed-origin AI plans, journey detail presentation, unknown-place recovery, day-trip fields with English spaces, Chinese navigation, dark appearance, maximum accessibility text size and recording to an editable mocked transcript. The first microphone permission flow was retested after fixing its inactive-scene cancellation.
-- iPad Pro 11-inch simulator, iOS 26.5: two additional flows passed for typed-origin AI plans/journey detail and city/parking/LRT. The tests account for the iPad's top tab controls.
-- After the final moved-stop walking-section fix, all 18 native unit tests passed again. The final device build and strict code-signature verification passed.
-- An independent source review found stale-direction data, misplaced walking links, vehicle snapshot mismatches and assistant continuation/presentation issues. These were corrected before installation. The review was not a physical usability or security audit.
+- Location: real CoreLocation simulator updates at a specified Macau coordinate; pan away and recenter twice. Unit tests also cover stale fixes, temporary `locationUnknown`, cancellation and timeout.
+- 3D: toggle after a pan while retaining center, distance and heading; the button reports the current camera perspective. Tests compare actual MKMapView values.
+- Traffic: retain all 1,268 road segments and 5,095 vertices from a captured normalized response, grouped into at most four renderers. Refresh-delay labels advance even if a network request stalls.
+- Applying a route: return to Explore, clear the previous navigation path/live-state owner, and fit only the route. Both endpoints remain inside the usable map area above the home panel. Open details, drag down to dismiss, and keep the underlying map. Native edge-back navigation is tested separately.
+- Voice: actual AVAudioRecorder power feeds a bounded scrolling waveform. Stop produces an editable mocked transcript in UI tests; cancel and microphone buttons work near their hit-area edges. The enabled send control is white in both appearances.
+- Assistant: checked candidates arrive before model comparison. Stream/JSON compatibility, arbitrary byte chunks, explicit failure, interrupted streams, cancellation and old-itinerary cleanup have tests. Provider aborts propagate through interpretation, nearby searches and itinerary planning. Candidate cancellation preserves source refresh scheduling and prevents another diversion round.
 
-Local result bundles are under `ios/build/Logs/Test/`: the full phone run started at 02:14:30, the iPad run at 02:16:30, and the final native-unit run followed the Build 3 fix. These generated bundles are excluded from git.
+## Automated results
 
-## Production and installation
+- Repository typecheck, lint, 41 files / 255 tests and production build passed. Source documentation checks passed. Production dependency audit found zero high/critical findings and one low finding.
+- iPhone 17 Pro simulator, iOS 26.5: 30 unit tests and all 15 UI flows passed in the 03:03 run. An additional endpoint-visibility regression passed after the final map inset correction. The final native unit rerun is recorded with the release receipt below.
+- Six UI flows passed again after large-type, map attribution and settings-navigation corrections. The route-to-home flow passed again after removing duplicate map insets.
+- iPad Pro 11-inch simulator, iOS 26.5: assistant route-to-home/details, city parking/LRT and settings flows passed.
+- The independent review findings were fixed: stale route state on reapplication, future journeys using current estimates, traffic included in route bounds, stale delay labels, preview row identity, obsolete itinerary context, stream cancellation, facility error handling and expired concurrent bus snapshots.
 
-[Native live check](native-live-check.json) records requests through the production Swift URLSession client and Codable models. It decoded 90 bus routes, 95 parking records, the LRT network and 24 route-56 stops. A synthetic journey from 關閘 to 大三巴牌坊 resolved catalogue choices and returned three plans. No personal position or audio was used. This was a point-in-time check, separate from fixture-only automated tests.
+Result bundles are local under `ios/build/Logs/Test/` and `ios/build-ipad/Logs/Test/`. Full phone run: `2026.11.16_03-03-13`; six-flow rerun: `03-09-02`; final map regression: `03-11-49`; iPad run: `03-06-17`. Generated result bundles are excluded from git.
 
-Build 3 was installed on the paired iPhone 17 Pro over USB. `ideviceinstaller` reported `InstallComplete (100%)`; querying `com.eric.macautraffic` on that phone returned `CFBundleVersion = 3`. The local package is `ios/build-device/MacauTraffic-build3.ipa`. The project does not commit signing credentials or device identifiers.
+## Measured performance
 
-The development profile expires at 2026-11-22 17:56 UTC (2026-11-23 01:56 Macau time), after which the app needs signing and installation again. The IPA SHA-256 is `d972ee4368b017894e597834a069c702e5bc52a7d2006a11fa25d718581c2857`.
+With the same captured traffic response and three iterations of traffic on, map pan, two perspective toggles and traffic off, app CPU time fell from 1.726 s to 1.275 s (26%). Wall time including UI automation fell from 5.734 s to 5.510 s. These are simulator measurements, not physical frame-rate or battery measurements.
 
-Xcode CoreDevice's tunnel failed on this host. Direct USB installation succeeded through libimobiledevice. Automatic launch remained unavailable because the debugserver/developer disk image connection was unavailable. Installation is confirmed; an observed physical launch, microphone quality, field location, live camera playback, battery usage and gesture performance are not claimed. Open 澳門出行 on the phone to use the installed development build. TestFlight and App Store distribution were not performed.
+A public journey request against the previous production API took 21.765 s. A local built-server HTTP stream returned candidates in 2.024 s and the final three options in 3.613 s; see [local stream check](stream-local-check.json). The environments and cache states differ, so this is not a controlled production speed comparison. First-candidate and final timings must be kept separate.
+
+## Deployment and installation
+
+The Build 4 release build passed. Deployment and final device installation are pending verification. The prior production rollback point is commit `826afc240d6441891ea35d0d5f9a99c70c1187f0`, Render deployment `dep-dbstuotckfvc73e1iq00`.
+
+Build 3 was installed over USB and the user reported physical interaction failures. This host's CoreDevice tunnel and debugserver were unavailable; libimobiledevice supported installation. No physical Build 4 launch, field GPS accuracy, microphone transcription quality, camera playback, frame pacing or battery measurement is claimed by simulator checks. TestFlight and App Store distribution are separate.
 
 ## Screenshots
 
-These are real simulator captures. Transport/API responses in UI tests use dated or explicitly synthetic fixtures; they do not establish live data accuracy. MapKit supplies the basemap. The phone images show the final compact design; the Build 3 change affects relocated-stop walking steps.
+Actual simulator captures use dated or explicitly synthetic fixture responses and a MapKit basemap. They do not establish live transport accuracy.
 
-- [Chinese assistant](assistant-zh.png), [Explore](explore-zh.png), [City](city-zh.png).
-- [Dark assistant](assistant-dark.png), [large text](assistant-large-text.png), [journey](journey.png), [trip editor](trip-editor.png).
-- [iPad assistant](ipad-assistant.png), [iPad journey](ipad-journey.png).
+- [Explore](explore-zh.png), [assistant](assistant-zh.png), [city](city-zh.png), [bus cards](buses.png).
+- [Concise plan](assistant-plan.png), [home route](journey-home.png), [draggable details](journey.png).
+- [Enabled send button](send-ready-dark.png), [voice waveform](voice-waveform.png), [dark assistant](assistant-dark.png).
+- [Large assistant](assistant-large-text.png), [large city](city-large-text.png), [large bus cards](buses-large-text.png).
+- [iPad assistant](ipad-assistant.png), [iPad details](ipad-journey.png).
 
-## Boundaries
+## Data limits
 
-Native SF Symbol vehicles replace the website's 3D models and bounded position extrapolation. Manual routing reuses the existing pure TypeScript algorithms through JavaScriptCore; there is no embedded website. Source-dependent estimates, dated walking geometry and qualitative border status retain their existing limits. Live train tracking was not added. Development signing and the backend/provider remain external runtime dependencies.
+Native vehicle pins use official reported estimates without the website's extrapolated 3D animation. Manual routing runs the shared TypeScript functions in JavaScriptCore. Dated walking geometry, source-dependent arrival estimates, unreviewed service hours and qualitative border status retain their existing limits. LRT positions are not live. Signing and backend/provider availability remain runtime dependencies.

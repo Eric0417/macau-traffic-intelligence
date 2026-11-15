@@ -1,5 +1,13 @@
 # Changelog
 
+## Macao Move interaction fixes and redesign - 2026-11-16
+
+- Name the native app Macao Move. Rework the home map, assistant, route cards and city view with larger focal elements, fewer visible explanations, monochrome actions and native navigation gestures.
+- Preserve the map camera when switching 2D/3D, support repeated location recentering, and batch the complete road overlay by color. Keep traffic delay notices current during stalled refreshes.
+- Apply assistant and manual plans to the home map, fit the selected route independently of traffic, and open details in a draggable sheet. Reset live route state on every application and omit current bus estimates for future journeys.
+- Show real microphone levels, an enabled white send button and cancellable waiting. Deliver checked route candidates before AI comparison finishes, retain explicit incomplete/error states and abort cancelled model requests.
+- Shorten AI explanations, preserve stable route identity while ranking changes, and clear previous itinerary context when a single journey replaces it. Add regression coverage for map controls, complete traffic geometry, gestures, cancellation and streaming responses.
+
 ## Native iOS application - 2026-11-16
 
 - Add an iOS 26 SwiftUI client for buses, local journey planning, AI and voice input, multi-stop itineraries, parking, LRT and city information, using the existing backend.

@@ -27,6 +27,8 @@ function sourceRead(source: SourceDefinition<unknown>, data: unknown, stale = fa
 }
 
 beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date(freshAt));
   vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("Unexpected network request")));
   readSourceMock.mockReset();
   readSourceMock.mockImplementation(async (source: SourceDefinition<unknown>) => {
@@ -37,7 +39,7 @@ beforeEach(() => {
     return null;
   });
 });
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
 
 describe("assistant snapshot freshness", () => {
   it("carries route-direction freshness separately from the fresh catalog and base readings", async () => {
@@ -69,4 +71,40 @@ describe("assistant snapshot freshness", () => {
     ]));
     expect(fetch).not.toHaveBeenCalled();
   });
+});
+
+it("starts bus lookups while the independent general sources are still pending", async () => {
+  let releaseRoads: (value: SourceRead<unknown>) => void = () => {};
+  const pendingRoads = new Promise<SourceRead<unknown>>(resolve => { releaseRoads = resolve; });
+  readSourceMock.mockImplementation(async (source: SourceDefinition<unknown>) => {
+    if (source.id === "roads") return pendingRoads;
+    if (source.id === "bus-routes") return sourceRead(source, catalog);
+    if (source.id === "bus-eta-00003-0") return sourceRead(source, eta(0));
+    if (source.id === "bus-eta-00003-1") return sourceRead(source, eta(1));
+    return null;
+  });
+  const result = buildLearningSnapshot("zh-Hant", { question: "3號巴士而家去到邊？" });
+  await vi.waitFor(() => expect(readSourceMock.mock.calls.some(([source]) => source.id === "bus-eta-00003-0")).toBe(true));
+  const roadSource = readSourceMock.mock.calls.find(([source]) => source.id === "roads")![0];
+  releaseRoads(sourceRead(roadSource, roads));
+  expect((await result).snapshot.bus?.liveRoutes).toHaveLength(2);
+});
+
+it("marks an early bus read delayed if another source holds the snapshot beyond its freshness window", async () => {
+  let releaseRoads: (value: SourceRead<unknown>) => void = () => {};
+  const pendingRoads = new Promise<SourceRead<unknown>>(resolve => { releaseRoads = resolve; });
+  readSourceMock.mockImplementation(async (source: SourceDefinition<unknown>) => {
+    if (source.id === "roads") return pendingRoads;
+    if (source.id === "bus-routes") return sourceRead(source, catalog);
+    if (source.id.startsWith("bus-eta-")) return sourceRead(source, eta(0));
+    return null;
+  });
+  const result = buildLearningSnapshot("zh-Hant", { question: "3號巴士而家去到邊？" });
+  await vi.waitFor(() => expect(readSourceMock.mock.calls.some(([source]) => source.id === "bus-eta-00003-0")).toBe(true));
+  vi.setSystemTime(new Date(Date.parse(freshAt) + 11_000));
+  releaseRoads(sourceRead(readSourceMock.mock.calls.find(([source]) => source.id === "roads")![0], roads));
+  expect((await result).snapshot.sourceStatus).toEqual(expect.arrayContaining([
+    expect.objectContaining({ id: "bus-eta-00003-0", stale: true }),
+    expect.objectContaining({ id: "bus-routes", stale: false }),
+  ]));
 });

@@ -5,7 +5,12 @@ import SwiftUI
     var errors: Set<String> = []
     var geometry: JourneyGeometry?
     var error: String?
+    var selectionID: String?
     func poll(_ selection: JourneySelection, locale: String) async {
+        if selectionID != selection.id {
+            envelopes = [:]; errors = []; geometry = nil; error = nil
+            selectionID = selection.id
+        }
         while !Task.isCancelled {
             await withTaskGroup(of: (String, Envelope<BusETA>?).self) { group in
                 for leg in selection.journey.legs {
@@ -35,14 +40,17 @@ struct JourneyDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
     var selection: JourneySelection
-    @State private var live = JourneyLiveState()
+    var showsMap = true
+    @State var live = JourneyLiveState()
     @State private var visible = false
     @State private var expandedMap = false
     var body: some View {
         List {
-            Section {
-                map.frame(height: 290).listRowInsets(EdgeInsets())
-                Button { expandedMap = true } label: { Label(settings.text("展開地圖", "Expand map"), systemImage: "arrow.up.left.and.arrow.down.right") }
+            if showsMap {
+                Section {
+                    map.frame(height: 290).listRowInsets(EdgeInsets())
+                    Button { expandedMap = true } label: { Label(settings.text("展開地圖", "Expand map"), systemImage: "arrow.up.left.and.arrow.down.right") }
+                }
             }
             if let first = selection.journey.legs.first, selection.origin.coordinates.distance(to: first.endpoint(boarding: true, eta: live.envelopes[first.id]?.data)) > 1 {
                 WalkingConnectionView(from: selection.origin.coordinates, to: first.endpoint(boarding: true, eta: live.envelopes[first.id]?.data), path: selection.journey.walking?.access, title: settings.text("步行前往上車站", "Walk to the boarding stop"))
@@ -95,7 +103,7 @@ struct JourneyDetailView: View {
         .navigationTitle(settings.text("行程詳情", "Journey")).navigationBarTitleDisplayMode(.inline)
         .toolbar { ToolbarItem(placement: .confirmationAction) { Button(settings.text("完成", "Done")) { dismiss() } } }
         .onAppear { visible = true }.onDisappear { visible = false }
-        .task(id: "\(visible)-\(scenePhase)-\(settings.language)") { if visible && scenePhase == .active { await live.poll(selection, locale: settings.language.rawValue) } }
+        .task(id: "\(visible)-\(scenePhase)-\(settings.language)") { if showsMap && visible && scenePhase == .active { await live.poll(selection, locale: settings.language.rawValue) } }
         .sheet(isPresented: $expandedMap) {
             NavigationStack {
                 map.navigationTitle(selection.destination.name).navigationBarTitleDisplayMode(.inline)
@@ -107,24 +115,10 @@ struct JourneyDetailView: View {
         TimelineView(.periodic(from: .now, by: 2)) { context in mapContent(at: context.date) }
     }
     private func mapContent(at now: Date) -> some View {
-        let features = live.geometry?.collection.features ?? []
-        let lines: [MapLine] = features.enumerated().compactMap { index, item in
-            guard let coordinates = item.geometry.line else { return nil }
-            return .init(id: "\(index)", coordinates: coordinates, color: item.properties.kind == "walking-path" ? .green : Color(hex: item.properties.color ?? "#8E8E93"), dashed: item.properties.kind == "walk", width: item.properties.width ?? 5)
-        }
-        let pins: [MapPin] = features.enumerated().compactMap { index, item in
-            guard let coordinate = item.geometry.point, item.properties.kind != "walk-label", item.properties.kind != "vehicle" else { return nil }
-            return .init(id: "\(index)", coordinate: coordinate, title: item.properties.label ?? "", symbol: "mappin", color: Color(hex: item.properties.color ?? "#007AFF"))
-        }
-        let vehicles: [MapPin] = selection.future ? [] : selection.journey.legs.flatMap { leg in
-            guard !live.errors.contains(leg.id), let envelope = live.envelopes[leg.id], !envelope.meta.isDelayed(at: now), envelope.data.routeCode == leg.routeCode, envelope.data.direction == leg.direction else { return [MapPin]() }
-            return envelope.data.vehicles.compactMap { vehicle in
-                guard vehicle.positionSource == "feed", let coordinate = vehicle.coordinates else { return nil }
-                return MapPin(id: "vehicle:\(leg.id):\(vehicle.id)", coordinate: coordinate, title: leg.routeName + " · " + vehicle.plate, symbol: "bus.fill")
-            }
-        }
-        return TransitMap(lines: lines, pins: pins + vehicles, fitID: selection.id + "\(live.geometry != nil)")
+        let snapshot = JourneyMapSnapshot(selection: selection, live: live, now: now)
+        return TransitMap(lines: snapshot.lines, pins: snapshot.pins, fitID: selection.id + "\(live.geometry != nil)")
     }
+
     private func terminalTime(_ minutes: Int) -> String { String(format: "%02d:%02d", minutes / 60, minutes % 60) }
 }
 

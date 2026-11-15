@@ -5,6 +5,9 @@ import { planAssistantJourney } from "@/server/sources/assistant-journeys";
 import type { BusNetwork } from "@/lib/bus-journey";
 import type { WalkingNetwork } from "@/lib/walking-network";
 import { journeyCandidates } from "@/server/sources/journey-candidates";
+import { after } from "next/server";
+
+vi.mock("next/server", () => ({ after: vi.fn() }));
 
 const from = { stationCode: "M1", stationName: "起點站", coordinates: [113.55, 22.19] as [number, number] };
 const to = { stationCode: "M2", stationName: "目的地站", coordinates: [113.56, 22.19] as [number, number] };
@@ -175,4 +178,97 @@ it("treats a generic hospital destination returned by the model as a nearby sear
   expect(data).toMatchObject({ kind: "facility-location", search: { category: "hospital", action: "directions" } });
   expect(model).toHaveBeenCalledOnce();
   expect(cache.readSource).not.toHaveBeenCalled();
+});
+
+it("streams checked candidates before ranking finishes and preserves the final envelope", async () => {
+  sources();
+  vi.stubEnv("ASSISTANT_API_KEY", "fixture");
+  vi.spyOn(cache, "consumeRateLimit").mockResolvedValue({ allowed: true, remaining: 5 });
+  let finishRanking: (value: string) => void = () => { throw new Error("Ranking has not started"); };
+  let candidateIds: string[] = [];
+  vi.spyOn(assistant, "callAssistantProvider").mockImplementation(messages => {
+    candidateIds = JSON.parse(messages[1].content).candidates.map((candidate: { id: string }) => candidate.id);
+    return new Promise(resolve => { finishRanking = resolve; });
+  });
+  const { POST } = await import("@/app/api/v1/assistant/journeys/route");
+  const response = await POST(new Request("http://localhost/api/v1/assistant/journeys", {
+    method: "POST", headers: { Accept: "application/x-ndjson" },
+    body: JSON.stringify({ question: "去體育館", locale: "zh-Hant", destinationId: "arena", origin: from.coordinates }),
+  }));
+  expect(response.headers.get("content-type")).toContain("application/x-ndjson");
+  expect(response.headers.get("cache-control")).toContain("no-store");
+  const reader = response.body!.getReader();
+  const decoder = new TextDecoder();
+  let event;
+  do { event = JSON.parse(decoder.decode((await reader.read()).value)); } while (event.type !== "candidates");
+  expect(event.data.model).toBe("Journey planner");
+  expect(event.data.options.length).toBeGreaterThan(0);
+  expect(event.data.options.every((option: { journey: { id: string } }) => candidateIds.includes(option.journey.id))).toBe(true);
+  finishRanking(JSON.stringify({ summary: "巴士方案", options: candidateIds.slice(0, 2).map(id => ({ id, title: "巴士", reason: "較少轉乘" })) }));
+  do { event = JSON.parse(decoder.decode((await reader.read()).value)); } while (event.type !== "complete");
+  expect(event.envelope.data.kind).toBe("plans");
+  expect(event.envelope.data.options.map((option: { journey: { id: string } }) => option.journey.id)).toEqual(candidateIds.slice(0, 2));
+  expect(event.envelope.meta.source.id).toBe("assistant");
+  expect((await reader.read()).done).toBe(true);
+});
+
+it("ends a failed stream with an explicit error instead of a complete answer", async () => {
+  vi.stubEnv("ASSISTANT_API_KEY", "fixture");
+  vi.spyOn(cache, "consumeRateLimit").mockResolvedValue({ allowed: true, remaining: 5 });
+  vi.spyOn(assistant, "callAssistantProvider").mockResolvedValue("not JSON");
+  const { POST } = await import("@/app/api/v1/assistant/journeys/route");
+  const response = await POST(new Request("http://localhost/api/v1/assistant/journeys", {
+    method: "POST", headers: { Accept: "application/x-ndjson" }, body: JSON.stringify({ question: "去體育館" }),
+  }));
+  const events = (await response.text()).trim().split("\n").map(line => JSON.parse(line));
+  expect(events.at(-1)).toEqual({ type: "error", error: "assistant_unavailable" });
+  expect(events.some(event => event.type === "complete")).toBe(false);
+});
+
+it("cancels pending ranking and retains scheduled source refreshes after preview use", async () => {
+  sources();
+  const refresh = vi.fn(async () => {});
+  const sourceRead = vi.mocked(cache.readSource).getMockImplementation()!;
+  vi.mocked(cache.readSource).mockImplementation(async source => {
+    const read = await sourceRead(source);
+    return read && { ...read, refresh };
+  });
+  vi.stubEnv("ASSISTANT_API_KEY", "fixture");
+  vi.spyOn(cache, "consumeRateLimit").mockResolvedValue({ allowed: true, remaining: 5 });
+  let providerSignal: AbortSignal | undefined;
+  const aborted = vi.fn();
+  vi.spyOn(assistant, "callAssistantProvider").mockImplementation((_messages, _json, signal) => {
+    providerSignal = signal;
+    return new Promise((_resolve, reject) => signal!.addEventListener("abort", () => { aborted(); reject(signal!.reason); }, { once: true }));
+  });
+  const { POST } = await import("@/app/api/v1/assistant/journeys/route");
+  const response = await POST(new Request("http://localhost/api/v1/assistant/journeys", {
+    method: "POST", headers: { Accept: "application/x-ndjson" },
+    body: JSON.stringify({ question: "去體育館", locale: "zh-Hant", destinationId: "arena", origin: from.coordinates }),
+  }));
+  const reader = response.body!.getReader();
+  let event;
+  do { event = JSON.parse(new TextDecoder().decode((await reader.read()).value)); } while (event.type !== "candidates");
+  expect(after).toHaveBeenCalledWith(refresh);
+  expect(vi.mocked(after).mock.calls.filter(([callback]) => callback === refresh)).toHaveLength(1);
+  await reader.cancel();
+  expect(providerSignal?.aborted).toBe(true);
+  expect(aborted).toHaveBeenCalledOnce();
+});
+
+it("does not launch a refill diversion round after cancellation during the first source batch", async () => {
+  const buses = { ...network, routes: Array.from({ length: 7 }, (_, i) => ({ ...network.routes[0], routeName: String(i + 1), routeCode: String(i + 1) })) };
+  let release: () => void = () => {};
+  const pending = new Promise<void>(resolve => { release = resolve; });
+  const reads = vi.spyOn(cache, "readSource").mockImplementation(async () => {
+    await pending;
+    return { result: { data: ["M1"], stale: false } } as never;
+  });
+  const cancellation = new AbortController();
+  const result = journeyCandidates(buses, walking, { id: "start", name: "起點", coordinates: from.coordinates }, walking.places[0], "zh-Hant", 600, undefined, true, cancellation.signal);
+  const firstBatchSize = reads.mock.calls.length;
+  expect(firstBatchSize).toBeGreaterThan(0);
+  cancellation.abort(); release();
+  await expect(result).rejects.toMatchObject({ name: "AbortError" });
+  expect(reads).toHaveBeenCalledTimes(firstBatchSize);
 });

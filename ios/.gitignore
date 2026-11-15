@@ -1,4 +1,4 @@
-build/
+build*/
 build-device/
 *.xcuserstate
 xcuserdata/

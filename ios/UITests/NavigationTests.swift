@@ -19,12 +19,27 @@ final class NavigationTests: XCTestCase {
     private func input(_ app: XCUIApplication, _ identifier: String) -> XCUIElement {
         app.descendants(matching: .any).matching(identifier: identifier).firstMatch
     }
+    func testTrafficInteractionPerformance() throws {
+        let app = launch()
+        XCTAssertTrue(app.buttons["Traffic"].waitForExistence(timeout: 10))
+        let options = XCTMeasureOptions()
+        options.iterationCount = 3
+        measure(metrics: [XCTClockMetric(), XCTCPUMetric(application: app)], options: options) {
+            app.buttons["Traffic"].tap()
+            let map = app.maps.firstMatch
+            map.coordinate(withNormalizedOffset: CGVector(dx: 0.35, dy: 0.5)).press(forDuration: 0.05, thenDragTo: map.coordinate(withNormalizedOffset: CGVector(dx: 0.65, dy: 0.45)))
+            app.buttons["Change map perspective"].tap()
+            app.buttons["Change map perspective"].tap()
+            app.buttons["Traffic"].tap()
+        }
+        capture("traffic-interaction", app: app)
+    }
     func testTabsAndSettings() throws {
         let app = XCUIApplication()
         app.launchArguments = ["--uitesting", "-language", "zh-Hant", "-appearance", "light"]
         app.launch()
         XCTAssertTrue(app.buttons["explore-search"].waitForExistence(timeout: 10))
-        tab(app, "收藏").tap()
+        tab(app, "城市").tap()
         app.buttons["設定"].tap()
         XCTAssertTrue(app.navigationBars["設定"].waitForExistence(timeout: 5))
         capture("settings-zh", app: app)
@@ -53,6 +68,7 @@ final class NavigationTests: XCTestCase {
     }
     func testAssistantManualOriginAndJourney() throws {
         let app = launch()
+        app.buttons["Traffic"].tap()
         tab(app, "Assistant").tap()
         capture("assistant", app: app)
         let field = input(app, "assistant-input")
@@ -62,8 +78,82 @@ final class NavigationTests: XCTestCase {
         XCTAssertTrue(origin.waitForExistence(timeout: 8)); origin.tap(); origin.typeText("Senado Square")
         app.buttons["Use this origin"].tap()
         let plan = app.staticTexts["步行前往大三巴"]
-        XCTAssertTrue(plan.waitForExistence(timeout: 8)); capture("assistant-plan", app: app); plan.tap()
+        XCTAssertTrue(plan.waitForExistence(timeout: 8)); capture("assistant-plan", app: app)
+        app.buttons["apply-route-0"].tap()
+        XCTAssertTrue(app.buttons["home-route-details"].waitForExistence(timeout: 5))
+        XCTAssertTrue(tab(app, "Explore").isSelected)
+        let mapValue = app.descendants(matching: .any)["transit-map"].value as? String ?? ""
+        let span = mapValue.components(separatedBy: "span=").last.flatMap(Double.init) ?? 1
+        XCTAssertLessThan(span, 0.04, "Traffic overlays must not expand the selected journey's bounds: \(mapValue)")
+        capture("journey-home", app: app)
+        app.buttons["home-route-details"].tap()
         XCTAssertTrue(app.navigationBars["Journey"].waitForExistence(timeout: 5)); capture("journey", app: app)
+        app.navigationBars["Journey"].swipeDown()
+        XCTAssertTrue(app.buttons["home-route-details"].waitForExistence(timeout: 5))
+    }
+    func testSendStateAndMapControls() throws {
+        let app = launch(extra: ["-appearance", "dark"])
+        let perspective = app.buttons["Change map perspective"]
+        XCTAssertTrue(perspective.waitForExistence(timeout: 8))
+        let map = app.maps.firstMatch
+        let cameraState = app.descendants(matching: .any)["transit-map"]
+        let initial = try XCTUnwrap(cameraState.value as? String)
+        map.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.4)).press(forDuration: 0.05, thenDragTo: map.coordinate(withNormalizedOffset: CGVector(dx: 0.65, dy: 0.5)))
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "value != %@", initial), object: cameraState)], timeout: 5), .completed)
+        let before = try XCTUnwrap(app.descendants(matching: .any)["transit-map"].value as? String)
+        perspective.tap()
+        XCTAssertEqual(perspective.value as? String, "3D")
+        let after = try XCTUnwrap(app.descendants(matching: .any)["transit-map"].value as? String)
+        XCTAssertEqual(before.components(separatedBy: ";").first, after.components(separatedBy: ";").first)
+        perspective.tap()
+        XCTAssertEqual(perspective.value as? String, "2D")
+        app.buttons["explore-search"].tap()
+        let field = input(app, "assistant-input")
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        let send = app.buttons["assistant-send"]
+        XCTAssertFalse(send.isEnabled)
+        field.tap(); field.typeText("Find a bus")
+        XCTAssertTrue(send.isEnabled)
+        XCTAssertEqual(send.value as? String, "Ready")
+        capture("send-ready-dark", app: app)
+    }
+    func testNativeBackSwipe() throws {
+        let app = launch()
+        tab(app, "City").tap()
+        app.staticTexts["Parking"].firstMatch.tap()
+        XCTAssertTrue(app.navigationBars["Parking"].waitForExistence(timeout: 5))
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.01, dy: 0.48)).press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.48)))
+        XCTAssertTrue(app.staticTexts["Macau weather"].waitForExistence(timeout: 5))
+    }
+    func testLocationRecentersAfterPanningTwice() throws {
+        let app = launch()
+        let locate = app.buttons["Show my location"]
+        let map = app.maps.firstMatch
+        let camera = app.descendants(matching: .any)["transit-map"]
+        for _ in 0..<2 {
+            locate.tap()
+            let permission = XCUIApplication(bundleIdentifier: "com.apple.springboard").alerts.firstMatch
+            if permission.waitForExistence(timeout: 1) { permission.buttons["Allow While Using App"].tap() }
+            XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "value BEGINSWITH %@", "22.19300,113.54800"), object: camera)], timeout: 8), .completed)
+            let located = try XCTUnwrap(camera.value as? String)
+            map.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.4)).press(forDuration: 0.05, thenDragTo: map.coordinate(withNormalizedOffset: CGVector(dx: 0.65, dy: 0.5)))
+            XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "value != %@", located), object: camera)], timeout: 5), .completed)
+        }
+        capture("location-repeat", app: app)
+    }
+    func testVoiceCancelHitAreaAndLargeCity() throws {
+        let app = launch(extra: ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"])
+        tab(app, "City").tap(); capture("city-large-text", app: app)
+        tab(app, "Buses").tap(); capture("buses-large-text", app: app)
+        tab(app, "Assistant").tap()
+        app.buttons["DeepSeek voice input"].coordinate(withNormalizedOffset: CGVector(dx: 0.8, dy: 0.5)).tap()
+        let permission = XCUIApplication(bundleIdentifier: "com.apple.springboard").alerts.firstMatch
+        if permission.waitForExistence(timeout: 2) { permission.buttons["Allow"].tap() }
+        let cancel = app.buttons["Cancel recording"]
+        XCTAssertTrue(cancel.waitForExistence(timeout: 8))
+        cancel.coordinate(withNormalizedOffset: CGVector(dx: 0.8, dy: 0.5)).tap()
+        XCTAssertTrue(input(app, "assistant-input").waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["assistant-send"].isEnabled)
     }
     func testUnknownTripPlaceHasCorrection() throws {
         let app = launch("choice")
@@ -115,6 +205,8 @@ final class NavigationTests: XCTestCase {
         if permission.waitForExistence(timeout: 3) { permission.buttons["Allow"].tap() }
         let stop = app.buttons["Stop and transcribe"]
         XCTAssertTrue(stop.waitForExistence(timeout: 8))
+        XCTAssertTrue(input(app, "voice-waveform").exists)
+        capture("voice-waveform", app: app)
         stop.tap()
         let field = input(app, "assistant-input")
         XCTAssertTrue(NSPredicate(format: "value == %@", "去大三巴點搭巴士？").evaluate(with: field) || XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", "去大三巴點搭巴士？"), object: field)], timeout: 8) == .completed)

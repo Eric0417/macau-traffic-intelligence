@@ -2,38 +2,41 @@ import SwiftUI
 
 struct BusListView: View {
     @Environment(AppSettings.self) private var settings
+    @Environment(\.dynamicTypeSize) private var typeSize
+    @ScaledMetric(relativeTo: .largeTitle) private var routeSize = 34.0
     @State private var routes = LiveResource<[BusRoute]>()
     @State private var query = ""
     var body: some View {
-        List {
-            Section {
-                NavigationLink { ManualPlannerView() } label: {
-                    Label(settings.text("由起點搵路線", "Plan a bus journey"), systemImage: "arrow.triangle.branch")
-                }
-            }
-            Section {
-                LoadState(resource: routes) { Task { await routes.load("bus/routes") } }
+        ScrollView {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: typeSize.isAccessibilitySize ? 260 : 102), spacing: 12)], spacing: 12) {
                 ForEach(filtered) { route in
-                    NavigationLink {
-                        BusDetailView(route: route)
-                    } label: {
-                        HStack(spacing: 14) {
-                            RouteBadge(name: route.routeName, color: route.company.color == "orange" ? .orange : .blue)
-                            VStack(alignment: .leading, spacing: 5) {
-                                Text(route.company.name).font(.subheadline).foregroundStyle(.secondary)
+                    NavigationLink { BusDetailView(route: route) } label: {
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text(route.routeName).font(.system(size: routeSize, weight: .bold, design: .rounded)).tracking(-1)
+                                .lineLimit(1).minimumScaleFactor(0.6).frame(maxWidth: .infinity, alignment: .leading)
+                            HStack(spacing: 5) {
+                                Circle().fill(route.company.color == "orange" ? Color.orange : TransitStyle.accent).frame(width: 5, height: 5)
+                                Text(route.company.name).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                                if !route.live { Image(systemName: "calendar").font(.caption2) }
                             }
-                            Spacer()
-                            if !route.live { Image(systemName: "calendar").accessibilityLabel(settings.text("季節性服務，無即時追蹤", "Seasonal, no live tracking")) }
-                        }.padding(.vertical, 5)
-                    }.accessibilityIdentifier("route-\(route.routeCode)")
+                        }.padding(16).frame(maxWidth: .infinity, minHeight: 110, alignment: .leading)
+                            .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 23))
+                            .shadow(color: .black.opacity(0.035), radius: 2, y: 3)
+                    }.buttonStyle(PressFeedbackStyle()).accessibilityIdentifier("route-\(route.routeCode)")
                 }
-                if routes.data != nil && filtered.isEmpty { Text(settings.text("沒有符合嘅路線", "No matching routes")).foregroundStyle(.secondary) }
-            } header: { Text(settings.text("全部路線", "All routes") + " · \(filtered.count)") }
-            if routes.meta != nil { SourceNote(meta: routes.meta, error: routes.error).listRowBackground(Color.clear) }
-        }
+            }.padding(.top, 8)
+            LoadState(resource: routes) { Task { await routes.load("bus/routes") } }
+            if routes.data != nil && filtered.isEmpty { ContentUnavailableView.search(text: query) }
+            if routes.meta != nil { SourceNote(meta: routes.meta, error: routes.error).padding(.vertical, 20) }
+        }.contentMargins(.horizontal, 20).background(Color(.systemGroupedBackground))
         .navigationTitle(settings.text("巴士", "Buses"))
-        .navigationBarTitleDisplayMode(.inline)
-        .searchable(text: $query, prompt: settings.text("搜尋路線號碼", "Search route number"))
+        .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: settings.text("路線號碼", "Route number"))
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                NavigationLink { ManualPlannerView() } label: { Image(systemName: "arrow.triangle.branch") }
+                    .accessibilityLabel(settings.text("規劃行程", "Plan a journey"))
+            }
+        }
         .refreshable { await routes.load("bus/routes") }
         .livePolling(routes, path: "bus/routes", interval: 21_600)
     }

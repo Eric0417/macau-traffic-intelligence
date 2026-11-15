@@ -1,6 +1,16 @@
 # Native iOS migration
 
-The user requested the whole Macau Traffic application as a native iOS app with a new Apple-style design. Target iOS 26; use the existing deployed API. No backend deployment is required for the client.
+## Build 4 correction and redesign
+
+Build 3 was rejected after physical use on November 16. The earlier tests missed repeat location, camera continuity, production-sized traffic overlays, route application and voice feedback. Treat the existing verification as coverage of those named tests only.
+
+1. Reproduce camera and traffic defects with the complete normalized road fixture, record a performance baseline, then preserve camera state and batch same-style map overlays.
+2. Keep the selected journey in the root navigation state. Applying a plan must select Explore and fit the verified route on the home map. Use system push navigation and dismissible sheets.
+3. Add audio metering with a bounded waveform, explicit send-state contrast and cancellable assistant waiting. Measure actual request latency before choosing an optimization.
+4. Redesign the main surfaces around a map, large route numbers, concise trip steps and a single primary action. Reference Not Boring's six official app pages and ChatGPT's restrained composer. Keep source and uncertainty details accessible.
+5. Run regressions for the reported flows, full native and repository checks, light/dark/large-type inspection and a second review. Install the signed update and record the remaining physical validation limits.
+
+The user requested the whole Macau Traffic application as a native iOS app with a new Apple-style design. Target iOS 26; use the existing deployed API. The initial client reused the existing API. Build 4 adds an opt-in progressive response and requires deploying the matching server change.
 
 1. Create the Xcode project, typed API client, preferences, native navigation and map. Verify a simulator build.
 2. Add route search, directions, stop selection, estimates, route geometry, favourites and freshness. Test null, suspended and delayed cases.

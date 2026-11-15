@@ -19,7 +19,7 @@ settings:
     IPHONEOS_DEPLOYMENT_TARGET: '26.0'
     TARGETED_DEVICE_FAMILY: '1,2'
     MARKETING_VERSION: '1.0.0'
-    CURRENT_PROJECT_VERSION: '3'
+    CURRENT_PROJECT_VERSION: '4'
     GENERATE_INFOPLIST_FILE: YES
     CODE_SIGN_STYLE: Automatic
     ENABLE_USER_SCRIPT_SANDBOXING: YES
@@ -44,7 +44,7 @@ targets:
       base:
         LD_RUNPATH_SEARCH_PATHS: $(inherited) @executable_path/Frameworks
         PRODUCT_BUNDLE_IDENTIFIER: com.eric.macautraffic
-        INFOPLIST_KEY_CFBundleDisplayName: 澳門出行
+        INFOPLIST_KEY_CFBundleDisplayName: Macao Move
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.navigation
         INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: 按你選擇的位置功能，尋找附近車站、停車場或規劃行程。
         INFOPLIST_KEY_NSMicrophoneUsageDescription: 錄製最多 20 秒的問題，經 DeepSeek 轉成可編輯文字。

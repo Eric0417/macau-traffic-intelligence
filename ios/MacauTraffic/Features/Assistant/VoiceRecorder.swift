@@ -16,11 +16,14 @@ enum VoiceWAV {
 }
 
 @Observable @MainActor final class VoiceRecorder: NSObject, @preconcurrency AVAudioRecorderDelegate {
+    var isStarting = false
     var isRecording = false
     var transcribing = false
     var startedAt: Date?
     var transcript = ""
     var error: String?
+    private(set) var levels: [Float] = []
+    private var metering: Task<Void, Never>?
     private var recorder: AVAudioRecorder?
     private var file: URL?
     private var generation = 0
@@ -37,8 +40,10 @@ enum VoiceWAV {
         }
     }
     func start() async {
-        guard !isRecording && !transcribing else { return }
+        guard !isStarting && !isRecording && !transcribing else { return }
         generation += 1; let current = generation; error = nil; transcript = ""
+        isStarting = true
+        defer { if current == generation { isStarting = false } }
         guard await AVAudioApplication.requestRecordPermission() else { error = "Microphone permission is off. You can still type your question."; return }
         guard current == generation else { return }
         do {
@@ -48,14 +53,24 @@ enum VoiceWAV {
             let url = FileManager.default.temporaryDirectory.appendingPathComponent("macau-voice-\(UUID().uuidString).wav")
             file = url
             let value = try AVAudioRecorder(url: url, settings: [AVFormatIDKey: kAudioFormatLinearPCM, AVSampleRateKey: 16_000, AVNumberOfChannelsKey: 1, AVLinearPCMBitDepthKey: 16, AVLinearPCMIsBigEndianKey: false, AVLinearPCMIsFloatKey: false])
-            value.delegate = self; recorder = value
+            value.delegate = self; value.isMeteringEnabled = true; recorder = value
             guard value.record(forDuration: 20) else { throw APIError.invalidResponse }
-            startedAt = .now; isRecording = true
+            startedAt = .now; levels = []; isRecording = true
+            metering = Task { [weak self] in
+                while !Task.isCancelled {
+                    guard let self, isRecording, let recorder else { return }
+                    recorder.updateMeters()
+                    levels.append(Self.normalizedLevel(recorder.averagePower(forChannel: 0)))
+                    if levels.count > 80 { levels.removeFirst(levels.count - 80) }
+                    do { try await Task.sleep(for: .milliseconds(50)) } catch { return }
+                }
+            }
         } catch { self.error = error.localizedDescription; cancel() }
     }
     func stopAndTranscribe() async {
         guard isRecording, let url = file else { return }
         let current = generation
+        metering?.cancel(); metering = nil
         isRecording = false; transcribing = true; recorder?.stop(); recorder = nil
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
         defer {
@@ -79,11 +94,16 @@ enum VoiceWAV {
         } catch { if generation == current { self.error = error.localizedDescription } }
     }
     func cancel() {
-        generation += 1; isRecording = false; transcribing = false
+        generation += 1; isStarting = false; isRecording = false; transcribing = false
+        metering?.cancel(); metering = nil; levels = []
         upload?.cancel(); upload = nil
         recorder?.stop(); recorder = nil
         if let file { try? FileManager.default.removeItem(at: file) }; file = nil
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+    }
+    static func normalizedLevel(_ decibels: Float) -> Float {
+        guard decibels.isFinite else { return 0 }
+        return max(0, min(1, (decibels + 55) / 55))
     }
     func audioRecorderDidFinishRecording(_ recorder: AVAudioRecorder, successfully flag: Bool) {
         if flag && isRecording { Task { await stopAndTranscribe() } }

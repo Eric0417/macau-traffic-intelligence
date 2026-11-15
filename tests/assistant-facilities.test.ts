@@ -193,3 +193,12 @@ it("uses a named square's reference point instead of asking about street fragmen
     kind: "facilities", origin: { id: "n6353597986", name: "關閘廣場" }, matches: [{ id: expect.any(String) }],
   });
 });
+
+it("keeps streamed facility route candidates visible when AI ranking fails", async () => {
+  sourceFixtures();
+  vi.spyOn(assistant, "callAssistantProvider").mockRejectedValue(new Error("ranking failed"));
+  const events: string[] = [];
+  await expect(planAssistantJourney({ question: "Go to the closest hospital", locale: "en", origin, facilitySearch: { category: "hospital", action: "directions" } }, event => events.push(event.type)))
+    .rejects.toThrow("ranking failed");
+  expect(events).toContain("candidates");
+});

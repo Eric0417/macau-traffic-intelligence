@@ -7,7 +7,8 @@ import type { Locale } from "@/lib/types";
 import { readSource, type SourceRead } from "@/server/cache";
 import { busDiversionSource } from "./bus";
 
-export async function journeyCandidates(bus: BusNetwork, walking: WalkingNetwork, origin: AssistantPlace, destination: AssistantPlace, locale: Locale, departureMinute?: number, router = createWalkingRouter(walking), checkCurrentSuspensions = departureMinute !== undefined) {
+export async function journeyCandidates(bus: BusNetwork, walking: WalkingNetwork, origin: AssistantPlace, destination: AssistantPlace, locale: Locale, departureMinute?: number, router = createWalkingRouter(walking), checkCurrentSuspensions = departureMinute !== undefined, signal?: AbortSignal) {
+  signal?.throwIfAborted();
   const text = (hant: string, hans: string, en: string) => locale === "en" ? en : locale === "zh-Hans" ? hans : hant;
   const refreshes: Array<() => Promise<void>> = [];
   const access = router(origin.coordinates), egress = router(destination.coordinates, true);
@@ -25,6 +26,7 @@ export async function journeyCandidates(bus: BusNetwork, walking: WalkingNetwork
     const names = [...new Set(candidates.flatMap(c => c.legs.map(l => l.routeName)))].filter(name => !unavailableStops.has(name));
     if (!names.length) break;
     const reads = await Promise.all(names.map(async name => ({ name, read: await readSource(busDiversionSource(name)) })));
+    signal?.throwIfAborted();
     for (const { name, read } of reads) {
       checks.push({ name, read });
       unavailableStops.set(name, new Set(read?.result.data ?? []));

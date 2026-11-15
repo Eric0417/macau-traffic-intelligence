@@ -102,3 +102,18 @@ enum AssistantResult: Decodable {
         }
     }
 }
+
+enum AssistantStreamEvent: Decodable {
+    case phase(String), candidates(AssistantPlans), complete(Envelope<AssistantResult>), failure
+    enum Keys: String, CodingKey { case type, phase, data, envelope }
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: Keys.self)
+        switch try values.decode(String.self, forKey: .type) {
+        case "phase": self = .phase(try values.decode(String.self, forKey: .phase))
+        case "candidates": self = .candidates(try values.decode(AssistantPlans.self, forKey: .data))
+        case "complete": self = .complete(try values.decode(Envelope<AssistantResult>.self, forKey: .envelope))
+        case "error": self = .failure
+        default: throw DecodingError.dataCorruptedError(forKey: .type, in: values, debugDescription: "Unknown journey event")
+        }
+    }
+}
