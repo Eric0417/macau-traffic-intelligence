@@ -34,12 +34,12 @@ it("keeps every named stop and return destination in the requested order", async
   expect(data.options[0].sections.map(s => [s.from.id, s.to.id])).toEqual([["p0", "p2"], ["p2", "p1"], ["p1", "p0"]]);
 });
 
-it("uses one model-selected connection per section for the complete itinerary", async () => {
+it("uses model-selected connections and derives the overview from them, ignoring contradictory prose", async () => {
   sources();
   vi.spyOn(assistant, "callAssistantProvider").mockImplementation(async messages => {
     const c = JSON.parse(messages[1].content);
     expect(c.options[0].sections).toHaveLength(2);
-    return JSON.stringify({ options: [{ id: "ordered", summary: "先搭巴士到地點2，再步行到地點1", selections: c.options[0].sections.map((s: { candidates: Array<{ mode: string }> }) => {
+    return JSON.stringify({ options: [{ id: "ordered", summary: "搭虛構999號，全程步行", selections: c.options[0].sections.map((s: { candidates: Array<{ mode: string }> }) => {
       const bus = s.candidates.findIndex(j => j.mode === "bus");
       return bus >= 0 ? bus : 0;
     }) }] });
@@ -47,7 +47,9 @@ it("uses one model-selected connection per section for the complete itinerary", 
   const { data } = await planAssistantJourney({ question: "幫我直接安排整條路線", locale: "zh-Hant", trip: { mode: "ordered", originQuery: "地點0", stops: [{ query: "地點2" }, { query: "地點1" }] } });
   expect(data.kind).toBe("itineraries");
   if (data.kind !== "itineraries") return;
-  expect(data.options[0].reason).toBe("先搭巴士到地點2，再步行到地點1");
+  expect(data.options[0].reason).not.toContain("999");
+  expect(data.options[0].reason).toContain("地點0 → 地點2：巴士 3");
+  expect(data.options[0].reason).toContain("地點2 → 地點1：步行");
   expect(data.options[0].sections[0].journeys[0].legs[0].routeName).toBe("3");
 });
 

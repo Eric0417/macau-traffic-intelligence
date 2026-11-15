@@ -8,6 +8,8 @@ Two fixture regressions also failed before the fix: six shorter transfer choices
 
 The DSAT parking response for facility 6045 on November 15 used the ordinary car icon for `塔石廣場地下上落客區(重型客車)`, with count 7. The parser previously labelled that count as light-vehicle spaces. A fixture reproduces this; heavy-only facility names now prevent that interpretation. The unclassified count is not reassigned to an assumed vehicle size.
 
+A production day-trip probe then exposed contradictory model prose: an overview said to walk while its selected candidate was buses 4 → 2. The overview now comes from the validated selections themselves. A regression supplies fabricated/contradictory prose and asserts that it cannot appear in the returned overview. The model still selects the complete journey.
+
 ## Verification
 
 - TypeScript and ESLint pass. Production build and standalone packaging pass.
@@ -23,4 +25,6 @@ The original walking-only input's starting point was not provided, so that exact
 
 ## Deployment
 
-Deployment verification is recorded after the Render rollout completes.
+Render deployment `dep-dbsilstckfvc73dmhttg` is live with commit `08ebbdb7ba0b926377185999ecab6e462ae736b7`.
+
+Production probes at 11:48 Macau time passed: the original Seac Pai Van bus question returned place choices with nearby-stop labels; the ordered route recommended 56 then H3; nearby parking returned five named facilities with vehicle counts and source times; nearby bus stops returned five exact platform codes and serving route names. The health endpoint reported `ok`, Redis, and zero source failure counters. `production-evidence.json` contains the responses to synthetic public-landmark queries; parking counts are observations at that time.
