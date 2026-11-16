@@ -1,6 +1,7 @@
 import type { Feature, FeatureCollection, LineString } from "geojson";
 
 export type Locale = "zh-Hant" | "zh-Hans" | "en";
+export type AssistantLocale = Locale | "ja" | "ko" | "pt" | "es";
 
 export interface LocalizedText {
   "zh-Hant": string;
@@ -292,7 +293,7 @@ export interface LearningAssistantAction {
 export interface LearningAssistantAnswer {
   answer: string;
   model: string;
-  locale: Locale;
+  locale: AssistantLocale;
   snapshotAt: string;
   contextSummary: string[];
   action?: LearningAssistantAction;

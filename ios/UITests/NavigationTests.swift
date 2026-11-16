@@ -116,12 +116,12 @@ final class NavigationTests: XCTestCase {
         XCTAssertFalse(input(app, "map-bus-model").exists)
         let mapState = input(app, "transit-map")
         XCTAssertTrue((mapState.value as? String)?.contains("overlays=1;") == true)
-        XCTAssertTrue((mapState.value as? String)?.contains("appleTraffic=0") == true)
+        XCTAssertTrue((mapState.value as? String)?.contains("dashed=0") == true)
         capture("bus-route-only", app: app)
         app.buttons["Traffic along route"].tap()
         XCTAssertTrue(app.staticTexts["bus-route-traffic-legend"].exists)
         XCTAssertTrue((mapState.value as? String)?.contains("overlays=2;") == true)
-        XCTAssertTrue((mapState.value as? String)?.contains("appleTraffic=0") == true)
+        XCTAssertTrue((mapState.value as? String)?.contains("dashed=1") == true)
         capture("bus-route-traffic", app: app)
         app.buttons["Bus route"].tap()
         XCTAssertFalse(app.staticTexts["bus-route-traffic-legend"].exists)
@@ -297,6 +297,53 @@ final class NavigationTests: XCTestCase {
         XCTAssertEqual(destination.value as? String, "Barra Station")
         capture("trip-editor", app: app)
     }
+
+    func testDarkDayTripDetailsAndLocationOrigin() throws {
+        let app = launch("trip", extra: ["-appearance", "dark"])
+        tab(app, "Assistant").tap()
+        app.buttons["Plan a day"].tap()
+        let details = app.buttons["assistant-trip-details"]
+        XCTAssertTrue(details.waitForExistence(timeout: 5))
+        XCTAssertEqual(details.label, "Trip details")
+        capture("trip-details-dark", app: app)
+        details.tap()
+        let destination = input(app, "trip-end")
+        XCTAssertTrue(destination.waitForExistence(timeout: 5))
+        destination.tap()
+        destination.typeText("Barra Station")
+        let preferences = input(app, "trip-preferences")
+        if !preferences.isHittable { app.swipeUp() }
+        preferences.tap()
+        preferences.typeText("History and less walking")
+        let plan = app.navigationBars.buttons["Plan"]
+        XCTAssertTrue(plan.isEnabled)
+        plan.tap()
+        let location = app.buttons["assistant-origin-location"]
+        XCTAssertTrue(location.waitForExistence(timeout: 5))
+        XCTAssertEqual(location.label, "Share current location")
+        capture("day-trip-location-dark", app: app)
+        location.tap()
+        let permission = XCUIApplication(bundleIdentifier: "com.apple.springboard").alerts.firstMatch
+        if permission.waitForExistence(timeout: 2) { permission.buttons["Allow While Using App"].tap() }
+        XCTAssertTrue(app.buttons["Edit places and visit lengths"].waitForExistence(timeout: 10))
+    }
+
+    func testFollowsDeviceLanguage() throws {
+        for (language, assistant, welcome) in [
+            ("ja-JP", "アシスタント", "どこへ行きますか？"),
+            ("ko-KR", "도우미", "어디로 갈까요?"),
+            ("pt-MO", "Assistente", "Para onde vai?"),
+            ("es-ES", "Asistente", "¿Adónde vas?")
+        ] {
+            let app = launch(extra: ["-language", "system", "-AppleLanguages", "(\(language))"])
+            let assistantTab = tab(app, assistant)
+            XCTAssertTrue(assistantTab.waitForExistence(timeout: 8))
+            assistantTab.tap()
+            XCTAssertTrue(app.staticTexts[welcome].waitForExistence(timeout: 5))
+            capture("assistant-\(language)", app: app)
+            app.terminate()
+        }
+    }
     func testFormattedAssistantAndTrafficLegend() throws {
         let app = launch("traffic")
         app.buttons["Traffic"].tap()
@@ -304,30 +351,23 @@ final class NavigationTests: XCTestCase {
         XCTAssertTrue(source.waitForExistence(timeout: 5)); source.tap()
         XCTAssertTrue(app.navigationBars["Traffic legend"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.switches["Show traffic"].exists)
-        app.buttons["Apple Maps"].tap()
-        XCTAssertTrue(app.staticTexts["Apple Maps provides traffic where available."].exists)
-        app.buttons["Done"].tap()
-        XCTAssertEqual(source.value as? String, "Apple Maps")
+        XCTAssertFalse(app.buttons["Apple Maps"].exists)
         let mapState = input(app, "transit-map")
-        let appleLayer = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value CONTAINS %@", "overlays=0;"), object: mapState)
-        XCTAssertEqual(XCTWaiter.wait(for: [appleLayer], timeout: 5), .completed)
-        XCTAssertTrue((mapState.value as? String)?.contains("appleTraffic=1") == true)
-        capture("apple-traffic-layer", app: app)
-        source.tap()
         app.buttons["30 min forecast"].tap()
-        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "forecast for about 30 minutes ahead")).firstMatch.exists)
+        XCTAssertTrue(app.staticTexts["Green clear · Orange slow · Red congested"].exists)
         app.buttons["Done"].tap()
         let forecastLayer = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", "DSAT forecast"), object: source)
         XCTAssertEqual(XCTWaiter.wait(for: [forecastLayer], timeout: 5), .completed)
         XCTAssertTrue((mapState.value as? String)?.contains("overlays=2;") == true)
-        XCTAssertTrue((mapState.value as? String)?.contains("appleTraffic=0") == true)
+        XCTAssertTrue((mapState.value as? String)?.contains("dashed=0") == true)
+        capture("solid-road-forecast", app: app)
         source.tap()
-        app.buttons["DSAT"].tap()
+        app.buttons["Live traffic"].tap()
         app.swipeUp()
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "No confirmed status")).firstMatch.exists)
         capture("traffic-colour-legend", app: app)
         app.buttons["Done"].tap()
-        XCTAssertTrue((mapState.value as? String)?.contains("appleTraffic=0") == true)
+        XCTAssertTrue((mapState.value as? String)?.contains("dashed=0") == true)
         app.buttons["Traffic"].tap()
         XCTAssertFalse(source.exists)
         XCTAssertTrue((mapState.value as? String)?.contains("overlays=0;") == true)

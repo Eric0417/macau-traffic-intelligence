@@ -2,6 +2,22 @@ import XCTest
 @testable import MacauTraffic
 
 @MainActor final class NativeFeatureTests: XCTestCase {
+    func testDeviceLanguageSelectionAndLocalizedFormatting() {
+        XCTAssertEqual(AppLanguage.preferred(in: ["fr-FR", "zh-HK", "en"]), .traditional)
+        XCTAssertEqual(AppLanguage.preferred(in: ["zh-CN"]), .simplified)
+        XCTAssertEqual(AppLanguage.preferred(in: ["yue-Hant-HK"]), .traditional)
+        XCTAssertEqual(AppLanguage.preferred(in: ["pt-MO", "en"]), .portuguese)
+        XCTAssertEqual(AppLanguage.preferred(in: ["de-DE"]), .english)
+        let minutes = 12
+        for (language, title, estimate): (AppLanguage, String, String) in [
+            (.japanese, "旅程の詳細", "約12分"), (.korean, "여행 세부 정보", "약 12분"),
+            (.portuguese, "Detalhes da viagem", "Cerca de 12 min"), (.spanish, "Detalles del viaje", "Unos 12 min")
+        ] {
+            XCTAssertEqual(language.localized("Trip details"), title)
+            XCTAssertEqual(language.localized("About \(minutes) min"), estimate)
+        }
+        XCTAssertEqual(AppLanguage.english.localized("Trip details"), "Trip details")
+    }
     func testAllReadOnlyContractsDecodeCapturedEnvelopes() throws {
         func decode<T: Decodable>(_ name: String, _ type: T.Type) throws {
             let url = try XCTUnwrap(Bundle.main.url(forResource: name, withExtension: "json", subdirectory: "Fixtures"))

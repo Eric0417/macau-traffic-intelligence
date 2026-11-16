@@ -46,7 +46,6 @@ struct TransitMap: View {
     var controlTopPadding: CGFloat = 12
     var viewport: MapViewport?
     var showsPerspective = true
-    var showsAppleTraffic = false
     var fitPadding = UIEdgeInsets(top: 70, left: 40, bottom: 60, right: 40)
     var fitCoordinates: [Coordinate]?
     var onSelect: ((String) -> Void)?
@@ -55,7 +54,7 @@ struct TransitMap: View {
     private var camera: MapViewport { viewport ?? ownViewport }
 
     var body: some View {
-        NativeTransitMap(lines: lines, pins: pins, fitID: fitID, fitPadding: fitPadding, fitCoordinates: fitCoordinates, viewport: camera, animated: !reduceMotion, showsAppleTraffic: showsAppleTraffic, onSelect: onSelect)
+        NativeTransitMap(lines: lines, pins: pins, fitID: fitID, fitPadding: fitPadding, fitCoordinates: fitCoordinates, viewport: camera, animated: !reduceMotion, onSelect: onSelect)
             .overlay(alignment: .topTrailing) {
                 if showsPerspective {
                     PerspectiveButton(viewport: camera).padding(.horizontal, 16).padding(.top, controlTopPadding)
@@ -109,7 +108,6 @@ struct NativeTransitMap: UIViewRepresentable {
     var fitCoordinates: [Coordinate]?
     var viewport: MapViewport
     var animated: Bool
-    var showsAppleTraffic: Bool
     var onSelect: ((String) -> Void)?
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
@@ -130,9 +128,6 @@ struct NativeTransitMap: UIViewRepresentable {
         let coordinator = context.coordinator
         coordinator.parent = self
         viewport.map = map
-        if (map.preferredConfiguration as? MKStandardMapConfiguration)?.showsTraffic != showsAppleTraffic {
-            map.preferredConfiguration = configuration()
-        }
         let margins = NSDirectionalEdgeInsets(top: fitPadding.top, leading: 16, bottom: fitPadding.bottom, trailing: 16)
         if map.directionalLayoutMargins != margins { map.directionalLayoutMargins = margins }
         if coordinator.lines != lines {
@@ -159,7 +154,6 @@ struct NativeTransitMap: UIViewRepresentable {
     private func configuration() -> MKStandardMapConfiguration {
         let configuration = MKStandardMapConfiguration(elevationStyle: .realistic, emphasisStyle: .muted)
         configuration.pointOfInterestFilter = .excludingAll
-        configuration.showsTraffic = showsAppleTraffic
         return configuration
     }
     static func dismantleUIView(_ map: MKMapView, coordinator: Coordinator) {
@@ -239,8 +233,8 @@ struct NativeTransitMap: UIViewRepresentable {
         #if DEBUG
         func describeMap(_ mapView: MKMapView) {
             let center = mapView.centerCoordinate
-            let appleTraffic = (mapView.preferredConfiguration as? MKStandardMapConfiguration)?.showsTraffic == true
-            mapView.accessibilityValue = String(format: "%.5f,%.5f;pitch=%.0f;overlays=%d;span=%.5f;appleTraffic=%d", center.latitude, center.longitude, mapView.camera.pitch, mapView.overlays.count, mapView.region.span.latitudeDelta, appleTraffic ? 1 : 0)
+            let dashed = batches.filter { $0.stroke.dashed }.count
+            mapView.accessibilityValue = String(format: "%.5f,%.5f;pitch=%.0f;overlays=%d;span=%.5f;dashed=%d", center.latitude, center.longitude, mapView.camera.pitch, mapView.overlays.count, mapView.region.span.latitudeDelta, dashed)
         }
         #endif
     }

@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ExploreView: View {
-    private enum TrafficLayer { case dsat, apple, forecast }
+    private enum TrafficLayer { case dsat, forecast }
     @Environment(AppSettings.self) private var settings
     @Environment(LocationService.self) private var location
     @Environment(AppNavigation.self) private var navigation
@@ -25,7 +25,6 @@ struct ExploreView: View {
         guard showTraffic else { return [] }
         switch trafficLayer {
         case .dsat: return roadLines
-        case .apple: return []
         case .forecast: return forecast.fresh(at: date) ? forecastLines : []
         }
     }
@@ -36,7 +35,7 @@ struct ExploreView: View {
                 let route = navigation.journey.map { JourneyMapSnapshot(selection: $0, live: live, now: context.date) }
                 TransitMap(lines: trafficLines(at: context.date) + (route?.lines ?? []), pins: route?.pins ?? [],
                            fitID: navigation.journey.map { $0.id + "-\(navigation.mapRevision)-\(live.selectionID == $0.id && live.geometry != nil)" } ?? "macau",
-                           viewport: viewport, showsPerspective: false, showsAppleTraffic: showTraffic && trafficLayer == .apple,
+                           viewport: viewport, showsPerspective: false,
                            fitPadding: .init(top: 80, left: 40, bottom: navigation.journey == nil ? 180 : 440, right: 40), fitCoordinates: route?.fitCoordinates)
                     .ignoresSafeArea()
             }
@@ -67,7 +66,7 @@ struct ExploreView: View {
         }
         .onChange(of: forecast.meta?.updatedAt) { _, _ in
             forecastLines = (forecast.data?.features ?? []).filter { $0.properties.status != "unknown" }.map {
-                .init(id: $0.properties.id, coordinates: $0.geometry.coordinates, color: trafficColor($0.properties.status), dashed: true, width: 3)
+                .init(id: $0.properties.id, coordinates: $0.geometry.coordinates, color: trafficColor($0.properties.status), width: 3)
             }
         }
         .task(id: "\(navigation.mapRevision)-\(navigation.journey?.id ?? "")-\(navigation.tab)-\(scenePhase)-\(settings.language)") {
@@ -90,8 +89,7 @@ struct ExploreView: View {
                 List {
                     Section {
                         Picker(settings.text("路況來源", "Traffic source"), selection: $trafficLayer) {
-                            Text(settings.text("交通事務局", "DSAT")).tag(TrafficLayer.dsat)
-                            Text(settings.text("Apple 地圖", "Apple Maps")).tag(TrafficLayer.apple)
+                            Text(settings.text("即時路況", "Live traffic")).tag(TrafficLayer.dsat)
                             Text(settings.text("30 分鐘預測", "30 min forecast")).tag(TrafficLayer.forecast)
                         }.pickerStyle(.segmented).accessibilityIdentifier("traffic-layer-picker")
                     }
@@ -103,16 +101,11 @@ struct ExploreView: View {
                             legendRow(.gray, title: settings.text("未知", "Unknown"), detail: settings.text("未有確認路況，唔代表暢通", "No confirmed status; does not mean clear"))
                         }
                         SourceNote(meta: roads.meta, error: roads.error)
-                    } else if trafficLayer == .forecast {
+                    } else {
                         Section {
-                            Text(settings.text("虛線係交通事務局對約 30 分鐘後嘅預測。", "Dashed lines show DSAT’s forecast for about 30 minutes ahead."))
                             Text(settings.text("綠 暢通 · 橙 緩慢 · 紅 擠塞", "Green clear · Orange slow · Red congested"))
                         }.foregroundStyle(.secondary)
                         SourceNote(meta: forecast.meta, error: forecast.error)
-                    } else {
-                        Section {
-                            Text(settings.text("Apple 地圖提供路況，覆蓋視乎路段。", "Apple Maps provides traffic where available.")).foregroundStyle(.secondary)
-                        }
                     }
                 }.navigationTitle(settings.text("路況圖例", "Traffic legend")).navigationBarTitleDisplayMode(.inline)
                     .toolbar { ToolbarItem(placement: .confirmationAction) { Button(settings.text("完成", "Done")) { showSources = false } } }
@@ -135,14 +128,12 @@ struct ExploreView: View {
     }
     private var trafficStatus: some View {
         TimelineView(.periodic(from: .now, by: 2)) { context in
-            let apple = trafficLayer == .apple
             let predicted = trafficLayer == .forecast
             let resource = visibleRoads
-            let delayed = !apple && (resource.error != nil || resource.meta?.isDelayed(at: context.date) == true)
+            let delayed = resource.error != nil || resource.meta?.isDelayed(at: context.date) == true
             Button { showSources = true } label: {
                 HStack(spacing: 8) {
-                    if apple { Image(systemName: "map") }
-                    else if resource.loading { ProgressView().controlSize(.small) }
+                    if resource.loading { ProgressView().controlSize(.small) }
                     else if delayed { Image(systemName: "clock.badge.exclamationmark").foregroundStyle(.orange) }
                     else if predicted { Image(systemName: "clock.arrow.circlepath") }
                     else {
@@ -152,15 +143,13 @@ struct ExploreView: View {
                             Circle().fill(.red)
                         }.frame(width: 26, height: 6)
                     }
-                    (apple ? Text(settings.text("Apple 路況", "Apple traffic")) :
-                        predicted ? Text(settings.text(delayed ? "預測暫未更新" : "30 分鐘預測", delayed ? "Forecast delayed" : "30 min forecast")) :
+                    (predicted ? Text(settings.text(delayed ? "預測暫未更新" : "30 分鐘預測", delayed ? "Forecast delayed" : "30 min forecast")) :
                         Text(settings.text(delayed ? "路況資料延遲" : "路況", delayed ? "Traffic data delayed" : "Traffic")))
                         .font(.caption.weight(.medium))
                     Image(systemName: "info.circle").font(.caption)
                 }.padding(.horizontal, 14).frame(minHeight: 44).contentShape(Capsule()).glassEffect(.regular.interactive(), in: .capsule)
             }.buttonStyle(.plain).accessibilityLabel(settings.text("路況資料", "Traffic sources"))
-                .accessibilityValue(apple ? settings.text("Apple 地圖", "Apple Maps") :
-                    delayed ? settings.text("資料延遲", "Data delayed") : resource.loading || resource.meta == nil ? settings.text("更新中", "Updating") :
+                .accessibilityValue(delayed ? settings.text("資料延遲", "Data delayed") : resource.loading || resource.meta == nil ? settings.text("更新中", "Updating") :
                     predicted ? settings.text("交通事務局預測", "DSAT forecast") : settings.text("最新資料", "Up to date"))
         }
     }

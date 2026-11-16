@@ -62,9 +62,15 @@ struct LocalizedName: Codable {
     var traditional: String
     var simplified: String
     var en: String
-    enum CodingKeys: String, CodingKey { case traditional = "zh-Hant", simplified = "zh-Hans", en }
+    var pt: String?
+    enum CodingKeys: String, CodingKey { case traditional = "zh-Hant", simplified = "zh-Hans", en, pt }
     func value(_ language: AppLanguage) -> String {
-        switch language { case .traditional: traditional; case .simplified: simplified; case .english: en }
+        switch language {
+        case .traditional: traditional
+        case .simplified: simplified
+        case .portuguese: pt.flatMap { $0.isEmpty ? nil : $0 } ?? en
+        default: en
+        }
     }
 }
 

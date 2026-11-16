@@ -1,0 +1,2 @@
+"NSLocationWhenInUseUsageDescription" = "リクエストに応じて、現在地で近くの停留所や駐車場を探したり、経路を計画したりします。";
+"NSMicrophoneUsageDescription" = "最大20秒録音できます。DeepSeekが編集可能なテキストに変換します。";

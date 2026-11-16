@@ -15,7 +15,7 @@ import type {
   BusRoute,
   LearningAssistantAnswer,
   LearningAssistantAction,
-  Locale,
+  AssistantLocale,
   LocalizedText,
   LrtNetwork,
   LrtNotice,
@@ -139,8 +139,9 @@ export interface AssistantAnswerResult {
   refreshes: Array<() => Promise<void>>;
 }
 
-function pickName(name: LocalizedText, locale: Locale): string {
-  return name[locale] || name["zh-Hant"] || name.en;
+function pickName(name: LocalizedText, locale: AssistantLocale): string {
+  const localized = locale === "zh-Hant" || locale === "zh-Hans" || locale === "pt" ? name[locale] : name.en;
+  return localized || name.en || name["zh-Hant"];
 }
 
 function truncate(value: string, maxLength: number): string {
@@ -198,7 +199,7 @@ export function extractPlaceQuery(question: string): string | null {
 export function findMentionedSegments(
   question: string,
   roads: RoadCollection | null,
-  locale: Locale,
+  locale: AssistantLocale,
 ): NonNullable<LearningSnapshot["roads"]>["mentionedSegments"] {
   if (!roads || !question.trim()) return [];
   const haystack = question.toLowerCase();
@@ -243,7 +244,7 @@ export function findMentionedSegments(
 
 function summariseLrt(
   network: LrtNetwork | null,
-  locale: Locale,
+  locale: AssistantLocale,
 ): LearningSnapshot["lrt"] {
   if (!network) return null;
   const stationCountByLine = new Map<string, number>();
@@ -332,7 +333,7 @@ export function matchLrtStation(
 
 function summariseRoads(
   roads: RoadCollection | null,
-  locale: Locale,
+  locale: AssistantLocale,
   question: string,
 ): LearningSnapshot["roads"] {
   if (!roads) return null;
@@ -369,7 +370,7 @@ function summariseRoads(
 
 function summariseBridges(
   bridges: BridgeTime[] | null,
-  locale: Locale,
+  locale: AssistantLocale,
 ): LearningSnapshot["bridges"] {
   if (!bridges) return null;
   return bridges.map((bridge) => ({
@@ -413,7 +414,7 @@ function summariseParking(
 
 function summariseBorders(
   borders: BorderStatus[] | null,
-  locale: Locale,
+  locale: AssistantLocale,
 ): LearningSnapshot["borders"] {
   if (!borders) return null;
   return borders.map((border) => ({
@@ -482,7 +483,7 @@ function summariseBusSlice(
 
 
 export async function buildLearningSnapshot(
-  locale: Locale,
+  locale: AssistantLocale,
   options: { focus?: AssistantFocus; question?: string } = {},
 ): Promise<{
   snapshot: LearningSnapshot;
@@ -657,10 +658,10 @@ export async function buildLearningSnapshot(
   return { snapshot, refreshes, action };
 }
 
-const localeName: Record<Locale, string> = {
+const localeName: Record<AssistantLocale, string> = {
   "zh-Hant": "Traditional Chinese as written in Macao",
   "zh-Hans": "Simplified Chinese",
-  en: "English",
+  en: "English", ja: "Japanese", ko: "Korean", pt: "Portuguese as used in Macao", es: "Spanish",
 };
 
 function assistantLocalTime(value: string | null): string | null {
@@ -669,7 +670,7 @@ function assistantLocalTime(value: string | null): string | null {
 
 export function buildAssistantMessages(
   question: string,
-  locale: Locale,
+  locale: AssistantLocale,
   snapshot: LearningSnapshot,
   history?: AssistantJourneyRequest["history"],
 ): Array<{ role: "system" | "user"; content: string }> {
@@ -824,10 +825,10 @@ async function readAssistantStream(response: Response, onText: (delta: string) =
   }
 }
 
-function contextSummary(snapshot: LearningSnapshot, locale: Locale): string[] {
+function contextSummary(snapshot: LearningSnapshot, locale: AssistantLocale): string[] {
   const items: string[] = [];
   const join = (zhHant: string, zhHans: string, en: string) =>
-    locale === "en" ? en : locale === "zh-Hans" ? zhHans : zhHant;
+    locale !== "zh-Hant" && locale !== "zh-Hans" ? en : locale === "zh-Hans" ? zhHans : zhHant;
 
   if (snapshot.roads) {
     items.push(
@@ -950,19 +951,19 @@ function contextSummary(snapshot: LearningSnapshot, locale: Locale): string[] {
 function placeCheckSentence(
   check: NonNullable<NonNullable<LearningSnapshot["bus"]>["placeCheck"]>,
   route: string,
-  locale: Locale,
+  locale: AssistantLocale,
 ): string {
   const direction =
     check.direction === null
       ? null
-      : locale === "en"
+      : locale !== "zh-Hant" && locale !== "zh-Hans"
         ? check.direction === 0
           ? "outbound"
           : "return"
         : check.direction === 0
           ? "去程"
           : "回程";
-  if (locale === "en") {
+  if (locale !== "zh-Hant" && locale !== "zh-Hans") {
     return check.served
       ? `Checked against the official stop list: route ${route} does serve ${check.place}${direction ? ` (${direction} trip)` : ""}.`
       : `Checked against the official stop list: route ${route} does not serve ${check.place}.`;
@@ -983,7 +984,7 @@ function placeCheckSentence(
 
 export async function askLearningAssistant(params: {
   question: string;
-  locale: Locale;
+  locale: AssistantLocale;
   focus?: AssistantFocus;
   signal?: AbortSignal;
   history?: AssistantJourneyRequest["history"];

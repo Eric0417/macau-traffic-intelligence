@@ -4,7 +4,7 @@ import MapKit
 enum ParkingKind: String, CaseIterable, Identifiable {
     case lightVehicle, motorcycle, electricVehicle, electricMotorcycle, accessible, heavyVehicleShort, heavyVehicleLong
     var id: String { rawValue }
-    var labels: (String, String) {
+    var labels: (String, String.LocalizationValue) {
         switch self {
         case .lightVehicle: ("輕型車", "Cars")
         case .motorcycle: ("電單車", "Motorcycles")

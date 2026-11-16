@@ -52,11 +52,13 @@ The native stop diagram places a vehicle between stops when its official estimat
 
 The bus route map draws the selected route's official stop-to-stop geometry in blue by default. The along-route mode colours those same segments using published bus-route traffic categories. Unknown or delayed categories appear dashed. Explore traffic layers are separate from this map.
 
-Explore's optional Apple Maps traffic mode uses MapKit's built-in layer and attribution. Apple controls its geographic coverage and refresh. It displays separately from the DSAT road overlay and contributes no data to server or assistant estimates. DSAT road reads in Explore follow the server's existing TTL and make one follow-up after three seconds on a stale response, then resume regular polling if it is still stale. See ADR 0028. The road-inference experiment in `docs/qa/traffic-estimation/RESEARCH.md` remains offline. DSAT unknown roads remain unknown.
+DSAT road reads in Explore follow the server's existing TTL and make one follow-up after three seconds on a stale response, then resume regular polling if it is still stale. See ADR 0028. The road-inference experiment in `docs/qa/traffic-estimation/RESEARCH.md` remains offline. DSAT unknown roads remain unknown.
 
-Explore's third layer uses `GET /api/v1/traffic/forecast`. The server joins DSAT's public Traffic Situation road geometry and 30-minute categories by road section ID. The app draws known categories as dashed lines and drops expired forecasts. The upstream response contains no issue time; displayed source time is retrieval time. See ADR 0030.
+Explore's forecast layer uses `GET /api/v1/traffic/forecast`. The server joins DSAT's public Traffic Situation road geometry and 30-minute categories by road section ID. The app draws known categories as solid lines and drops expired forecasts. The upstream response contains no issue time; displayed source time is retrieval time. See ADR 0030.
 
 Native assistant requests carry up to six recent question and reply pairs in the optional journey history field. Structured results contribute a short text summary without coordinate fields. This history is sent to the configured provider and is not persisted or cached by the app or server. NDJSON text deltas appear as they arrive; a complete response is required before a turn enters history. See ADR 0029.
+
+Assistant request locales also accept `ja`, `ko`, `pt` and `es`. Generated answers are requested in that language and source fields keep their published names. Fixed backend text without a translation uses English for these locales. Once the other day-trip details are complete, a blank origin returns the existing explicit location choice. GPS is sent only when the user chooses to share it. See ADR 0031.
 
 
 ## Adapter notes

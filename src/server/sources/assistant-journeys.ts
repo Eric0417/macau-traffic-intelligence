@@ -54,7 +54,7 @@ function inMacau([lng, lat]: AssistantPlace["coordinates"]) {
 }
 
 function copy(locale: AssistantJourneyRequest["locale"]) {
-  return (hant: string, hans: string, en: string) => locale === "en" ? en : locale === "zh-Hans" ? hans : hant;
+  return (hant: string, hans: string, en: string) => locale === "zh-Hant" ? hant : locale === "zh-Hans" ? hans : en;
 }
 
 export type JourneyPlanningEvent =

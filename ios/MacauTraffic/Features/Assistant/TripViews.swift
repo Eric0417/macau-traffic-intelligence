@@ -77,7 +77,7 @@ struct TripEditorView: View {
         !draft.stops.contains { $0.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty } &&
         (draft.mode != "ordered" || !draft.stops.isEmpty) &&
         (!(draft.mode == "day" || (useSchedule && includeEndTime)) || clock(end) > clock(start)) &&
-        (draft.mode != "day" || [draft.endQuery, draft.preferences, draft.originQuery].allSatisfy { $0?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false })
+        (draft.mode != "day" || [draft.endQuery, draft.preferences].allSatisfy { $0?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false })
     }
     private func limited(_ text: String, _ count: Int) -> String? {
         let value = String(text.prefix(count))

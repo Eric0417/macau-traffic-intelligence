@@ -86,11 +86,17 @@ it("asks for missing day-trip details without calling the model or sources", asy
   const model = vi.spyOn(assistant, "callAssistantProvider");
   const read = vi.spyOn(cache, "readSource");
   const { data } = await planAssistantJourney({ question: "傳統文化一日遊", locale: "zh-Hant", trip: tripDraftSchema.parse({ mode: "day", theme: "傳統文化" }) });
-  expect(data).toMatchObject({ kind: "trip-details", missing: ["date", "startTime", "endTime", "originQuery", "endQuery", "preferences"] });
+  expect(data).toMatchObject({ kind: "trip-details", missing: ["date", "startTime", "endTime", "endQuery", "preferences"] });
   expect(model).not.toHaveBeenCalled(); expect(read).not.toHaveBeenCalled();
 });
 
 const day = () => tripDraftSchema.parse({ mode: "day", theme: "文化", date: "2026-11-18", startTime: "09:00", endTime: "18:00", originQuery: "地點0", endQuery: "地點0", preferences: "輕鬆步行" });
+it("asks for the day-trip location after the form is complete without a typed origin", async () => {
+  sources();
+  const trip = { ...day(), originQuery: undefined };
+  const { data } = await planAssistantJourney({ question: "文化一日遊", locale: "zh-Hant", trip });
+  expect(data).toMatchObject({ kind: "trip-location", draft: { endQuery: trip.endQuery, preferences: trip.preferences } });
+});
 it("excludes weekly closures and verifies complete day-trip alternatives and their return connection", async () => {
   sources();
   vi.spyOn(assistant, "callAssistantProvider").mockImplementation(async messages => {

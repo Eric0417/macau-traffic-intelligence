@@ -298,7 +298,7 @@ struct BusRouteMap: View {
                 return .init(id: "\(index)", coordinates: segment.coordinates,
                              color: showsRouteTraffic ? trafficColor(status) : .blue,
                              dashed: showsRouteTraffic && status == "unknown")
-            }, pins: stops + vehicles, fitID: "\(eta?.routeCode ?? ""):\(eta?.direction ?? 0):\(initialVehicle ?? "route")", viewport: viewport, showsAppleTraffic: false,
+            }, pins: stops + vehicles, fitID: "\(eta?.routeCode ?? ""):\(eta?.direction ?? 0):\(initialVehicle ?? "route")", viewport: viewport,
                fitPadding: .init(top: 35, left: 30, bottom: 35, right: 30),
                fitCoordinates: initialVehicle.flatMap { id in eta?.vehicles.first(where: { $0.id == id && $0.positionSource == "feed" })?.coordinates }.map { [$0] },
                onSelect: { id in

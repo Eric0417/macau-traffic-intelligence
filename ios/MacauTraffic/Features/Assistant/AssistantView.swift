@@ -135,7 +135,7 @@ struct AssistantView: View {
             }
         }.padding(.bottom, 16)
     }
-    private func suggestion(_ chinese: String, _ english: String, _ symbol: String, question: String) -> some View {
+    private func suggestion(_ chinese: String, _ english: String.LocalizationValue, _ symbol: String, question: String) -> some View {
         Button { state.draft = question; submit() } label: {
             HStack(spacing: 14) {
                 Image(systemName: symbol).frame(width: 24).foregroundStyle(.secondary)
@@ -164,7 +164,9 @@ struct AssistantView: View {
         case .emergency:
             VStack(alignment: .leading, spacing: 14) {
                 Text(settings.text("需要緊急救護，請直接致電 999。", "For an emergency ambulance in Macau, call 999.")).font(.title3.bold())
-                Link(settings.text("致電 999", "Call 999"), destination: URL(string: "tel:999")!).buttonStyle(.borderedProminent)
+                Link(destination: URL(string: "tel:999")!) {
+                    Text(settings.text("致電 999", "Call 999")).foregroundStyle(Color(.systemBackground))
+                }.buttonStyle(.borderedProminent)
                 Link(settings.text("衛生局急救服務資訊", "Health Bureau emergency service"), destination: URL(string: "https://www.gov.mo/en/services/ps-1544/")!)
             }.readingCard()
         case .location(let place): locationPrompt(title: settings.text("由邊度去 ", "Where are you starting for ") + place.name)
@@ -183,7 +185,9 @@ struct AssistantView: View {
         case .tripDetails(let value):
             VStack(alignment: .leading, spacing: 14) {
                 Text(value.message ?? settings.text("加返日期、時間同偏好，就可以安排完整行程。", "Add your date, times and preferences to plan the trip."))
-                Button(settings.text("填寫行程資料", "Trip details")) { editingTrip = .init(draft: value.draft, newTrip: false) }.buttonStyle(.borderedProminent)
+                Button { editingTrip = .init(draft: value.draft, newTrip: false) } label: {
+                    Text(settings.text("填寫行程資料", "Trip details")).foregroundStyle(Color(.systemBackground))
+                }.buttonStyle(.borderedProminent).accessibilityIdentifier("assistant-trip-details")
             }.readingCard()
         case .nearby(let answer): AnswerView(answer: answer)
         case .plans(let plans):
@@ -229,7 +233,7 @@ struct AssistantView: View {
             Button {
                 locationTask = Task {
                     do { let coordinate = try await location.request(); try Task.checkCancellation(); locationError = nil; state.useOrigin(coordinate: coordinate) }
-                    catch is CancellationError {} catch { locationError = error.localizedDescription }
+                    catch is CancellationError {} catch { locationError = settings.description(for: error) }
                 }
             } label: {
                 Label(settings.text("分享目前位置", "Share current location"), systemImage: "location.fill")

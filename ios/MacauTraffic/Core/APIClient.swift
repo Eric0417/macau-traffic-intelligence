@@ -140,12 +140,17 @@ enum APIError: Error, LocalizedError {
 enum FixtureLoader {
     static func response<T: Decodable>(_ path: String, body: Data?) throws -> T {
         var name = path.components(separatedBy: "?")[0].replacingOccurrences(of: "/", with: "_")
+        var tripLocation: TripDraft?
         if name == "bus_routes_00056_eta" && ProcessInfo.processInfo.arguments.contains("--scenario=bus") { name += "_vehicles" }
         if path == "assistant/journeys" {
             let request = body.flatMap { try? JSONDecoder().decode(AssistantRequest.self, from: $0) }
             let scenario = ProcessInfo.processInfo.arguments.first { $0.hasPrefix("--scenario=") }?.components(separatedBy: "=").last ?? "journey"
             switch scenario {
-            case "trip": name = request?.trip == nil ? "assistant_trip_details" : "assistant_itineraries"
+            case "trip":
+                if let trip = request?.trip, request?.origin == nil, trip.originQuery == nil, trip.originId == nil {
+                    name = "assistant_trip_details"
+                    tripLocation = trip
+                } else { name = request?.trip == nil ? "assistant_trip_details" : "assistant_itineraries" }
             case "facilities": name = "assistant_facilities"
             case "choice": name = "assistant_trip_choice"
             case "traffic": name = "assistant_traffic"
@@ -156,6 +161,9 @@ enum FixtureLoader {
         guard let url = Bundle.main.url(forResource: name, withExtension: "json", subdirectory: "Fixtures") else { throw APIError.http(503) }
         let data = try Data(contentsOf: url)
         guard var object = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { throw APIError.invalidResponse }
+        if let tripLocation {
+            object["data"] = ["kind": "trip-location", "draft": try JSONSerialization.jsonObject(with: JSONEncoder().encode(tripLocation))]
+        }
         if var meta = object["meta"] as? [String: Any] {
             let now = ISO8601DateFormatter().string(from: .now)
             meta["generatedAt"] = now; meta["updatedAt"] = now; object["meta"] = meta

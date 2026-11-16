@@ -1,6 +1,7 @@
 import SwiftUI
 
 @main struct MacauTrafficApp: App {
+    @Environment(\.scenePhase) private var phase
     @State private var settings = AppSettings()
     @State private var location = LocationService()
     @State private var navigation = AppNavigation()
@@ -9,6 +10,7 @@ import SwiftUI
             RootView().environment(settings).environment(location).environment(navigation)
                 .preferredColorScheme(settings.colorScheme)
                 .environment(\.locale, Locale(identifier: settings.language.rawValue))
+                .onChange(of: phase) { _, value in if value == .active { settings.refreshSystemLanguage() } }
         }
     }
 }

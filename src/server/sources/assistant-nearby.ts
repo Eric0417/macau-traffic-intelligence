@@ -12,7 +12,7 @@ const answerSchema = z.object({ summary: z.string().trim().min(1).max(800), ids:
 export async function planNearby(request: AssistantJourneyRequest, kind: "parking" | "bus-stops", originQuery?: string, signal?: AbortSignal): Promise<{ data: AssistantJourneyResult; refreshes: Array<() => Promise<void>> }> {
   const refreshes: Array<() => Promise<void>> = [];
   const result = (data: AssistantJourneyResult) => ({ data, refreshes });
-  const text = (hant: string, hans: string, en: string) => request.locale === "en" ? en : request.locale === "zh-Hans" ? hans : hant;
+  const text = (hant: string, hans: string, en: string) => request.locale === "zh-Hant" ? hant : request.locale === "zh-Hans" ? hans : en;
   let origin: AssistantPlace | undefined;
   if (originQuery || request.originId) {
     const [bus, walking] = await Promise.all([readSource(sources.busNetwork), readSource(sources.walkingNetwork)]);

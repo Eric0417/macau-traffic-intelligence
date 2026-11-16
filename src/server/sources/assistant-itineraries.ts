@@ -24,8 +24,8 @@ export async function planItinerary(request: AssistantJourneyRequest, input: Tri
   const draft = structuredClone(input);
   const refreshes: Array<() => Promise<void>> = [];
   const result = (data: AssistantJourneyResult) => ({ data, refreshes });
-  const text = (hant: string, hans: string, en: string) => request.locale === "en" ? en : request.locale === "zh-Hans" ? hans : hant;
-  const missing = missingTripDetails(draft);
+  const text = (hant: string, hans: string, en: string) => request.locale === "zh-Hant" ? hant : request.locale === "zh-Hans" ? hans : en;
+  const missing = missingTripDetails(draft).filter(field => field !== "originQuery");
   if (missing.length) return result({ kind: "trip-details", draft, missing });
   if (draft.mode === "day" && (timeMinutes(draft.endTime!) <= timeMinutes(draft.startTime!) || draft.date! < new Date(Date.now() + 8 * 3600_000).toISOString().slice(0, 10))) {
     return result({ kind: "trip-details", draft, missing: ["date", "startTime", "endTime"], message: text("請選今日或之後嘅日期，結束時間要遲過開始時間。", "请选择今天或之后的日期，结束时间须晚于开始时间。", "Choose today or a future date, with an end time after the start.") });
@@ -116,7 +116,7 @@ export async function planItinerary(request: AssistantJourneyRequest, input: Tri
       });
       const slots = scheduleVisits(visits, draft.startTime!, draft.endTime!);
       if (!slots) continue;
-      const stops: ItineraryStop[] = [start, ...visits.map((v, i) => ({ id: v.placeId, name: request.locale === "en" ? v.nameEn : v.name, coordinates: v.coordinates,
+      const stops: ItineraryStop[] = [start, ...visits.map((v, i) => ({ id: v.placeId, name: request.locale === "zh-Hant" || request.locale === "zh-Hans" ? v.name : v.nameEn, coordinates: v.coordinates,
         visit: true, stayMinutes: v.minutes, targetTime: minuteTime(slots[i]), sourceUrl: v.sourceUrl, checkedAt: v.checkedAt,
         hours: `${minuteTime(v.opens)}–${minuteTime(v.closes)}${v.lastAdmission ? ` (${text("最後入場", "最后入场", "last admission")} ${minuteTime(v.lastAdmission)})` : ""}`,
       }))];

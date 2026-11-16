@@ -232,9 +232,11 @@ export const lrtNoticeSchema = z.object({
   active: z.boolean(),
 });
 
+const assistantLocaleSchema = z.enum(["zh-Hant", "zh-Hans", "en", "ja", "ko", "pt", "es"]);
+
 export const learningAssistantRequestSchema = z.object({
   question: z.string().trim().min(2).max(500),
-  locale: z.enum(["zh-Hant", "zh-Hans", "en"]),
+  locale: assistantLocaleSchema,
   focus: z
     .object({
       routeCode: z.string().trim().min(1).max(12),
@@ -246,7 +248,7 @@ export const learningAssistantRequestSchema = z.object({
 export const learningAssistantAnswerSchema = z.object({
   answer: z.string().min(1),
   model: z.string().min(1),
-  locale: z.enum(["zh-Hant", "zh-Hans", "en"]),
+  locale: assistantLocaleSchema,
   snapshotAt: z.string(),
   contextSummary: z.array(z.string()),
   action: z
@@ -273,7 +275,7 @@ export const contractBySource = {
 
 export const assistantJourneyRequestSchema = z.object({
   question: z.string().trim().min(1).max(500),
-  locale: z.enum(["zh-Hant", "zh-Hans", "en"]).default("zh-Hant"),
+  locale: assistantLocaleSchema.default("zh-Hant"),
   destinationId: z.string().min(1).max(120).optional(),
   origin: z.tuple([z.number().min(-180).max(180), z.number().min(-90).max(90)]).optional(),
   originQuery: z.string().trim().min(1).max(150).optional(),

@@ -1,5 +1,11 @@
 # Changelog
 
+## Macao Move system languages and day-trip location - 2026-11-16
+
+- Follow the device language by default, with a language override in Settings. Add Japanese, Korean, Portuguese and Spanish interface and assistant support.
+- Restore contrast on the day-trip details and location actions in dark appearance. Let a completed day-trip form request a location after submission when the origin is blank.
+- Offer live traffic and the 30-minute forecast in Explore. Draw predictions as solid lines and remove the Apple Maps traffic choice.
+
 ## Macao Move conversation and traffic outlook - 2026-11-16
 
 - Keep up to six recent exchanges in the native assistant. Resolve references and route revisions against that context and run the original verification rules on each turn.

@@ -39,7 +39,10 @@ struct SettingsView: View {
         @Bindable var settings = settings
         Form {
                 Section {
-                    Picker(settings.text("語言", "Language"), selection: $settings.language) { ForEach(AppLanguage.allCases, id: \.self) { Text($0.name).tag($0) } }
+                    Picker(settings.text("語言", "Language"), selection: $settings.languageOverride) {
+                        Text(settings.text("跟隨系統", "System")).tag(nil as AppLanguage?)
+                        ForEach(AppLanguage.allCases, id: \.self) { Text($0.name).tag(Optional($0)) }
+                    }
                     Picker(settings.text("外觀", "Appearance"), selection: $settings.appearance) {
                         Text(settings.text("跟隨系統", "System")).tag("system")
                         Text(settings.text("淺色", "Light")).tag("light")

@@ -3,15 +3,15 @@ import type { AssistantPlace } from "@/lib/assistant-journey";
 import { BUS_JOURNEY_ACCESS_METERS, planBusJourneys, type BusJourney, type BusNetwork } from "@/lib/bus-journey";
 import { createWalkingRouter, type WalkingNetwork } from "@/lib/walking-network";
 import { distanceMeters } from "@/lib/resident-tools";
-import type { Locale } from "@/lib/types";
+import type { AssistantLocale } from "@/lib/types";
 import { readSource, type SourceRead } from "@/server/cache";
 import { busDiversionSource } from "./bus";
 
-export async function journeyCandidates(bus: BusNetwork, walking: WalkingNetwork, origin: AssistantPlace, destination: AssistantPlace, locale: Locale, departureMinute?: number, router?: ReturnType<typeof createWalkingRouter>, checkCurrentSuspensions = departureMinute !== undefined, signal?: AbortSignal) {
+export async function journeyCandidates(bus: BusNetwork, walking: WalkingNetwork, origin: AssistantPlace, destination: AssistantPlace, locale: AssistantLocale, departureMinute?: number, router?: ReturnType<typeof createWalkingRouter>, checkCurrentSuspensions = departureMinute !== undefined, signal?: AbortSignal) {
   signal?.throwIfAborted();
   const started = performance.now();
   router ??= createWalkingRouter(walking);
-  const text = (hant: string, hans: string, en: string) => locale === "en" ? en : locale === "zh-Hans" ? hans : hant;
+  const text = (hant: string, hans: string, en: string) => locale === "zh-Hant" ? hant : locale === "zh-Hans" ? hans : en;
   const refreshes: Array<() => Promise<void>> = [];
   const access = router(origin.coordinates), egress = router(destination.coordinates, true);
   const walkingMs = Math.round(performance.now() - started);
