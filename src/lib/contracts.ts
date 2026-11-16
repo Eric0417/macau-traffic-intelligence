@@ -60,6 +60,17 @@ export const busCompanySchema = z.object({
   color: z.enum(["blue", "orange"]),
 });
 
+const timetableTimeSchema = z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/);
+export const busTimetableSchema = z.object({
+  checkedAt: z.string().date(),
+  sourceUrl: z.url().regex(/^https:\/\/www\.dsat\.gov\.mo\/dsat\/route_display\.aspx\?route=busroute_[0-9A-Z]+$/),
+  schedules: z.array(z.object({
+    days: z.enum(["daily", "mon-fri-except-public", "mon-sat-except-public", "mon-fri-except-mandatory", "mon-sat-except-mandatory", "mon-fri-except-public-and-um"]),
+    towards: z.string().optional(),
+    periods: z.array(z.object({ start: timetableTimeSchema, end: timetableTimeSchema.optional() })).min(1),
+  })).min(1),
+});
+
 export const busRouteSchema = z.object({
   routeName: z.string(),
   routeCode: z.string(),
@@ -67,6 +78,7 @@ export const busRouteSchema = z.object({
   company: busCompanySchema,
   hasChange: z.boolean(),
   live: z.boolean(),
+  timetable: busTimetableSchema.optional(),
 });
 
 export const busArrivalEstimateSchema = z.object({

@@ -1,0 +1,1634 @@
+{
+  "1": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_1",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:00",
+            "end": "01:15"
+          }
+        ],
+        "towards": "媽閣"
+      },
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "05:45",
+            "end": "00:45"
+          }
+        ],
+        "towards": "關閘"
+      }
+    ]
+  },
+  "10": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_10",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:00",
+            "end": "01:15"
+          }
+        ],
+        "towards": "媽閣"
+      },
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "05:45",
+            "end": "00:40"
+          }
+        ],
+        "towards": "關閘"
+      }
+    ]
+  },
+  "101": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_101",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "00:00",
+            "end": "23:50"
+          }
+        ]
+      }
+    ]
+  },
+  "102": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_102",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:00",
+            "end": "00:00"
+          }
+        ],
+        "towards": "橫琴澳方口岸"
+      },
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:00",
+            "end": "00:00"
+          }
+        ],
+        "towards": "港珠澳大橋邊檢大樓"
+      }
+    ]
+  },
+  "103": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_103",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:00",
+            "end": "23:30"
+          }
+        ]
+      }
+    ]
+  },
+  "10B": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_10B",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:00",
+            "end": "01:15"
+          }
+        ]
+      }
+    ]
+  },
+  "11": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_11",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:10",
+            "end": "00:00"
+          }
+        ]
+      }
+    ]
+  },
+  "12": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_12",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:00",
+            "end": "23:50"
+          }
+        ]
+      }
+    ]
+  },
+  "15": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_15",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "05:30",
+            "end": "19:30"
+          }
+        ]
+      }
+    ]
+  },
+  "16": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_16",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:00",
+            "end": "01:00"
+          }
+        ]
+      }
+    ]
+  },
+  "16S": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_16S",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:30",
+            "end": "20:00"
+          }
+        ]
+      }
+    ]
+  },
+  "17": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_17",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "05:30",
+            "end": "00:50"
+          }
+        ]
+      }
+    ]
+  },
+  "17S": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_17S",
+    "schedules": [
+      {
+        "days": "mon-sat-except-public",
+        "periods": [
+          {
+            "start": "06:45",
+            "end": "09:30"
+          },
+          {
+            "start": "15:30",
+            "end": "20:00"
+          }
+        ],
+        "towards": "關閘"
+      },
+      {
+        "days": "mon-sat-except-public",
+        "periods": [
+          {
+            "start": "06:45",
+            "end": "09:30"
+          },
+          {
+            "start": "15:30",
+            "end": "19:30"
+          }
+        ],
+        "towards": "新口岸/科英布拉街"
+      }
+    ]
+  },
+  "18": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_18",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:00",
+            "end": "01:10"
+          }
+        ],
+        "towards": "媽閣"
+      },
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "05:45",
+            "end": "00:40"
+          }
+        ],
+        "towards": "牧場街"
+      }
+    ]
+  },
+  "18A": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_18A",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:20",
+            "end": "23:40"
+          }
+        ]
+      }
+    ]
+  },
+  "18B": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_18B",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "07:00",
+            "end": "22:00"
+          }
+        ],
+        "towards": "媽閣"
+      },
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "07:00",
+            "end": "22:00"
+          }
+        ],
+        "towards": "永定街"
+      }
+    ]
+  },
+  "19": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_19",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:15",
+            "end": "00:00"
+          }
+        ]
+      }
+    ]
+  },
+  "1A": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_1A",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:00",
+            "end": "00:10"
+          }
+        ],
+        "towards": "新口岸/科英布拉街"
+      },
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:00",
+            "end": "00:10"
+          }
+        ],
+        "towards": "筷子基街"
+      }
+    ]
+  },
+  "2": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_2",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:15",
+            "end": "00:00"
+          }
+        ],
+        "towards": "媽閣"
+      },
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:30",
+            "end": "00:20"
+          }
+        ],
+        "towards": "永寧廣場"
+      }
+    ]
+  },
+  "21A": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_21A",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:20",
+            "end": "23:30"
+          }
+        ],
+        "towards": "九澳油庫"
+      },
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "07:20",
+            "end": "00:30"
+          }
+        ],
+        "towards": "媽閣"
+      }
+    ]
+  },
+  "22": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_22",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:15",
+            "end": "00:10"
+          }
+        ]
+      }
+    ]
+  },
+  "23": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_23",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:30",
+            "end": "23:30"
+          }
+        ]
+      }
+    ]
+  },
+  "25": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_25",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:00",
+            "end": "01:15"
+          }
+        ]
+      }
+    ]
+  },
+  "25AX": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_25AX",
+    "schedules": [
+      {
+        "days": "mon-fri-except-public",
+        "periods": [
+          {
+            "start": "06:00",
+            "end": "09:00"
+          },
+          {
+            "start": "16:00",
+            "end": "19:00"
+          }
+        ]
+      }
+    ]
+  },
+  "25B": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_25B",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:00",
+            "end": "01:00"
+          }
+        ],
+        "towards": "橫琴澳方口岸"
+      },
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:00",
+            "end": "01:00"
+          }
+        ],
+        "towards": "關閘"
+      }
+    ]
+  },
+  "25BS": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_25BS",
+    "schedules": [
+      {
+        "days": "mon-sat-except-mandatory",
+        "periods": [
+          {
+            "start": "06:30",
+            "end": "09:30"
+          },
+          {
+            "start": "17:00",
+            "end": "19:00"
+          }
+        ]
+      }
+    ]
+  },
+  "26": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_26",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:00",
+            "end": "23:30"
+          }
+        ]
+      }
+    ]
+  },
+  "26A": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_26A",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:00",
+            "end": "00:30"
+          }
+        ],
+        "towards": "黑沙海灘"
+      },
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:00",
+            "end": "01:00"
+          }
+        ],
+        "towards": "筷子基北灣"
+      }
+    ]
+  },
+  "27": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_27",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:00",
+            "end": "00:00"
+          }
+        ]
+      }
+    ]
+  },
+  "28A": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_28A",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:30",
+            "end": "00:10"
+          }
+        ]
+      }
+    ]
+  },
+  "28B": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_28B",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:15",
+            "end": "23:45"
+          }
+        ]
+      }
+    ]
+  },
+  "28C": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_28C",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "05:40",
+            "end": "00:45"
+          }
+        ]
+      }
+    ]
+  },
+  "29": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_29",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "07:00",
+            "end": "20:00"
+          }
+        ]
+      }
+    ]
+  },
+  "2A": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_2A",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:30",
+            "end": "23:25"
+          }
+        ]
+      }
+    ]
+  },
+  "2AS": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_2AS",
+    "schedules": [
+      {
+        "days": "mon-fri-except-public",
+        "periods": [
+          {
+            "start": "07:00",
+            "end": "09:30"
+          }
+        ]
+      }
+    ]
+  },
+  "3": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_3",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:00",
+            "end": "01:15"
+          }
+        ],
+        "towards": "外港碼頭"
+      },
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "05:45",
+            "end": "00:45"
+          }
+        ],
+        "towards": "關閘"
+      }
+    ]
+  },
+  "30": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_30",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:00",
+            "end": "01:10"
+          }
+        ]
+      }
+    ]
+  },
+  "30X": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_30X",
+    "schedules": [
+      {
+        "days": "mon-sat-except-mandatory",
+        "periods": [
+          {
+            "start": "06:30",
+            "end": "10:00"
+          },
+          {
+            "start": "15:00",
+            "end": "20:00"
+          }
+        ]
+      }
+    ]
+  },
+  "32": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_32",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:00",
+            "end": "00:00"
+          }
+        ]
+      }
+    ]
+  },
+  "33": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_33",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "05:30",
+            "end": "00:30"
+          }
+        ]
+      }
+    ]
+  },
+  "34": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_34",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:00",
+            "end": "01:00"
+          }
+        ],
+        "towards": "海洋花園"
+      },
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:00",
+            "end": "00:35"
+          }
+        ],
+        "towards": "青洲坊"
+      }
+    ]
+  },
+  "35": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_35",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "07:00",
+            "end": "23:00"
+          }
+        ]
+      }
+    ]
+  },
+  "37": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_37",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:30",
+            "end": "23:30"
+          }
+        ]
+      }
+    ]
+  },
+  "39": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_39",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:00",
+            "end": "00:00"
+          }
+        ]
+      }
+    ]
+  },
+  "3A": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_3A",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "05:40",
+            "end": "00:45"
+          }
+        ]
+      }
+    ]
+  },
+  "3AX": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_3AX",
+    "schedules": [
+      {
+        "days": "mon-sat-except-mandatory",
+        "periods": [
+          {
+            "start": "07:00",
+            "end": "09:30"
+          },
+          {
+            "start": "15:00",
+            "end": "20:00"
+          }
+        ]
+      }
+    ]
+  },
+  "3X": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_3X",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "07:00",
+            "end": "23:00"
+          }
+        ]
+      }
+    ]
+  },
+  "4": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_4",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:00",
+            "end": "00:10"
+          }
+        ]
+      }
+    ]
+  },
+  "5": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_5",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "05:40",
+            "end": "01:00"
+          }
+        ]
+      }
+    ]
+  },
+  "50": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_50",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "07:00",
+            "end": "21:45"
+          }
+        ]
+      }
+    ]
+  },
+  "50B": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_50B",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:30",
+            "end": "20:30"
+          }
+        ]
+      }
+    ]
+  },
+  "51": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_51",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "05:30",
+            "end": "01:00"
+          }
+        ]
+      }
+    ]
+  },
+  "51A": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_51A",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:00",
+            "end": "00:00"
+          }
+        ],
+        "towards": "蝴蝶谷大馬路"
+      },
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:00",
+            "end": "00:00"
+          }
+        ],
+        "towards": "海擎天"
+      }
+    ]
+  },
+  "51B": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_51B",
+    "schedules": [
+      {
+        "days": "mon-sat-except-mandatory",
+        "periods": [
+          {
+            "start": "06:00",
+            "end": "10:00"
+          },
+          {
+            "start": "15:00",
+            "end": "20:00"
+          }
+        ]
+      }
+    ]
+  },
+  "52": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_52",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:00",
+            "end": "00:00"
+          }
+        ]
+      }
+    ]
+  },
+  "55": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_55",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:00",
+            "end": "00:00"
+          }
+        ]
+      }
+    ]
+  },
+  "56": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_56",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:00",
+            "end": "00:00"
+          }
+        ]
+      }
+    ]
+  },
+  "59": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_59",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:10",
+            "end": "10:00"
+          },
+          {
+            "start": "15:00",
+            "end": "19:30"
+          }
+        ],
+        "towards": "聯生圓形地"
+      },
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:50",
+            "end": "10:40"
+          },
+          {
+            "start": "15:40",
+            "end": "20:10"
+          }
+        ],
+        "towards": "關閘"
+      }
+    ]
+  },
+  "5X": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_5X",
+    "schedules": [
+      {
+        "days": "mon-fri-except-public",
+        "periods": [
+          {
+            "start": "07:00",
+            "end": "09:30"
+          },
+          {
+            "start": "17:00",
+            "end": "19:30"
+          }
+        ]
+      }
+    ]
+  },
+  "60": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_60",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:00",
+            "end": "23:45"
+          }
+        ]
+      }
+    ]
+  },
+  "61": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_61",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:00",
+            "end": "23:30"
+          }
+        ],
+        "towards": "關閘"
+      },
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:00",
+            "end": "23:30"
+          }
+        ],
+        "towards": "媽閣"
+      }
+    ]
+  },
+  "65": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_65",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:00",
+            "end": "23:30"
+          }
+        ]
+      }
+    ]
+  },
+  "6A": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_6A",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:15",
+            "end": "23:35"
+          }
+        ]
+      }
+    ]
+  },
+  "6B": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_6B",
+    "schedules": [
+      {
+        "days": "mon-sat-except-mandatory",
+        "periods": [
+          {
+            "start": "06:15",
+            "end": "23:30"
+          }
+        ]
+      }
+    ]
+  },
+  "7": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_7",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:15",
+            "end": "23:50"
+          }
+        ],
+        "towards": "城市日前地"
+      },
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:25",
+            "end": "00:10"
+          }
+        ],
+        "towards": "東方明珠"
+      }
+    ]
+  },
+  "701X": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_701X",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "00:00",
+            "end": "23:35"
+          }
+        ]
+      }
+    ]
+  },
+  "701XS": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_701XS",
+    "schedules": [
+      {
+        "days": "mon-fri-except-public-and-um",
+        "periods": [
+          {
+            "start": "17:00",
+            "end": "19:30"
+          }
+        ]
+      }
+    ]
+  },
+  "71": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_71",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:30",
+            "end": "22:00"
+          }
+        ]
+      }
+    ]
+  },
+  "71S": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_71S",
+    "schedules": [
+      {
+        "days": "mon-fri-except-public",
+        "periods": [
+          {
+            "start": "08:25"
+          },
+          {
+            "start": "08:40"
+          }
+        ],
+        "towards": "俾若翰街/快富樓"
+      },
+      {
+        "days": "mon-fri-except-public",
+        "periods": [
+          {
+            "start": "07:35"
+          },
+          {
+            "start": "07:50"
+          },
+          {
+            "start": "09:10"
+          }
+        ],
+        "towards": "澳門大學總站"
+      }
+    ]
+  },
+  "72": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_72",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:00",
+            "end": "00:15"
+          }
+        ]
+      }
+    ]
+  },
+  "73": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_73",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:30",
+            "end": "00:10"
+          }
+        ]
+      }
+    ]
+  },
+  "8": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_8",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:10",
+            "end": "00:00"
+          }
+        ],
+        "towards": "回力"
+      },
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:30",
+            "end": "00:10"
+          }
+        ],
+        "towards": "工業園街"
+      }
+    ]
+  },
+  "8A": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_8A",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:30",
+            "end": "23:30"
+          }
+        ]
+      }
+    ]
+  },
+  "9": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_9",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "05:45",
+            "end": "01:10"
+          }
+        ]
+      }
+    ]
+  },
+  "9A": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_9A",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "05:45",
+            "end": "01:10"
+          }
+        ]
+      }
+    ]
+  },
+  "AP1": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_AP1",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:00",
+            "end": "01:20"
+          }
+        ]
+      }
+    ]
+  },
+  "H1": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_H1",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "07:30",
+            "end": "20:30"
+          }
+        ]
+      }
+    ]
+  },
+  "H2": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_H2",
+    "schedules": [
+      {
+        "days": "mon-fri-except-mandatory",
+        "periods": [
+          {
+            "start": "06:30",
+            "end": "20:00"
+          }
+        ]
+      }
+    ]
+  },
+  "H3": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_H3",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:20",
+            "end": "21:30"
+          }
+        ]
+      }
+    ]
+  },
+  "MT1": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_MT1",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "07:00",
+            "end": "00:00"
+          }
+        ]
+      }
+    ]
+  },
+  "MT2": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_MT2",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:50",
+            "end": "23:40"
+          }
+        ]
+      }
+    ]
+  },
+  "MT3": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_MT3",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:50",
+            "end": "20:30"
+          }
+        ]
+      }
+    ]
+  },
+  "MT4": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_MT4",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "05:45",
+            "end": "01:00"
+          }
+        ],
+        "towards": "氹仔客運碼頭"
+      },
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "06:00",
+            "end": "00:45"
+          }
+        ],
+        "towards": "關閘"
+      }
+    ]
+  },
+  "MT5": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_MT5",
+    "schedules": [
+      {
+        "days": "mon-fri-except-mandatory",
+        "periods": [
+          {
+            "start": "07:00",
+            "end": "10:00"
+          },
+          {
+            "start": "15:00",
+            "end": "21:00"
+          }
+        ]
+      }
+    ]
+  },
+  "N1A": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_N1A",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "00:00",
+            "end": "06:00"
+          }
+        ]
+      }
+    ]
+  },
+  "N1B": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_N1B",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "00:00",
+            "end": "06:00"
+          }
+        ]
+      }
+    ]
+  },
+  "N2": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_N2",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "00:00",
+            "end": "06:00"
+          }
+        ],
+        "towards": "氹仔客運碼頭"
+      },
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "00:00",
+            "end": "06:00"
+          }
+        ],
+        "towards": "筷子基北灣"
+      }
+    ]
+  },
+  "N3": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_N3",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "00:00",
+            "end": "06:00"
+          }
+        ]
+      }
+    ]
+  },
+  "N5": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_N5",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "00:00",
+            "end": "06:00"
+          }
+        ]
+      }
+    ]
+  },
+  "N6": {
+    "checkedAt": "2026-11-16",
+    "sourceUrl": "https://www.dsat.gov.mo/dsat/route_display.aspx?route=busroute_N6",
+    "schedules": [
+      {
+        "days": "daily",
+        "periods": [
+          {
+            "start": "00:00",
+            "end": "06:00"
+          }
+        ]
+      }
+    ]
+  }
+}

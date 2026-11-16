@@ -1,7 +1,8 @@
 import "server-only";
 import * as cheerio from "cheerio";
 import { z } from "zod";
-import { busEtaSchema, busRouteSchema } from "@/lib/contracts";
+import { busEtaSchema, busRouteSchema, busTimetableSchema } from "@/lib/contracts";
+import timetableSnapshot from "../../../data/bus-timetables.json";
 import type {
   BusEta,
   BusCompany,
@@ -18,6 +19,7 @@ import type { SourceDefinition } from "@/server/source";
 const BUS_API = "https://bis.dsat.gov.mo:37812/macauweb";
 const DDBUS_API = "https://bis.dsat.gov.mo:37812/ddbus";
 const ROUTE_PAGE = "https://www.dsat.gov.mo/dsat/bus_route.aspx";
+const timetables = z.record(z.string(), busTimetableSchema).parse(timetableSnapshot);
 const HUID = "cc57da25-d5d8-4286-8712-d98df57c8af6";
 
 // Tile colours on the official route page. bc1 is Transmac, bc2 is TCM.
@@ -252,11 +254,15 @@ export async function loadBusRoutes() {
       live: false,
     }));
 
-  return [...tracked, ...seasonal].sort(compareRoutes).map((route) => busRouteSchema.parse(route));
+  return [...tracked, ...seasonal].sort(compareRoutes).map((route) => busRouteSchema.parse({
+    ...route,
+    timetable: timetables[route.routeName],
+  }));
 }
 
 export const busRoutesSource: SourceDefinition<Awaited<ReturnType<typeof loadBusRoutes>>> = {
   id: "bus-routes",
+  cacheVersion: "timetables-2026-11-16",
   name: "DSAT 巴士路線",
   url: "https://bis.dsat.gov.mo:37812/macauweb/",
   attribution: "交通事務局巴士報站及巴士路線公開資料",

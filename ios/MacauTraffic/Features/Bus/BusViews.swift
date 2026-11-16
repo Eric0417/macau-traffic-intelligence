@@ -47,6 +47,8 @@ struct BusListView: View {
 
 struct BusDetailView: View {
     @Environment(AppSettings.self) private var settings
+    @Environment(LocationService.self) private var location
+    @Environment(\.scenePhase) private var phase
     var route: BusRoute
     var initialDirection = 0
     var initialStation: String?
@@ -56,9 +58,11 @@ struct BusDetailView: View {
     @State private var selectedStop: String?
     @State private var search = ""
     @State private var showMap = false
+    @State private var visible = false
     var path: String { "bus/routes/\(route.routeCode)/eta?direction=\(direction)" }
     var eta: BusETA? { resource.data?.direction == direction ? resource.data : nil }
     var body: some View {
+        let nearbyID = location.fix?.nearbyStop(in: eta?.stops ?? [], now: .now)?.id
         List {
             Section {
                 HStack(alignment: .top, spacing: 16) {
@@ -74,8 +78,8 @@ struct BusDetailView: View {
                         Text(settings.text("回程", "Inbound")).tag(1)
                     }.pickerStyle(.segmented).onChange(of: direction) { _, _ in selectedStop = nil }
                 }
-                Button { showMap = true } label: { Label(settings.text("路線地圖", "Route map"), systemImage: "map") }
             }
+            BusTimetableView(timetable: route.timetable)
             if !route.live {
                 Text(settings.text("呢條路線暫無即時追蹤資料。服務日期請參閱官方公告。", "Live tracking is unavailable for this route. Check official notices for service dates."))
             } else {
@@ -93,7 +97,16 @@ struct BusDetailView: View {
                                     Text("\(stop.sequence + 1)").font(.caption.monospacedDigit()).foregroundStyle(.secondary)
                                         .frame(width: 28, height: 28).background(.quaternary, in: Circle())
                                     VStack(alignment: .leading, spacing: 5) {
-                                        Text(stop.stationName).font(.body.weight(.medium)).foregroundStyle(.primary)
+                                        HStack(alignment: .firstTextBaseline, spacing: 6) {
+                                            Text(stop.stationName).font(.body.weight(.medium)).foregroundStyle(.primary)
+                                            TimelineView(.periodic(from: .now, by: 2)) { context in
+                                                if nearbyID == stop.id && location.fix?.isRecent(at: context.date) == true {
+                                                    Image(systemName: "figure.stand").foregroundStyle(.blue)
+                                                        .accessibilityLabel(settings.text("你在此站附近", "You are near this stop"))
+                                                        .accessibilityIdentifier("nearby-stop-\(stop.id)")
+                                                }
+                                            }
+                                        }
                                         Text(stop.stationCode).font(.caption).foregroundStyle(.secondary)
                                         ArrivalLabel(stop: stop, resource: resource)
                                         if stop.trafficStatus == "slow" || stop.trafficStatus == "congested" {
@@ -107,23 +120,26 @@ struct BusDetailView: View {
                         }
                     } header: { Text(settings.text("沿途車站", "Stops") + " · \(eta.stops.count)") }
                     Section {
-                        DisclosureGroup(settings.text("車輛資料", "Vehicle details")) {
-                            TimelineView(.periodic(from: .now, by: 2)) { context in
+                        TimelineView(.periodic(from: .now, by: 2)) { context in
+                            VStack(alignment: .leading, spacing: 20) {
                                 if resource.fresh(at: context.date) {
                                     ForEach(eta.vehicles) { vehicle in
-                                        VStack(alignment: .leading, spacing: 5) {
-                                            Label(vehicle.plate, systemImage: vehicle.lowFloor ? "figure.roll" : "bus.fill")
-                                            Text(vehicle.stationName).font(.subheadline)
-                                            if let speed = vehicle.speedKph { Text("\(Int(speed)) km/h").font(.subheadline.monospacedDigit()) }
-                                            Text(vehicle.positionSource == "feed" ? settings.text("官方位置估算", "Official position estimate") : settings.text("只提供正前往嘅車站", "Approaching stop only; position unavailable")).font(.caption).foregroundStyle(.secondary)
-                                        }.padding(.vertical, 4)
+                                        BusVehicleRow(vehicle: vehicle, eta: eta)
                                     }
                                     if eta.vehicles.isEmpty { Text(settings.text("未有車輛資料", "No vehicles reported")) }
                                 } else { Text(settings.text("位置資料已延遲", "Vehicle data is delayed")).foregroundStyle(.secondary) }
-                            }
+                            }.frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 6)
                         }
                         SourceNote(meta: resource.meta, error: resource.error)
+                    } header: { Text(settings.text("巴士位置", "Bus locations")) }
+                    Section {
+                        Button { showMap = true } label: {
+                            HStack { Text(settings.text("路線地圖", "Route map")); Spacer(); Image(systemName: "arrow.up.left.and.arrow.down.right") }
+                        }.accessibilityIdentifier("bus-route-map")
+                        BusRouteMap(resource: resource, compact: true, onStop: { selectedStop = $0 })
+                            .frame(height: 260).listRowInsets(EdgeInsets())
                     }
+                    Section { BusModelView(company: route.company) }
                 }
             }
         }
@@ -131,7 +147,16 @@ struct BusDetailView: View {
         .searchable(text: $search, prompt: settings.text("搜尋沿途車站", "Find a stop on this route"))
         .toolbar { SaveButton(item: .init(id: "bus:\(route.routeCode):\(direction)", kind: "bus", title: route.routeName, routeCode: route.routeCode, direction: direction)) }
         .onAppear {
+            visible = true
             if resource.data == nil { direction = initialDirection }
+        }
+        .onDisappear { visible = false }
+        .task(id: "\(visible)-\(phase)") {
+            guard visible && phase == .active && route.live else { return }
+            while !Task.isCancelled {
+                _ = try? await location.request(maxAccuracy: 50)
+                do { try await Task.sleep(for: .seconds(15)) } catch { return }
+            }
         }
         .onChange(of: eta?.routeCode) { _, _ in
             if let station = initialStation, selectedStop == nil {
@@ -206,14 +231,17 @@ struct StopSheet: View {
 
 struct BusRouteMap: View {
     @Environment(AppSettings.self) private var settings
+    @Environment(LocationService.self) private var location
     let resource: LiveResource<BusETA>
+    var compact = false
     var onStop: (String) -> Void
     var body: some View {
         TimelineView(.periodic(from: .now, by: 2)) { context in
             let eta = resource.data
+            let nearby = location.fix?.nearbyStop(in: eta?.stops ?? [], now: context.date)?.id
             let stops = (eta?.stops ?? []).compactMap { stop -> MapPin? in
                 guard let coordinate = stop.coordinates else { return nil }
-                return .init(id: stop.id, coordinate: coordinate, title: stop.stationName, symbol: "circle.fill", color: stop.suspended ? .orange : .blue)
+                return .init(id: stop.id, coordinate: coordinate, title: stop.stationName, symbol: nearby == stop.id ? "figure.stand" : "circle.fill", color: stop.suspended ? .orange : .blue)
             }
             let vehicles = resource.fresh(at: context.date) ? (eta?.vehicles ?? []).compactMap { vehicle -> MapPin? in
                 guard vehicle.positionSource == "feed", let coordinate = vehicle.coordinates else { return nil }
@@ -221,13 +249,17 @@ struct BusRouteMap: View {
             } : []
             TransitMap(lines: (eta?.routeSegments ?? []).enumerated().map { index, segment in
                 .init(id: "\(index)", coordinates: segment.coordinates, color: resource.fresh(at: context.date) ? trafficColor(segment.trafficStatus) : .gray)
-            }, pins: stops + vehicles, fitID: "\(eta?.routeCode ?? ""):\(eta?.direction ?? 0)", onSelect: { id in if !id.hasPrefix("vehicle:") { onStop(id) } })
+            }, pins: stops + vehicles, fitID: "\(eta?.routeCode ?? ""):\(eta?.direction ?? 0)", showsPerspective: !compact,
+               fitPadding: .init(top: 35, left: 30, bottom: 35, right: 30),
+               onSelect: { id in if !id.hasPrefix("vehicle:") { onStop(id) } })
             .safeAreaInset(edge: .bottom) {
+                if !compact {
                 VStack(spacing: 8) {
                     Text(settings.text("綠：暢通 · 橙：緩慢 · 紅：擠塞 · 灰：未確認", "Green: clear · Orange: slow · Red: congested · Gray: unknown")).font(.caption)
                     Text(settings.text("巴士為官方估算位置，並非 GPS 直播", "Official estimated positions, not live GPS")).font(.caption)
                     SourceNote(meta: resource.meta, error: resource.error)
                 }.padding(16).background(.regularMaterial)
+                }
             }
         }
     }

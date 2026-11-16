@@ -34,6 +34,71 @@ final class NavigationTests: XCTestCase {
         }
         capture("traffic-interaction", app: app)
     }
+    func testAssistantWaitsWithDotAndKeepsKeyboardClosedOnEntry() throws {
+        let app = launch("waiting")
+        XCTAssertTrue(app.buttons["explore-search"].waitForExistence(timeout: 8))
+        app.buttons["explore-search"].tap()
+        XCTAssertTrue(input(app, "assistant-input").waitForExistence(timeout: 5))
+        XCTAssertFalse(app.keyboards.firstMatch.exists)
+        let field = input(app, "assistant-input")
+        field.tap(); field.typeText("Take me to Senado Square")
+        app.buttons["assistant-send"].tap()
+        XCTAssertTrue(input(app, "assistant-waiting-dot").waitForExistence(timeout: 5))
+        XCTAssertFalse(app.keyboards.firstMatch.exists)
+        XCTAssertEqual(app.buttons["assistant-send"].label, "Stop request")
+        XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] %@", "seconds")).firstMatch.exists)
+        capture("assistant-waiting-dot", app: app)
+        app.buttons["assistant-send"].tap()
+        XCTAssertTrue(input(app, "assistant-waiting-dot").waitForNonExistence(timeout: 5))
+        tab(app, "Explore").tap(); tab(app, "Assistant").tap()
+        XCTAssertFalse(app.keyboards.firstMatch.exists)
+    }
+    func testBusHoursAlignedVehiclesAndBottomMedia() throws {
+        let app = launch("bus")
+        tab(app, "Buses").tap()
+        let search = app.searchFields.firstMatch
+        XCTAssertTrue(search.waitForExistence(timeout: 5)); search.tap(); search.typeText("56")
+        app.buttons["route-00056"].tap()
+        XCTAssertTrue(app.staticTexts["06:00 – 00:00 +1 day"].waitForExistence(timeout: 8))
+        XCTAssertFalse(app.keyboards.firstMatch.exists)
+        capture("bus-hours", app: app)
+        let row = input(app, "vehicle-test-0")
+        for _ in 0..<18 {
+            if row.exists && row.isHittable { break }
+            app.swipeUp()
+        }
+        XCTAssertTrue(row.exists)
+        let first = app.staticTexts["MX0000"], second = app.staticTexts["MX0003"]
+        XCTAssertTrue(first.exists); XCTAssertTrue(second.exists)
+        XCTAssertEqual(first.frame.minX, second.frame.minX, accuracy: 1)
+        capture("bus-vehicles-aligned", app: app)
+        let map = app.buttons["bus-route-map"]
+        for _ in 0..<5 { if map.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(map.isHittable)
+        capture("bus-bottom-map", app: app)
+        app.swipeUp()
+        XCTAssertTrue(input(app, "bus-model").exists)
+        capture("bus-model", app: app)
+        for _ in 0..<4 {
+            if map.exists && map.isHittable { break }
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.3)).press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.7)))
+        }
+        map.tap()
+        XCTAssertTrue(app.buttons["Done"].waitForExistence(timeout: 5))
+        app.buttons["Done"].tap()
+        XCTAssertTrue(app.navigationBars["56"].exists)
+    }
+    func testNearbyRouteStopUsesSimulatorGPS() throws {
+        let app = launch("bus")
+        tab(app, "Buses").tap()
+        let search = app.searchFields.firstMatch
+        XCTAssertTrue(search.waitForExistence(timeout: 5)); search.tap(); search.typeText("56")
+        app.buttons["route-00056"].tap()
+        let marker = app.images["nearby-stop-0:C690/6"]
+        XCTAssertTrue(marker.waitForExistence(timeout: 10))
+        XCTAssertEqual(app.images.matching(NSPredicate(format: "identifier BEGINSWITH %@", "nearby-stop-")).count, 1)
+        capture("nearby-bus-stop", app: app)
+    }
     func testTabsAndSettings() throws {
         let app = XCUIApplication()
         app.launchArguments = ["--uitesting", "-language", "zh-Hant", "-appearance", "light"]

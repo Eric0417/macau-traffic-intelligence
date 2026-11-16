@@ -7,7 +7,6 @@ struct ExploreView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var roads = LiveResource<LineCollection<Road>>()
-    @State private var weather = LiveResource<Weather>()
     @State private var viewport = MapViewport()
     private var live: JourneyLiveState { navigation.journeyLive }
     @State private var showTraffic = false
@@ -24,11 +23,11 @@ struct ExploreView: View {
                 TransitMap(lines: (showTraffic ? roadLines : []) + (route?.lines ?? []), pins: route?.pins ?? [],
                            fitID: navigation.journey.map { $0.id + "-\(navigation.mapRevision)-\(live.selectionID == $0.id && live.geometry != nil)" } ?? "macau",
                            viewport: viewport, showsPerspective: false,
-                           fitPadding: .init(top: 140, left: 40, bottom: navigation.journey == nil ? 210 : 440, right: 40), fitCoordinates: route?.fitCoordinates)
+                           fitPadding: .init(top: 80, left: 40, bottom: navigation.journey == nil ? 180 : 440, right: 40), fitCoordinates: route?.fitCoordinates)
                     .ignoresSafeArea()
             }
             VStack(spacing: 0) {
-                header
+                if showTraffic { trafficStatus.frame(maxWidth: .infinity, alignment: .leading) }
                 Spacer(minLength: 24)
                 controls
                 if let selection = navigation.journey {
@@ -36,16 +35,17 @@ struct ExploreView: View {
                 } else {
                     Button { navigation.ask() } label: {
                         HStack {
-                            Text(settings.text("想去邊？", "Where to?")).font(.system(.title2, design: .rounded, weight: .bold))
+                            Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+                            Text(settings.text("想去邊？", "Where to?")).font(.headline)
                             Spacer()
-                            Image(systemName: "arrow.up.right").font(.title2.weight(.semibold))
-                        }.padding(22).foregroundStyle(.white).background(TransitStyle.ink, in: .rect(cornerRadius: 28))
+                            Image(systemName: "arrow.up.right").font(.subheadline.weight(.semibold))
+                        }.padding(.horizontal, 20).frame(minHeight: 56).contentShape(Capsule())
+                            .glassEffect(.regular.interactive(), in: .capsule)
                     }.buttonStyle(PressFeedbackStyle()).accessibilityIdentifier("explore-search").padding(.top, 14)
                 }
             }.padding(.horizontal, 20).padding(.top, 12).padding(.bottom, 14).frame(maxWidth: 620)
         }
         .toolbar(.hidden, for: .navigationBar)
-        .livePolling(weather, path: "weather", interval: 60, enabled: navigation.tab == .explore)
         .livePolling(roads, path: "traffic/roads", interval: 60, enabled: navigation.tab == .explore && showTraffic)
         .onChange(of: roads.meta?.generatedAt) { _, _ in
             roadLines = (roads.data?.features ?? []).map { .init(id: $0.properties.id, coordinates: $0.geometry.coordinates, color: trafficColor($0.properties.status), width: 3) }
@@ -79,39 +79,26 @@ struct ExploreView: View {
             if let url = URL(string: UIApplication.openSettingsURLString) { Link(settings.text("設定", "Settings"), destination: url) }
         } message: { Text(error ?? "") }
     }
-    private var header: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(settings.text("澳門", "Macau")).font(.system(size: 42, weight: .bold, design: .rounded)).tracking(-1.5)
-                if showTraffic {
-                    Button { showSources = true } label: {
-                        HStack(spacing: 8) {
-                            Circle().fill(.green).frame(width: 6, height: 6)
-                            Circle().fill(.orange).frame(width: 6, height: 6)
-                            Circle().fill(.red).frame(width: 6, height: 6)
-                            Text(settings.text("路況", "Traffic")).font(.caption.weight(.semibold))
-                            Image(systemName: "info.circle").font(.caption)
-                        }.padding(.horizontal, 12).padding(.vertical, 10).glassEffect()
-                    }.buttonStyle(.plain).accessibilityLabel(settings.text("路況資料", "Traffic sources"))
+    private var trafficStatus: some View {
+        TimelineView(.periodic(from: .now, by: 2)) { context in
+            let delayed = roads.error != nil || roads.meta?.isDelayed(at: context.date) == true
+            Button { showSources = true } label: {
+                HStack(spacing: 8) {
                     if roads.loading { ProgressView().controlSize(.small) }
-                    TimelineView(.periodic(from: .now, by: 2)) { context in
-                        if roads.error != nil || roads.meta?.isDelayed(at: context.date) == true {
-                            Text(settings.text("路況資料延遲", "Traffic data delayed")).font(.caption).foregroundStyle(.orange)
-                        }
+                    else if delayed { Image(systemName: "clock.badge.exclamationmark").foregroundStyle(.orange) }
+                    else {
+                        HStack(spacing: 4) {
+                            Circle().fill(.green)
+                            Circle().fill(.orange)
+                            Circle().fill(.red)
+                        }.frame(width: 26, height: 6)
                     }
-                }
-            }
-            Spacer()
-            TimelineView(.periodic(from: .now, by: 30)) { context in
-                if weather.fresh(at: context.date), let temperature = weather.data?.temperatureCelsius {
-                    NavigationLink { WeatherView() } label: {
-                        Text("\(Int(temperature))°").font(.system(.title2, design: .rounded, weight: .semibold)).padding(14).glassEffect()
-                    }.buttonStyle(.plain).accessibilityLabel(settings.text("天氣", "Weather") + " \(Int(temperature))°")
-                }
-            }
+                    Text(settings.text(delayed ? "路況資料延遲" : "路況", delayed ? "Traffic data delayed" : "Traffic")).font(.caption.weight(.medium))
+                    Image(systemName: "info.circle").font(.caption)
+                }.padding(.horizontal, 14).frame(minHeight: 44).glassEffect(.regular.interactive(), in: .capsule)
+            }.buttonStyle(.plain).accessibilityLabel(settings.text("路況資料", "Traffic sources"))
+                .accessibilityValue(delayed ? settings.text("資料延遲", "Data delayed") : roads.loading || roads.meta == nil ? settings.text("更新中", "Updating") : settings.text("最新資料", "Up to date"))
         }
-        .padding(.bottom, 12)
-        .background { LinearGradient(colors: [Color(.systemBackground).opacity(0.9), Color(.systemBackground).opacity(0)], startPoint: .top, endPoint: .bottom).padding(-24).allowsHitTesting(false) }
     }
     private var controls: some View {
         HStack(alignment: .bottom) {

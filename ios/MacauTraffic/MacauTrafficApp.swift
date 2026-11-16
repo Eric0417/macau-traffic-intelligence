@@ -20,7 +20,6 @@ import SwiftUI
     var journey: JourneySelection?
     var journeyLive = JourneyLiveState()
     var mapRevision = 0
-    var assistantFocus = 0
     func apply(_ selection: JourneySelection) {
         journey = selection
         journeyLive = JourneyLiveState()
@@ -28,7 +27,7 @@ import SwiftUI
         explorePath = NavigationPath()
         tab = .explore
     }
-    func ask() { assistantFocus += 1; tab = .assistant }
+    func ask() { tab = .assistant }
 }
 
 struct RootView: View {

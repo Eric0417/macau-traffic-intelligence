@@ -34,7 +34,7 @@ struct AssistantView: View {
                                 .background(Color(.secondarySystemBackground), in: .rect(cornerRadius: 22))
                         }
                         if state.busy {
-                            AssistantWaitingView(state: state)
+                            AssistantWaitingView()
                         }
                         if state.cancelled && !state.preview {
                             Text(settings.text("已停止查詢", "Request stopped")).font(.subheadline).foregroundStyle(.secondary)
@@ -94,8 +94,7 @@ struct AssistantView: View {
         .onChange(of: phase) { _, value in
             if value == .background || (value == .inactive && (voice.isRecording || voice.transcribing)) { voice.cancel() }
         }
-        .onAppear { if navigation.assistantFocus > 0 { typing = true } }
-        .onChange(of: navigation.assistantFocus) { _, _ in typing = true }
+        .onAppear { typing = false; originTyping = false }
         .onDisappear { voice.cancel(); locationTask?.cancel(); typing = false; originTyping = false }
     }
     private var welcome: some View {

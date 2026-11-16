@@ -1,5 +1,13 @@
 # Changelog
 
+## Macao Move home, assistant and bus detail corrections - 2026-11-16
+
+- Remove the home title gradient that produced a black edge below the status bar. Use a smaller glass destination control with a complete tap area.
+- Keep the keyboard closed when entering Assistant. Replace elapsed waiting time with one pulsing dot; retain cancellation and a static Reduce Motion alternative.
+- Mark the closest unsuspended stop on the current route only when a recent GPS fix, including its accuracy radius, places it within 50 m. Stop location requests when the detail is hidden or the app is inactive.
+- Add reviewed terminal operating hours for 90 routes, preserving day restrictions, split service and fixed departures. Keep unavailable hours explicit and link official timetables.
+- Align vehicle rows, describe the reported route segment or approaching stop without claiming exact GPS, and move the map and illustrative bus model below the stop and vehicle lists.
+
 ## Macao Move interaction fixes and redesign - 2026-11-16
 
 - Name the native app Macao Move. Rework the home map, assistant, route cards and city view with larger focal elements, fewer visible explanations, monochrome actions and native navigation gestures.

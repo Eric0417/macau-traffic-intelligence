@@ -76,6 +76,17 @@ export interface BusRoute {
   company: BusCompany;
   hasChange: boolean;
   live: boolean;
+  timetable?: BusTimetable;
+}
+
+export interface BusTimetable {
+  checkedAt: string;
+  sourceUrl: string;
+  schedules: {
+    days: "daily" | "mon-fri-except-public" | "mon-sat-except-public" | "mon-fri-except-mandatory" | "mon-sat-except-mandatory" | "mon-fri-except-public-and-um";
+    towards?: string;
+    periods: { start: string; end?: string }[];
+  }[];
 }
 
 export interface BusArrivalEstimate {

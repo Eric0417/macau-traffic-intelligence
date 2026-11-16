@@ -172,6 +172,8 @@ describe("bus sources", () => {
       live: true,
     });
     expect(byName.get("1A")?.routeCode).toBe("0001A");
+    expect(byName.get("3")?.timetable?.schedules[0]).toMatchObject({ towards: "外港碼頭", periods: [{ start: "06:00", end: "01:15" }] });
+    expect(byName.get("3AS")?.timetable).toBeUndefined();
     expect(byName.get("3AS")).toMatchObject({ company: { color: "orange" }, live: false });
     expect(byName.get("17S1")).toMatchObject({
       routeCode: "017S1",

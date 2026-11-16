@@ -72,6 +72,7 @@ struct BusCompany: Codable { var id: String; var name: String; var color: String
 struct BusRoute: Codable, Identifiable {
     var routeName: String; var routeCode: String; var routeType: Int
     var company: BusCompany; var hasChange: Bool; var live: Bool
+    var timetable: BusTimetable?
     var id: String { routeCode }
 }
 struct ArrivalEstimate: Codable {

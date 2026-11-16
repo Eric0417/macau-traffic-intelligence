@@ -22,6 +22,7 @@ struct APIClient {
     func journey(_ body: AssistantRequest, receive: @escaping @MainActor (AssistantStreamEvent) -> Void) async throws -> Envelope<AssistantResult> {
         #if DEBUG
         if baseURL == Self.productionURL && (ProcessInfo.processInfo.arguments.contains("--uitesting") || ProcessInfo.processInfo.environment["MACAU_FIXTURES"] == "1") {
+            if ProcessInfo.processInfo.arguments.contains("--scenario=waiting") { try await Task.sleep(for: .seconds(30)) }
             return try await post("assistant/journeys", body: body)
         }
         #endif
@@ -120,6 +121,7 @@ enum APIError: Error, LocalizedError {
 enum FixtureLoader {
     static func response<T: Decodable>(_ path: String, body: Data?) throws -> T {
         var name = path.components(separatedBy: "?")[0].replacingOccurrences(of: "/", with: "_")
+        if name == "bus_routes_00056_eta" && ProcessInfo.processInfo.arguments.contains("--scenario=bus") { name += "_vehicles" }
         if path == "assistant/journeys" {
             let request = body.flatMap { try? JSONDecoder().decode(AssistantRequest.self, from: $0) }
             let scenario = ProcessInfo.processInfo.arguments.first { $0.hasPrefix("--scenario=") }?.components(separatedBy: "=").last ?? "journey"

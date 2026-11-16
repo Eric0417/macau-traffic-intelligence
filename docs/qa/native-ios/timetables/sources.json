@@ -1,0 +1,545 @@
+{
+  "checkedAt": "2026-11-16",
+  "sources": [
+    {
+      "route": "1",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_1.jpg",
+      "sha256": "ec73ef3e8f3d1a918b83ddf4944ae3d15383491ee79e4885def26eabed0006bc",
+      "bytes": 372255
+    },
+    {
+      "route": "10",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_10.jpg",
+      "sha256": "c7643338c0b2434e6803d6ecb10cd2e73b31426d339cbde2d9b153d9bb8043d0",
+      "bytes": 216403
+    },
+    {
+      "route": "101",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_101.jpg",
+      "sha256": "2bf8788829635d7d31b3ab9de8b6a321ad62f24fb2385dbc7b48b50a79fd7b19",
+      "bytes": 216523
+    },
+    {
+      "route": "102",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_102.jpg",
+      "sha256": "5c0303a2b1c13c01fffcd3b432ae794078b6fe43442286c1c3438927b9cc10c8",
+      "bytes": 780190
+    },
+    {
+      "route": "103",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_103.jpg",
+      "sha256": "534a5ff37f96feb52ba3bb8ad7a5674fd7bc4b9e484f5ad4f372fc1edaed617e",
+      "bytes": 474962
+    },
+    {
+      "route": "10B",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_10B.jpg",
+      "sha256": "5c26246f044630400926430668d5fef70ee23dbb7ff1b0002e20fb5cdeadb18e",
+      "bytes": 280623
+    },
+    {
+      "route": "11",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_11.jpg",
+      "sha256": "ab4dcb06a58e12876426c56c8c6ce71d4ac2bc17d98b5937d5b2b0ead794f2a9",
+      "bytes": 410581
+    },
+    {
+      "route": "12",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_12.jpg",
+      "sha256": "f3acd3da7168034e667ec72f2d37315613c9da7ff8617f900a116657eb257f15",
+      "bytes": 613653
+    },
+    {
+      "route": "15",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_15.jpg",
+      "sha256": "ee0d3966e794773cef859ded21ec3e4c82c570794ace73e7694e4e479c56b33c",
+      "bytes": 826091
+    },
+    {
+      "route": "16",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_16.jpg",
+      "sha256": "b2341fe951808d98b7ee2fdd668e37672f8ce7220d32f422bdb47ee257f7c18d",
+      "bytes": 291652
+    },
+    {
+      "route": "16S",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_16S.jpg",
+      "sha256": "43a9a6f94f312119dd147f47e6af7892448cc17533f1cbec2f2aee1a7920267c",
+      "bytes": 551195
+    },
+    {
+      "route": "17",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_17.jpg",
+      "sha256": "f7ced70e9ae4e44ba6f9a80885133b86878a89e092bb0902e62e6ae021e9da97",
+      "bytes": 312625
+    },
+    {
+      "route": "17S",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_17S.jpg",
+      "sha256": "ca0b48f69e93714ab2f8847a03a396e6bf3244f8d22fd4495704ddc3beb3f1ef",
+      "bytes": 581730
+    },
+    {
+      "route": "18",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_18.jpg",
+      "sha256": "f9f9bc85deaffc19c4a7f551c879a8798540aaf4e848807b6ad68c9d95ae0509",
+      "bytes": 446319
+    },
+    {
+      "route": "18A",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_18A.jpg",
+      "sha256": "91e8558fabeca7734f0d4d5e55f59bda2e0b64432626e0f737298c053dd20654",
+      "bytes": 261555
+    },
+    {
+      "route": "18B",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_18B.jpg",
+      "sha256": "02ae83936deb6e20901acae4ab34d479f170f0ce7162173a9075a1309be0f693",
+      "bytes": 411984
+    },
+    {
+      "route": "19",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_19.jpg",
+      "sha256": "aa35a4902f61e24606ea8a734dfc2729efe98d20e809d3ae563caadb2adecce7",
+      "bytes": 240933
+    },
+    {
+      "route": "1A",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_1A.jpg",
+      "sha256": "21e689f58f3d9d67c73bda79e0eea6ac2428edc5c107a3de3c8cde69d0b1979c",
+      "bytes": 354353
+    },
+    {
+      "route": "2",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_2.jpg",
+      "sha256": "8fc911e511f0d7c370899f63779dcd9fd7fc67808ca8330eaea2425098dec125",
+      "bytes": 413221
+    },
+    {
+      "route": "21A",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_21A.jpg",
+      "sha256": "1f586614cc2df3f1293274a38c3375e92d95f96fb99ff7b8af1fa94e975271c5",
+      "bytes": 276944
+    },
+    {
+      "route": "22",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_22.jpg",
+      "sha256": "2e5551ae92e7ff3b700bf716a1e070bf452bd6ee7ecc8f75ef09c7e1087b3445",
+      "bytes": 374467
+    },
+    {
+      "route": "23",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_23.jpg",
+      "sha256": "7d842e8032450284e75c24e55c7462eea836de0b4e4ae430920e7ed1bdb4037b",
+      "bytes": 339618
+    },
+    {
+      "route": "25",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_25.jpg",
+      "sha256": "7d0dee82981096943fc00ac41ba38b576f7db41fc356830b4ed79ebc7bfcea7d",
+      "bytes": 1097861
+    },
+    {
+      "route": "25AX",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_25AX.jpg",
+      "sha256": "da0c8c753a3da16cf5cc9de3e70be2a290976fc7db0e17afa0ba958d5ffd1e99",
+      "bytes": 501526
+    },
+    {
+      "route": "25B",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_25B.jpg",
+      "sha256": "ae7967373e0539b0eb7350c276a75f636c9008dcb0ed997ad2f373a76e6e43d6",
+      "bytes": 1242130
+    },
+    {
+      "route": "25BS",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_25BS.jpg",
+      "sha256": "bd2a1f3b3b2a863575ce7d273d29004b5e313bfc9b38fbd06ba04a2280f5b693",
+      "bytes": 890680
+    },
+    {
+      "route": "26",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_26.jpg",
+      "sha256": "0e92080049372990a8fd5f6ef78a54e34a46336e93bf26e3c974d19c09ec5bf2",
+      "bytes": 1336495
+    },
+    {
+      "route": "26A",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_26A.jpg",
+      "sha256": "7ee9c9965c318929c1e632b7eee5d12de6a1fa99882edc2d0e744ddf7aea979f",
+      "bytes": 879198
+    },
+    {
+      "route": "27",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_27.jpg",
+      "sha256": "a445eb3c86f6dfbff45f6af4f359e79e09d47bd7cff03194964f83ca52612066",
+      "bytes": 486588
+    },
+    {
+      "route": "28A",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_28A.jpg",
+      "sha256": "7f345dcf95a8ccefb0ac18be745c15e6ad6a2ac2bf9a9e84ca6080bcd1c81eed",
+      "bytes": 589512
+    },
+    {
+      "route": "28B",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_28B.jpg",
+      "sha256": "9b1f7bdcb5e403a22fbf5627e541b7a551454a5a82a2ee99949b6b1f67aa81d0",
+      "bytes": 454820
+    },
+    {
+      "route": "28C",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_28C.jpg",
+      "sha256": "0f75ed9076fc5c838a124b1884a059b553c4fe35de0ffd8e61d2feed465e75db",
+      "bytes": 353013
+    },
+    {
+      "route": "29",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_29.jpg",
+      "sha256": "b23e90a4f16cd6e5deed2601702f59837e3a5b293abc249544aa7c7e65345f1b",
+      "bytes": 662605
+    },
+    {
+      "route": "2A",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_2A.jpg",
+      "sha256": "782a3e0104aa4187a6dc3d68bf55e528c2df1e1d99f603dafa5bbd93e8a95751",
+      "bytes": 200919
+    },
+    {
+      "route": "2AS",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_2AS.jpg",
+      "sha256": "665d9834728eac5f89b48d9a58b7b598c787073fa9c32b7cbe60afe4b559c07d",
+      "bytes": 189742
+    },
+    {
+      "route": "3",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_3.jpg",
+      "sha256": "f4abb99bcfb47afa4e0683b8b93e66b9d30e6f778042ee7cbc94755c237cbb37",
+      "bytes": 604862
+    },
+    {
+      "route": "30",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_30.jpg",
+      "sha256": "04fccaef0bc85de5f0ada580b788af75bdb0360cc8ba9f6b5e01b27c416fbb49",
+      "bytes": 378186
+    },
+    {
+      "route": "30X",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_30X.jpg",
+      "sha256": "8d6f677822ad5f256b861ff3f16c68029e3bf88f2f6fd16013bf771ed866a7c7",
+      "bytes": 583086
+    },
+    {
+      "route": "32",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_32.jpg",
+      "sha256": "5a71ba49b8ff7fec79dc490e6655d14b9b6711d69002d5c3ff03cf06417dea0a",
+      "bytes": 336044
+    },
+    {
+      "route": "33",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_33.jpg",
+      "sha256": "aa0e31b6bf32d213cd9a9ca5309b74f47c14f7a0f579e2a26de41a171573a7aa",
+      "bytes": 980444
+    },
+    {
+      "route": "34",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_34.jpg",
+      "sha256": "3f496cfa669fefd142a99feffe2e1144bd08f15e6ed5bb6838ff6574672658d1",
+      "bytes": 710010
+    },
+    {
+      "route": "35",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_35.jpg",
+      "sha256": "344aad9d6f05349f23303baaa0d036d02974fe2c8075725927533506bfc8acdb",
+      "bytes": 439248
+    },
+    {
+      "route": "37",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_37.jpg",
+      "sha256": "bbd353730aa689d5f7e1b7b626e73ff04119c615eb5c4db59d5f6836d65be58c",
+      "bytes": 293604
+    },
+    {
+      "route": "39",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_39.jpg",
+      "sha256": "f2226eab2c4713e94537382d2e1b2d072a5cdd57d4542cb0d29d8ca25ff32c80",
+      "bytes": 606038
+    },
+    {
+      "route": "3A",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_3A.jpg",
+      "sha256": "7cce4f5eb296b9c8113fae5d1dc4373f6fd6661741d30a78b6b2a07af0d42970",
+      "bytes": 653380
+    },
+    {
+      "route": "3AX",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_3AX.jpg",
+      "sha256": "23a2dc51f9a163e516a825b34e1c83216c93c39cb5a961abda0c348040dc9d5e",
+      "bytes": 191707
+    },
+    {
+      "route": "3X",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_3X.jpg",
+      "sha256": "d1f49add1318768a9b5fd8b67fadfb4b4d624a30b167402c1bc206ecf228ba9a",
+      "bytes": 264985
+    },
+    {
+      "route": "4",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_4.jpg",
+      "sha256": "30bc817c7f47593a8ae942b8b85179ea20d25cedfad1af687803d198eb85f9d1",
+      "bytes": 279400
+    },
+    {
+      "route": "5",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_5.jpg",
+      "sha256": "95b99adaa9b11883fc37159240e135be5637c626dabc55e902b32fa49c9b3650",
+      "bytes": 879787
+    },
+    {
+      "route": "50",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_50.jpg",
+      "sha256": "c4de250875cdb8025171c9d0d7657b75bb7eec1f5a25b7423f5a156c854397f3",
+      "bytes": 259943
+    },
+    {
+      "route": "50B",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_50B.jpg",
+      "sha256": "10533f712bb9af93f6f6687bc601460cfb0e55be31165671da16815f9d7f58b1",
+      "bytes": 354378
+    },
+    {
+      "route": "51",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_51.jpg",
+      "sha256": "660b5c5319878d16a8ea0b7c9cc1bbcf05a0436330400a25e6e3570b5ebd6efd",
+      "bytes": 986680
+    },
+    {
+      "route": "51A",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_51A.jpg",
+      "sha256": "a558cc06d791b6d27db1c471a5f163298890c0ee4ce465d75489cb017ebf5cb0",
+      "bytes": 1135978
+    },
+    {
+      "route": "51B",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_51B.jpg",
+      "sha256": "2a21c59579e22a8f47e62e81f297e49062abb886e1ab29ca189f22f6bef5add8",
+      "bytes": 720804
+    },
+    {
+      "route": "52",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_52.jpg",
+      "sha256": "413243ab61b3f127da5e4ffe08b7434238131d5590a6ccf0e176e7b87a7a8517",
+      "bytes": 232481
+    },
+    {
+      "route": "55",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_55.jpg",
+      "sha256": "463a448fa5e856ea61f4ae8aab0548551583d62cb73f4c45bc1478c23b37b0ee",
+      "bytes": 143598
+    },
+    {
+      "route": "56",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_56.jpg",
+      "sha256": "3f174ab8d6b2b9f9ec441e7a6c376b01072282e346debe11185c82a2c88c6e6b",
+      "bytes": 264829
+    },
+    {
+      "route": "59",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_59.jpg",
+      "sha256": "51ad1c1d08790ec782b00ac39e17af40e740f47090283b1a5019c68f1aa4a5e3",
+      "bytes": 325813
+    },
+    {
+      "route": "5X",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_5X.jpg",
+      "sha256": "98370c38d2dda0c13f4dc029f73f868a67f5964963649dea8eda77c174731c5f",
+      "bytes": 276984
+    },
+    {
+      "route": "60",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_60.jpg",
+      "sha256": "763711652f21512079df41bf4e887211b30e244c999bd8714817acdc5e0a99ad",
+      "bytes": 482834
+    },
+    {
+      "route": "61",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_61.jpg",
+      "sha256": "03c9cd8ba3386187fff745e4080bd6822456eddd11b647f36d32084f98f4b5d1",
+      "bytes": 707223
+    },
+    {
+      "route": "65",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_65.jpg",
+      "sha256": "d9f131a417f296a932816de7708ca0fe87eddf61b771f4b85d30ba5dd5d212bc",
+      "bytes": 927031
+    },
+    {
+      "route": "6A",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_6A.jpg",
+      "sha256": "04fb0daabcfb80efe28d81800256a7783080e90b3253ebcc193505a825ee1a79",
+      "bytes": 229983
+    },
+    {
+      "route": "6B",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_6B.jpg",
+      "sha256": "295c87ffb1600d199c7fa8ecd89a88a1a110a9b6f8aed0e78e371302dcf63c16",
+      "bytes": 200406
+    },
+    {
+      "route": "7",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_7.jpg",
+      "sha256": "0ff06d56c4c179ffb76ae2146e0a1d4b9996c597d7fe470d6ca6b16b2cb4cd53",
+      "bytes": 223048
+    },
+    {
+      "route": "701X",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_701X.jpg",
+      "sha256": "b2a9bb5df75f360ef08144cb0303adb389f2327075b8f22dd6609fd30c4c89fe",
+      "bytes": 566732
+    },
+    {
+      "route": "701XS",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_701XS.jpg",
+      "sha256": "a5fe507a883f3582e4f558c01981b4e8b195c0647d0949bb3abc91007861b4b9",
+      "bytes": 123579
+    },
+    {
+      "route": "71",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_71.jpg",
+      "sha256": "80e78ddd91e713db0dfdc7451421e22cada73e9d870279d8f0dab87dec933ed4",
+      "bytes": 468594
+    },
+    {
+      "route": "71S",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_71S.jpg",
+      "sha256": "20893c625d88b49f273488bb6f0934a335613c237f381ab3fac9f830ca699145",
+      "bytes": 418194
+    },
+    {
+      "route": "72",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_72.jpg",
+      "sha256": "ad9971e2f4d8d3209e89373fe838f63f34e4a08ac41d6c7a92f661283f762dc1",
+      "bytes": 621645
+    },
+    {
+      "route": "73",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_73.jpg",
+      "sha256": "95d85e01b945dea9ab7d99825fcb46f92b6b9dcdcb3f5b4fab63e3d8ecfe2b3f",
+      "bytes": 295915
+    },
+    {
+      "route": "8",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_8.jpg",
+      "sha256": "348f4a8f74b3b80d4efa04391ea8a574e2f07ea5b1c63c7b46115705382a460a",
+      "bytes": 340901
+    },
+    {
+      "route": "8A",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_8A.jpg",
+      "sha256": "416ffcd48010c7b95bb8450665c01faafd1fbb8eec74e1109bd0af1df6789cd8",
+      "bytes": 284496
+    },
+    {
+      "route": "9",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_9.jpg",
+      "sha256": "a1bc3832433a5e965b64e8486814136e87529ff8b2a8492a1dd9a9f1efa3e299",
+      "bytes": 941849
+    },
+    {
+      "route": "9A",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_9A.jpg",
+      "sha256": "80bd9b3b6cb1d84a52031b1eb834f0c44cd3668e965741ba1dd1a99fd37f2d7b",
+      "bytes": 326557
+    },
+    {
+      "route": "AP1",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_AP1.jpg",
+      "sha256": "ad1c6dea4f538ce7da90a39a8fe0009b62c9cc52b3490d58b387746d21370699",
+      "bytes": 932201
+    },
+    {
+      "route": "H1",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_H1.jpg",
+      "sha256": "248075365d37b5880ac6b9c7b8bf05fbb2606d8b580f6474cd92673c5cf36de1",
+      "bytes": 224555
+    },
+    {
+      "route": "H2",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_H2.jpg",
+      "sha256": "9667463453f5590dc7c2acd026aea8f239db49a8502c1023ebb84942c01bd991",
+      "bytes": 390684
+    },
+    {
+      "route": "H3",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_H3.jpg",
+      "sha256": "86ace4cdc9be0c12d3ca171993c9b779a31f0da48c309117fa5f5910e042ec36",
+      "bytes": 315136
+    },
+    {
+      "route": "MT1",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_MT1.jpg",
+      "sha256": "b40e0e9d34702bd7714c8750548c7e16649a167880d55ecf4948bb1d80636642",
+      "bytes": 343196
+    },
+    {
+      "route": "MT2",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_MT2.jpg",
+      "sha256": "ff4701987af7cd9906972b03601288404a74530731371414548ce51b7a051b8b",
+      "bytes": 207637
+    },
+    {
+      "route": "MT3",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_MT3.jpg",
+      "sha256": "f0d5fd64c83d1ce527b5288179585436b41ca174d34c54bbdb4a0e9ee04eb156",
+      "bytes": 318611
+    },
+    {
+      "route": "MT4",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_MT4.jpg",
+      "sha256": "62aee62f9c3811fa7d518f4451c903d4a87056bbc8847d7b33922c5545ba8782",
+      "bytes": 811393
+    },
+    {
+      "route": "MT5",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_MT5.jpg",
+      "sha256": "6e6239a870c668f6ddb8c244aa5102e30eb85aca822156561089c70db9de087f",
+      "bytes": 564846
+    },
+    {
+      "route": "N1A",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_N1A.jpg",
+      "sha256": "33b288f190eb8bc504a7553d6bb55c206d4c5dbaed1cc732998f39c33ab0bf23",
+      "bytes": 524864
+    },
+    {
+      "route": "N1B",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_N1B.jpg",
+      "sha256": "931812a5e549a4a40933959350e4466fa0d77bed39513dfc78096e3146bb6b55",
+      "bytes": 258530
+    },
+    {
+      "route": "N2",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_N2.jpg",
+      "sha256": "c6578fc56cefd167ced4513d793267f764f9374e8a63038b0bc56e14e25379dc",
+      "bytes": 397474
+    },
+    {
+      "route": "N3",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_N3.jpg",
+      "sha256": "8304331ae12d95409c9ae714ffff8d84235566f7079a3061a4922f29348d474c",
+      "bytes": 771833
+    },
+    {
+      "route": "N5",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_N5.jpg",
+      "sha256": "5bcb4ecd9ac9fb97a5bf108b3bb0be3993f9c6b370818814b227c54a42a55657",
+      "bytes": 444604
+    },
+    {
+      "route": "N6",
+      "url": "https://www.dsat.gov.mo/bus/images/busroute/busroute_N6.jpg",
+      "sha256": "a3f35567da91a16d97583e0ba0a1dc724d2146d4487128a4e1b8521e4224637f",
+      "bytes": 331338
+    }
+  ]
+}

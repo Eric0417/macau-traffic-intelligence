@@ -102,7 +102,7 @@ import SwiftUI
     }
 }
 
-private final class StubLocationManager: CLLocationManager {
+final class StubLocationManager: CLLocationManager {
     var stopCount = 0
     override var authorizationStatus: CLAuthorizationStatus { .authorizedWhenInUse }
     override func startUpdatingLocation() {}
