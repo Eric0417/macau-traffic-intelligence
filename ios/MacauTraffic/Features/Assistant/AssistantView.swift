@@ -178,7 +178,7 @@ struct AssistantView: View {
                 DisclosureGroup(settings.text("路線注意事項", "Route notices") + " · \(plans.warnings.count)") { warningList(plans.warnings) }.font(.footnote).foregroundStyle(.secondary)
             }
             DisclosureGroup(settings.text("規劃說明", "Planning details")) {
-                Text(plans.summary).font(.footnote).textSelection(.enabled)
+                AssistantReplyText(text: plans.summary).font(.footnote).textSelection(.enabled)
                 if let taxi = plans.taxiAlternative { Text(taxi).font(.footnote) }
                 Text(plans.model + " · " + plans.networkFetchedAt).font(.caption)
             }.font(.footnote).foregroundStyle(.secondary)
@@ -209,8 +209,11 @@ struct AssistantView: View {
                     do { let coordinate = try await location.request(); try Task.checkCancellation(); locationError = nil; state.useOrigin(coordinate: coordinate) }
                     catch is CancellationError {} catch { locationError = error.localizedDescription }
                 }
-            } label: { Label(settings.text("分享目前位置", "Share current location"), systemImage: "location.fill") }
-                .buttonStyle(.borderedProminent).disabled(location.locating || state.busy)
+            } label: {
+                Label(settings.text("分享目前位置", "Share current location"), systemImage: "location.fill")
+                    .foregroundStyle(Color(.systemBackground))
+            }
+                .buttonStyle(.borderedProminent).controlSize(.large).accessibilityIdentifier("assistant-origin-location").disabled(location.locating || state.busy)
             TextField(settings.text("或者輸入起點地標", "Or enter an origin landmark"), text: $manualOrigin).textFieldStyle(.roundedBorder).disabled(location.locating)
                 .focused($originTyping).submitLabel(.go).onSubmit(useManualOrigin)
             Button(settings.text("使用呢個起點", "Use this origin"), action: useManualOrigin).buttonStyle(.bordered).controlSize(.large)
@@ -238,7 +241,7 @@ struct AnswerView: View {
     var answer: TrafficAnswer
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Text(answer.answer).textSelection(.enabled)
+            AssistantReplyText(text: answer.answer).textSelection(.enabled)
             if let action = answer.action {
                 if action.kind == "lrt" { NavigationLink(settings.text("查看輕軌", "Open light rail")) { LRTView() } }
                 else if let code = action.routeCode {

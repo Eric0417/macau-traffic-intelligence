@@ -1,5 +1,6 @@
 import XCTest
 import CoreLocation
+import simd
 @testable import MacauTraffic
 
 @MainActor final class BusDetailTests: XCTestCase {
@@ -65,5 +66,60 @@ import CoreLocation
         XCTAssertTrue(BusTimetable.Period(start: "06:00", end: "00:00").crossesMidnight)
         XCTAssertFalse(BusTimetable.Period(start: "00:00", end: "06:00").crossesMidnight)
         XCTAssertFalse(BusTimetable.Period(start: "08:25").crossesMidnight)
+    }
+    func testSchematicPlacesFeedBusBetweenStopsAndFallbackAtApproachedStop() throws {
+        let envelope: Envelope<BusETA> = try FixtureLoader.response("bus/routes/00056/eta_vehicles", body: nil)
+        let eta = envelope.data
+        let vehicle = try XCTUnwrap(eta.vehicles.last)
+        let position = try XCTUnwrap(vehicle.routePosition(in: eta))
+        XCTAssertNotNil(position.from)
+        XCTAssertEqual(position.to.sequence, position.from!.sequence + 1)
+        var fallback = vehicle
+        fallback.positionSource = "stop"
+        let approach = try XCTUnwrap(fallback.routePosition(in: eta))
+        XCTAssertNil(approach.from)
+        XCTAssertEqual(approach.to.sequence, vehicle.stationSequence)
+        fallback.stationSequence = 999
+        XCTAssertNil(fallback.routePosition(in: eta))
+    }
+    func testSchematicDoesNotGuessAnOccurrenceFromARepeatedCode() throws {
+        let envelope: Envelope<BusETA> = try FixtureLoader.response("bus/routes/00056/eta_vehicles", body: nil)
+        var eta = envelope.data
+        var vehicle = try XCTUnwrap(eta.vehicles.last)
+        let original = try XCTUnwrap(vehicle.routePosition(in: eta))
+        var repeatedFrom = try XCTUnwrap(original.from)
+        var repeatedTo = original.to
+        repeatedFrom.sequence += 100; repeatedTo.sequence += 100
+        eta.stops += [repeatedFrom, repeatedTo]
+        vehicle.stationSequence = repeatedTo.sequence; vehicle.stationCode = repeatedTo.stationCode
+        XCTAssertEqual(vehicle.routePosition(in: eta)?.to.id, repeatedTo.id)
+        vehicle.stationSequence = 999
+        XCTAssertNil(vehicle.routePosition(in: eta))
+    }
+    func testLoopClosingBusRemainsBetweenLastAndFirstStops() throws {
+        let envelope: Envelope<BusETA> = try FixtureLoader.response("bus/routes/00056/eta_vehicles", body: nil)
+        var eta = envelope.data
+        var vehicle = try XCTUnwrap(eta.vehicles.last)
+        let first = try XCTUnwrap(eta.stops.first)
+        let index = try XCTUnwrap(eta.routeSegments.firstIndex { $0.fromStationCode == eta.stops.last?.stationCode && $0.toStationCode == first.stationCode })
+        let segment = eta.routeSegments[index]
+        vehicle.segmentIndex = index
+        vehicle.coordinates = segment.coordinates[segment.coordinates.count / 2]
+        vehicle.stationCode = first.stationCode; vehicle.stationSequence = first.sequence
+        eta.vehicles = [vehicle]
+        XCTAssertEqual(vehicle.routePosition(in: eta)?.from?.id, eta.stops.last?.id)
+        XCTAssertEqual(vehicle.routePosition(in: eta)?.to.id, first.id)
+        XCTAssertEqual(eta.stopContext(through: first, includeVehicles: true).map(\.id), [eta.stops.last!.id, first.id])
+        XCTAssertEqual(eta.stopContext(through: first, includeVehicles: false).map(\.id), [first.id])
+    }
+    func testBusNoseFollowsCompassAndRotatingMap() {
+        func nose(_ bearing: Double, _ heading: Double) -> SIMD3<Float> {
+            simd_quatf(angle: BusModelPose.yaw(bearing: bearing, heading: heading), axis: [0, 1, 0]).act([1, 0, 0])
+        }
+        XCTAssertEqual(nose(0, 0).z, -1, accuracy: 0.001)
+        XCTAssertEqual(nose(90, 0).x, 1, accuracy: 0.001)
+        XCTAssertEqual(nose(180, 0).z, 1, accuracy: 0.001)
+        XCTAssertEqual(nose(270, 0).x, -1, accuracy: 0.001)
+        XCTAssertEqual(nose(0, 90).x, -1, accuracy: 0.001)
     }
 }

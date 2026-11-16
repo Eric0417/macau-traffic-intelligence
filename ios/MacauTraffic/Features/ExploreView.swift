@@ -68,16 +68,35 @@ struct ExploreView: View {
         .sheet(isPresented: $showSources) {
             NavigationStack {
                 List {
-                    Text(settings.text("只顯示官方監測路段；灰色代表未有路況。", "Officially monitored segments only. Gray means no traffic status."))
+                    Section(settings.text("地圖顏色", "Map colours")) {
+                        legendRow(.green, title: settings.text("暢通", "Clear"), detail: settings.text("官方回報交通正常", "Traffic reported as normal"))
+                        legendRow(.orange, title: settings.text("緩慢", "Slow"), detail: settings.text("官方回報車流緩慢", "Traffic reported as slow"))
+                        legendRow(.red, title: settings.text("擠塞", "Congested"), detail: settings.text("官方回報道路擠塞", "Congestion reported"))
+                        legendRow(.gray, title: settings.text("未知", "Unknown"), detail: settings.text("未有確認路況，唔代表暢通", "No confirmed status; does not mean clear"))
+                    }
+                    Section {
+                        Toggle(settings.text("顯示路況", "Show traffic"), isOn: $showTraffic)
+                        Text(settings.text("只顯示官方監測路段。", "Officially monitored segments only.")).font(.footnote).foregroundStyle(.secondary)
+                    }
                     SourceNote(meta: roads.meta, error: roads.error)
-                }.navigationTitle(settings.text("路況資料", "Traffic sources"))
+                }.navigationTitle(settings.text("路況圖例", "Traffic legend")).navigationBarTitleDisplayMode(.inline)
                     .toolbar { ToolbarItem(placement: .confirmationAction) { Button(settings.text("完成", "Done")) { showSources = false } } }
-            }.presentationDetents([.medium]).presentationDragIndicator(.visible)
+            }.presentationDetents([.medium, .large]).presentationDragIndicator(.visible)
         }
+        .sensoryFeedback(.selection, trigger: showSources)
         .alert(settings.text("定位未能完成", "Location unavailable"), isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {
             Button(settings.text("好", "OK")) { error = nil }
             if let url = URL(string: UIApplication.openSettingsURLString) { Link(settings.text("設定", "Settings"), destination: url) }
         } message: { Text(error ?? "") }
+    }
+    private func legendRow(_ color: Color, title: String, detail: String) -> some View {
+        HStack(spacing: 16) {
+            Capsule().fill(color).frame(width: 28, height: 5).accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title).font(.body.weight(.medium))
+                Text(detail).font(.caption).foregroundStyle(.secondary)
+            }
+        }.padding(.vertical, 3).accessibilityElement(children: .combine)
     }
     private var trafficStatus: some View {
         TimelineView(.periodic(from: .now, by: 2)) { context in
@@ -95,7 +114,7 @@ struct ExploreView: View {
                     }
                     Text(settings.text(delayed ? "路況資料延遲" : "路況", delayed ? "Traffic data delayed" : "Traffic")).font(.caption.weight(.medium))
                     Image(systemName: "info.circle").font(.caption)
-                }.padding(.horizontal, 14).frame(minHeight: 44).glassEffect(.regular.interactive(), in: .capsule)
+                }.padding(.horizontal, 14).frame(minHeight: 44).contentShape(Capsule()).glassEffect(.regular.interactive(), in: .capsule)
             }.buttonStyle(.plain).accessibilityLabel(settings.text("路況資料", "Traffic sources"))
                 .accessibilityValue(delayed ? settings.text("資料延遲", "Data delayed") : roads.loading || roads.meta == nil ? settings.text("更新中", "Updating") : settings.text("最新資料", "Up to date"))
         }

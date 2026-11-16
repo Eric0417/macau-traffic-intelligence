@@ -15,6 +15,8 @@ struct MapPin: Identifiable, Equatable {
     var title: String
     var symbol = "mappin"
     var color: Color = .blue
+    var modelName: String?
+    var bearing: Double?
 }
 
 @Observable @MainActor final class MapViewport {
@@ -177,10 +179,18 @@ struct NativeTransitMap: UIViewRepresentable {
             for pin in pins {
                 if let annotation = annotations[pin.id] {
                     if annotation.pin != pin {
+                        if annotation.pin.modelName != pin.modelName {
+                            map.removeAnnotation(annotation)
+                            let replacement = TransitAnnotation(pin)
+                            annotations[pin.id] = replacement
+                            map.addAnnotation(replacement)
+                            continue
+                        }
                         annotation.pin = pin
                         annotation.coordinate = pin.coordinate.location
                         annotation.title = pin.title
                         if let view = map.view(for: annotation) as? MKMarkerAnnotationView { configure(view, with: pin) }
+                        if let view = map.view(for: annotation) as? BusModelAnnotationView, let bearing = pin.bearing { view.updatePose(bearing: bearing, camera: map.camera) }
                     }
                 } else {
                     let annotation = TransitAnnotation(pin)
@@ -200,6 +210,13 @@ struct NativeTransitMap: UIViewRepresentable {
         }
         func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
             guard let annotation = annotation as? TransitAnnotation else { return nil }
+            if let modelName = annotation.pin.modelName {
+                let view = mapView.dequeueReusableAnnotationView(withIdentifier: "bus-model") as? BusModelAnnotationView ?? BusModelAnnotationView(annotation: annotation, reuseIdentifier: "bus-model")
+                view.annotation = annotation
+                view.configure(modelName: modelName, plate: annotation.pin.title)
+                if let bearing = annotation.pin.bearing { view.updatePose(bearing: bearing, camera: mapView.camera) }
+                return view
+            }
             let view = mapView.dequeueReusableAnnotationView(withIdentifier: "transit") as? MKMarkerAnnotationView ?? MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: "transit")
             view.annotation = annotation
             configure(view, with: annotation.pin)
@@ -216,6 +233,13 @@ struct NativeTransitMap: UIViewRepresentable {
             guard let annotation = view.annotation as? TransitAnnotation, let select = parent.onSelect else { return }
             select(annotation.pin.id)
             mapView.deselectAnnotation(annotation, animated: false)
+        }
+        func mapViewDidChangeVisibleRegion(_ mapView: MKMapView) {
+            for annotation in annotations.values where annotation.pin.modelName != nil {
+                if let view = mapView.view(for: annotation) as? BusModelAnnotationView, let bearing = annotation.pin.bearing {
+                    view.updatePose(bearing: bearing, camera: mapView.camera)
+                }
+            }
         }
         func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
             parent.viewport.update()

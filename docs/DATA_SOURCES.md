@@ -47,6 +47,9 @@ Native tests decode captured contracts, check freshness and request encoding, ru
 
 The native client is named Macao Move. Road overlays are batched by stroke style without dropping monitored segments. Repeated location actions explicitly recenter the current map camera; route application fits only the selected route, excluding background traffic. Recording feedback uses AVAudioRecorder's actual metered input power, with an 80-sample in-memory display buffer. No audio recording limit, upload format or retention policy changes.
 
+Native Build 8 places vehicles within the stop diagram only when their official estimated coordinate matches the reported route segment within 100 m; unmatched reports keep approaching-stop wording. Repeated stop occurrences and circular closing segments keep their sequence identity. The map model is a schematic vehicle anchored to the feed coordinate, not measured physical vehicle geometry. Its bearing comes from the nearest nonzero edge of the validated official segment; rotation and pitch follow the map camera. Bus positions are not verified GPS telemetry. The road-inference experiment in `docs/qa/traffic-estimation/RESEARCH.md` is offline only and changes no live source, contract, cache or fallback. Unknown roads remain unknown.
+
+
 ## Adapter notes
 
 - Journey presentation uses the existing normalized ETA API for each selected leg (maximum two). Stop codes, direction, segment chain, count and endpoint geometry must match before a bus line is drawn. Repeated ambiguous paths, missing segments and conflicting transfer coordinates are not joined with invented lines. Official schedules/operating hours remain unverified for bus journeys. `docs/qa/resident-workspace/bus-journey-accuracy.json` records fresh reads of routes 3A, MT5 and 25 and the 30-stop versus 9-stop ranking regression.

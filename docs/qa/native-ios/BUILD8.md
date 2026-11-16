@@ -1,0 +1,25 @@
+# Macao Move Build 8 verification
+
+16 November 2026. Build 8 installed and independently read back from the paired iPhone at 10:32 Macau time.
+
+The arrival list is now a continuous stop diagram. Each matched bus appears before the stop it is travelling toward, with its plate and official-estimate label. Approaching-stop-only reports open stop detail and never invent a map position. Stop details resolve the selected occurrence from each new envelope and show the nearest preceding bus context, including a verified circular last-to-first segment. Vehicle technical details are collapsed.
+
+The standalone illustrative-model card is removed. A selected vehicle renders a RealityKit model at its feed coordinate within MapKit. Only one model per map is active; other feed vehicles remain selectable pins. The asset's +X nose rotates to the nearest validated segment tangent. A custom virtual camera follows map heading and pitch; native map gestures remain active. The vehicle is an annotation at a geographic point with schematic size, not a world-scale mesh with terrain occlusion. Missing validated heading retains a regular pin.
+
+Assistant replies render inline Markdown emphasis without literal stars, with separate heading/list/paragraph blocks. Long prose splits at sentence boundaries and preserves all wording, including cautions. Existing journey cards and collapsed explanations remain. The home traffic button opens a colour legend and triggers selection haptics; grey explicitly means unknown. The assistant's origin-location button explicitly uses the inverse foreground of its primary tint, fixing white text on a white prominent button in dark mode.
+
+Before changes, the new position/presentation tests failed due to missing behavior. Development UI checks also exposed model clipping without a controlled camera and a stale sheet parameter that prevented bus focus. The final camera and item-driven sheet correct those cases. Independent review found missing circular segments, nested stale stop snapshots and misleading map taps for fallback vehicles; each was corrected.
+
+Repository typecheck, lint, docs check and 42 files / 260 tests passed. Four offline-inference tests passed. The broad iPhone regression at 10:23 passed 44 native units and 18 UI flows. After the final decimal, removed-stop and location-button corrections, 45 native units passed on both iPhone and iPad. The final changed iPhone flows covered bus-list/map rotation/stop details, formatted answers/legend, actual permission denial followed by manual-origin recovery, and location success in both light and dark appearance. The last location flow passed on iPad too, completing all three changed iPad flows.
+
+The first location-success runs stalled on an old simulated GPS fix; supplying a continuing waypoint stream made both appearance flows pass without changing production location code. The earlier iPad run also inherited denied location permission; the tests now reset authorization and explicitly handle the system prompt. The separate 50 m nearest-stop test passed at 10:31 with a fixed C690/6 coordinate and granted simulator permission. Its earlier runs with different permission/location state did not pass; the successful setup and output are retained separately. These checks span 21 distinct iPhone flows, rather than one single final 21-test run.
+
+Result bundles: broad iPhone `10-18-45`; final iPhone units and three successful changed flows `10-24-12` (its location-success case failed before the GPS setup correction); successful light/dark location rerun `10-27-27`; nearest-stop `10-30-51`. iPad units, bus and answer flows: `10-23-11` (location-success case failed before correction); successful location rerun: `10-27-27`. All are 2026.11.16 bundles under their respective ignored derived-data directories.
+
+The review's decimal-prefix case is now tested so “3.5 km” cannot become list item 3 with distance “5 km”. A selected stop removed by a refresh shows an unavailable state and never falls back to a captured stop snapshot. The independent final source review found no remaining required changes. Release compilation and strict signature verification passed.
+
+Screenshots in `build8-screens/` use clearly marked synthetic fixtures. They do not establish physical GPS, actual arrival accuracy, haptic feel or phone frame rate. The official bus positions remain estimates.
+
+The road-inference research and its failed whole-street generalisation are in [the experiment report](../traffic-estimation/RESEARCH.md). No inference layer is published. No server code or deployment changes are needed for Build 8.
+
+Installation returned `InstallComplete (100%)`. A separate installed-application query returned Macao Move, version 1.0.0, build 8. The IPA is `ios/build-device/MacaoMove-build8.ipa`, SHA-256 `c5ba16b5f19644350a2664b3746955e73b2a2000684f6a0fa13c7c19fd169290`. Its ZIP contains no AppleDouble entries. See [installation receipt](build8-installation.json). This confirms installation; physical haptic feel and outdoor position accuracy are not established by simulator tests.

@@ -1,0 +1,14 @@
+{
+  "verifiedAt": "2026-11-16T02:32:10.820307+00:00",
+  "device": "paired iPhone",
+  "bundleIdentifier": "com.eric.macautraffic",
+  "displayName": "Macao Move",
+  "version": "1.0.0",
+  "build": "8",
+  "installer": "ideviceinstaller",
+  "installStatus": "InstallComplete (100%)",
+  "independentReadback": true,
+  "ipa": "ios/build-device/MacaoMove-build8.ipa",
+  "sha256": "c5ba16b5f19644350a2664b3746955e73b2a2000684f6a0fa13c7c19fd169290",
+  "signature": "codesign --verify --deep --strict passed"
+}

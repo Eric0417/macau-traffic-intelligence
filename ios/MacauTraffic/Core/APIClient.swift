@@ -140,6 +140,17 @@ enum FixtureLoader {
             let now = ISO8601DateFormatter().string(from: .now)
             meta["generatedAt"] = now; meta["updatedAt"] = now; object["meta"] = meta
         }
+        if name == "bus_routes_00056_eta_vehicles", var payload = object["data"] as? [String: Any], var stops = payload["stops"] as? [[String: Any]] {
+            for index in stops.indices {
+                if var estimate = stops[index]["arrivalEstimate"] as? [String: Any] {
+                    estimate["generatedAt"] = ISO8601DateFormatter().string(from: .now)
+                    estimate["arrivalAt"] = ISO8601DateFormatter().string(from: .now.addingTimeInterval(Double(estimate["minutes"] as? Int ?? 5) * 60))
+                    stops[index]["arrivalEstimate"] = estimate
+                }
+                stops[index].removeValue(forKey: "arrivalStatus")
+            }
+            payload["stops"] = stops; object["data"] = payload
+        }
         return try JSONDecoder().decode(T.self, from: JSONSerialization.data(withJSONObject: object))
     }
 }

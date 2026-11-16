@@ -1,0 +1,159 @@
+{
+  "snapshotMeta": {
+    "generatedAt": "2026-11-16T02:07:53.162Z",
+    "updatedAt": "2026-11-16T02:01:02.071Z",
+    "stale": true,
+    "ttlSeconds": 60,
+    "source": {
+      "id": "roads",
+      "name": "DSAT 即時道路擁塞",
+      "url": "https://bis.dsat.gov.mo/trafficmap/",
+      "text": "交通事務局及地圖繪製暨地籍局發佈的道路路況"
+    }
+  },
+  "roadCount": 1268,
+  "observedCount": 1098,
+  "unknownCount": 170,
+  "method": "endpoint-neighbor-vote-v1",
+  "evaluations": [
+    {
+      "mask": "segment",
+      "heldOut": {
+        "normal": 932,
+        "slow": 143,
+        "congested": 23
+      },
+      "coverage": 0.7122040072859745,
+      "coverageByClass": {
+        "normal": 0.7564377682403434,
+        "slow": 0.5244755244755245,
+        "congested": 0.08695652173913043
+      },
+      "inference": {
+        "count": 782,
+        "accuracy": 0.9948849104859335,
+        "recall": {
+          "normal": 0.9957446808510638,
+          "slow": 0.9866666666666667,
+          "congested": 1.0
+        },
+        "confusion": {
+          "normal": {
+            "normal": 702,
+            "slow": 3,
+            "congested": 0
+          },
+          "slow": {
+            "normal": 1,
+            "slow": 74,
+            "congested": 0
+          },
+          "congested": {
+            "normal": 0,
+            "slow": 0,
+            "congested": 2
+          }
+        }
+      },
+      "majorityOnSameSubset": {
+        "count": 782,
+        "accuracy": 0.90153452685422,
+        "recall": {
+          "normal": 1.0,
+          "slow": 0.0,
+          "congested": 0.0
+        },
+        "confusion": {
+          "normal": {
+            "normal": 705,
+            "slow": 0,
+            "congested": 0
+          },
+          "slow": {
+            "normal": 75,
+            "slow": 0,
+            "congested": 0
+          },
+          "congested": {
+            "normal": 2,
+            "slow": 0,
+            "congested": 0
+          }
+        }
+      }
+    },
+    {
+      "mask": "street",
+      "heldOut": {
+        "normal": 932,
+        "slow": 143,
+        "congested": 23
+      },
+      "coverage": 0.25774134790528236,
+      "coverageByClass": {
+        "normal": 0.26824034334763946,
+        "slow": 0.16783216783216784,
+        "congested": 0.391304347826087
+      },
+      "inference": {
+        "count": 283,
+        "accuracy": 0.8056537102473498,
+        "recall": {
+          "normal": 0.876,
+          "slow": 0.375,
+          "congested": 0.0
+        },
+        "confusion": {
+          "normal": {
+            "normal": 219,
+            "slow": 31,
+            "congested": 0
+          },
+          "slow": {
+            "normal": 15,
+            "slow": 9,
+            "congested": 0
+          },
+          "congested": {
+            "normal": 6,
+            "slow": 3,
+            "congested": 0
+          }
+        }
+      },
+      "majorityOnSameSubset": {
+        "count": 283,
+        "accuracy": 0.8833922261484098,
+        "recall": {
+          "normal": 1.0,
+          "slow": 0.0,
+          "congested": 0.0
+        },
+        "confusion": {
+          "normal": {
+            "normal": 250,
+            "slow": 0,
+            "congested": 0
+          },
+          "slow": {
+            "normal": 24,
+            "slow": 0,
+            "congested": 0
+          },
+          "congested": {
+            "normal": 9,
+            "slow": 0,
+            "congested": 0
+          }
+        }
+      }
+    }
+  ],
+  "productionEnabled": false,
+  "limitations": [
+    "Single timestamp; publisher labels are not field ground truth.",
+    "Endpoint proximity is not a verified directed motor-vehicle graph.",
+    "Held-out monitored roads do not establish accuracy on unmonitored side streets.",
+    "No historical speed, signal phase, turning flow, or calibrated confidence data."
+  ]
+}

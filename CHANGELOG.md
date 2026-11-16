@@ -1,5 +1,13 @@
 # Changelog
 
+## Macao Move bus diagrams and readable replies - 2026-11-16
+
+- Place bus markers between stops in the arrival list and selected-stop detail. Preserve circular last-to-first segments and distinguish a matched position from an approaching-stop report.
+- Move the bus model onto its reported map coordinate. Tap a bus to focus it; orient its nose along the matched road and adjust the camera with map rotation and tilt. Keep other vehicles as selectable pins.
+- Render assistant Markdown as headings, short paragraphs and lists, without literal stars or decorative star prefixes. Keep route explanations in the existing disclosures.
+- Add haptic feedback and an explicit four-colour legend to the home traffic information control. Fix the assistant origin-location button's white-on-white label in dark mode.
+- Record an offline road-inference study and masked-label experiment. Whole-street testing missed all covered congested cases, so unknown streets retain their unknown status.
+
 ## Macao Move home, assistant and bus detail corrections - 2026-11-16
 
 - Remove the home title gradient that produced a black edge below the status bar. Use a smaller glass destination control with a complete tap area.

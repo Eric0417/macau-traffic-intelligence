@@ -124,7 +124,7 @@ struct ItineraryResultsView: View {
             if plans.options.indices.contains(selected) {
                 let option = plans.options[selected]
                 Text(option.title).font(.title2.bold())
-                Text(option.reason).foregroundStyle(.secondary).textSelection(.enabled)
+                AssistantReplyText(text: option.reason).foregroundStyle(.secondary).textSelection(.enabled)
                 TransitMap(pins: option.stops.enumerated().map { index, stop in .init(id: "\(index)", coordinate: stop.coordinates, title: "\(index + 1). " + stop.name, symbol: "mappin", color: .teal) }, fitID: option.id).frame(height: 240).clipShape(.rect(cornerRadius: 24))
                 Button(settings.text("修改地點同停留時間", "Edit places and visit lengths"), systemImage: "slider.horizontal.3") { onEdit(plans.editable(option)) }.buttonStyle(.bordered)
                 VStack(alignment: .leading, spacing: 0) {

@@ -34,6 +34,49 @@ final class NavigationTests: XCTestCase {
         }
         capture("traffic-interaction", app: app)
     }
+    func testAssistantLocationButtonLightAndDark() throws {
+        let authorization = XCUIApplication()
+        authorization.resetAuthorizationStatus(for: .location)
+        defer { authorization.resetAuthorizationStatus(for: .location) }
+        for appearance in ["light", "dark"] {
+            let app = launch(extra: ["-appearance", appearance])
+            tab(app, "Assistant").tap()
+            let field = input(app, "assistant-input")
+            field.tap(); field.typeText("Take me to Senado Square")
+            app.buttons["assistant-send"].tap()
+            let location = app.buttons["assistant-origin-location"]
+            XCTAssertTrue(location.waitForExistence(timeout: 8))
+            XCTAssertEqual(location.label, "Share current location")
+            XCTAssertTrue(location.isEnabled)
+            capture("assistant-location-" + appearance, app: app)
+            location.tap()
+            let permission = XCUIApplication(bundleIdentifier: "com.apple.springboard").alerts.firstMatch
+            if permission.waitForExistence(timeout: 1) { permission.buttons["Allow While Using App"].tap() }
+            XCTAssertTrue(app.staticTexts["步行前往大三巴"].waitForExistence(timeout: 8))
+            app.terminate()
+        }
+    }
+    func testAssistantDeniedLocationKeepsManualOrigin() throws {
+        let authorization = XCUIApplication()
+        authorization.resetAuthorizationStatus(for: .location)
+        defer { authorization.resetAuthorizationStatus(for: .location) }
+        let app = launch(extra: ["-appearance", "dark"])
+        tab(app, "Assistant").tap()
+        let field = input(app, "assistant-input")
+        field.tap(); field.typeText("Take me to Senado Square")
+        app.buttons["assistant-send"].tap()
+        let location = app.buttons["assistant-origin-location"]
+        XCTAssertTrue(location.waitForExistence(timeout: 8)); location.tap()
+        let permission = XCUIApplication(bundleIdentifier: "com.apple.springboard").alerts.firstMatch
+        XCTAssertTrue(permission.waitForExistence(timeout: 5))
+        permission.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Don")).firstMatch.tap()
+        XCTAssertTrue(app.staticTexts["Location access is off. You can enter a landmark instead."].waitForExistence(timeout: 5))
+        capture("assistant-location-denied", app: app)
+        let origin = app.textFields["Or enter an origin landmark"]
+        origin.tap(); origin.typeText("Senado Square")
+        app.buttons["Use this origin"].tap()
+        XCTAssertTrue(app.staticTexts["步行前往大三巴"].waitForExistence(timeout: 8))
+    }
     func testAssistantWaitsWithDotAndKeepsKeyboardClosedOnEntry() throws {
         let app = launch("waiting")
         XCTAssertTrue(app.buttons["explore-search"].waitForExistence(timeout: 8))
@@ -53,7 +96,7 @@ final class NavigationTests: XCTestCase {
         tab(app, "Explore").tap(); tab(app, "Assistant").tap()
         XCTAssertFalse(app.keyboards.firstMatch.exists)
     }
-    func testBusHoursAlignedVehiclesAndBottomMedia() throws {
+    func testBusPositionsAppearInArrivalListAndMap() throws {
         let app = launch("bus")
         tab(app, "Buses").tap()
         let search = app.searchFields.firstMatch
@@ -61,32 +104,31 @@ final class NavigationTests: XCTestCase {
         app.buttons["route-00056"].tap()
         XCTAssertTrue(app.staticTexts["06:00 – 00:00 +1 day"].waitForExistence(timeout: 8))
         XCTAssertFalse(app.keyboards.firstMatch.exists)
-        capture("bus-hours", app: app)
-        let row = input(app, "vehicle-test-0")
-        for _ in 0..<18 {
-            if row.exists && row.isHittable { break }
-            app.swipeUp()
-        }
-        XCTAssertTrue(row.exists)
-        let first = app.staticTexts["MX0000"], second = app.staticTexts["MX0003"]
-        XCTAssertTrue(first.exists); XCTAssertTrue(second.exists)
-        XCTAssertEqual(first.frame.minX, second.frame.minX, accuracy: 1)
-        capture("bus-vehicles-aligned", app: app)
-        let map = app.buttons["bus-route-map"]
-        for _ in 0..<5 { if map.isHittable { break }; app.swipeUp() }
-        XCTAssertTrue(map.isHittable)
-        capture("bus-bottom-map", app: app)
-        app.swipeUp()
-        XCTAssertTrue(input(app, "bus-model").exists)
-        capture("bus-model", app: app)
-        for _ in 0..<4 {
-            if map.exists && map.isHittable { break }
-            app.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.3)).press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.7)))
-        }
-        map.tap()
+        let bus = app.buttons["route-bus-test-3"]
+        for _ in 0..<7 { if bus.exists && bus.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(bus.isHittable)
+        XCTAssertTrue(app.staticTexts["Between stops · official estimate"].firstMatch.exists)
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "min")).firstMatch.exists)
+        capture("bus-arrival-diagram", app: app)
+        bus.tap()
         XCTAssertTrue(app.buttons["Done"].waitForExistence(timeout: 5))
+        XCTAssertTrue(input(app, "map-bus-model").waitForExistence(timeout: 8))
+        app.buttons["Change map perspective"].tap()
+        XCTAssertEqual(app.buttons["Change map perspective"].value as? String, "3D")
+        capture("bus-model-on-route", app: app)
+        let model = input(app, "map-bus-model")
+        let orientation = try XCTUnwrap(model.value as? String)
+        app.maps.firstMatch.rotate(.pi / 2, withVelocity: 1)
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "value != %@", orientation), object: model)], timeout: 5), .completed)
+        capture("bus-model-rotated", app: app)
         app.buttons["Done"].tap()
         XCTAssertTrue(app.navigationBars["56"].exists)
+        app.buttons["stop-T376/2"].tap()
+        XCTAssertTrue(app.buttons["Done"].waitForExistence(timeout: 5))
+        app.swipeUp()
+        XCTAssertTrue(app.buttons["route-bus-test-3"].exists)
+        capture("bus-stop-arrival-context", app: app)
+        app.buttons["Done"].tap()
     }
     func testNearbyRouteStopUsesSimulatorGPS() throws {
         let app = launch("bus")
@@ -94,6 +136,8 @@ final class NavigationTests: XCTestCase {
         let search = app.searchFields.firstMatch
         XCTAssertTrue(search.waitForExistence(timeout: 5)); search.tap(); search.typeText("56")
         app.buttons["route-00056"].tap()
+        let permission = XCUIApplication(bundleIdentifier: "com.apple.springboard").alerts.firstMatch
+        if permission.waitForExistence(timeout: 2) { permission.buttons["Allow While Using App"].tap() }
         let marker = app.images["nearby-stop-0:C690/6"]
         XCTAssertTrue(marker.waitForExistence(timeout: 10))
         XCTAssertEqual(app.images.matching(NSPredicate(format: "identifier BEGINSWITH %@", "nearby-stop-")).count, 1)
@@ -242,6 +286,25 @@ final class NavigationTests: XCTestCase {
         destination.tap(); destination.typeText("Barra Station")
         XCTAssertEqual(destination.value as? String, "Barra Station")
         capture("trip-editor", app: app)
+    }
+    func testFormattedAssistantAndTrafficLegend() throws {
+        let app = launch("traffic")
+        app.buttons["Traffic"].tap()
+        let source = app.buttons["Traffic sources"]
+        XCTAssertTrue(source.waitForExistence(timeout: 5)); source.tap()
+        XCTAssertTrue(app.navigationBars["Traffic legend"].waitForExistence(timeout: 5))
+        app.swipeUp()
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "No confirmed status")).firstMatch.exists)
+        capture("traffic-colour-legend", app: app)
+        app.buttons["Done"].tap()
+        tab(app, "Assistant").tap()
+        let field = input(app, "assistant-input")
+        field.tap(); field.typeText("How is the traffic?")
+        app.buttons["assistant-send"].tap()
+        XCTAssertTrue(input(app, "reply-block-0").waitForExistence(timeout: 8))
+        XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "**")).firstMatch.exists)
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "唔係即時路況")).firstMatch.exists)
+        capture("assistant-formatted-answer", app: app)
     }
     func testDarkExplore() throws {
         let app = launch(extra: ["-appearance", "dark"])

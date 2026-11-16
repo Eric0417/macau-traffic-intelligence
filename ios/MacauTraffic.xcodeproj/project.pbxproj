@@ -20,6 +20,7 @@
 		35B0EBAF5518DCCB738A58EF /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06C6C6D23C36758C4FFE50A8 /* APIClient.swift */; };
 		378E636F3CE180158464C5C5 /* AssistantState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C5D1C96697C468C5295B342 /* AssistantState.swift */; };
 		480206B87D4F622979E279F1 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 6C7C812D9D6BA9474007F5DF /* PrivacyInfo.xcprivacy */; };
+		4CFF8263BAC52A9882A39F4D /* BusStopRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51A8BC0CFE2D57ACF3926D07 /* BusStopRow.swift */; };
 		514F483B29F3E84592220B5A /* TransitMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9765403F358FC1390BA86ED1 /* TransitMap.swift */; };
 		579D2929FEC0BBD50EC53037 /* SavedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3968728EA201E8E457582122 /* SavedView.swift */; };
 		57E7F0D00BE994CEAF907248 /* AssistantComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = E81E35DC0FE562B06E54AC25 /* AssistantComposer.swift */; };
@@ -46,12 +47,14 @@
 		A557A0ABF243CADE9DFB4C70 /* TripPlaceCorrection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B5FBFCA5EB580C14194ACAC /* TripPlaceCorrection.swift */; };
 		A72A22D67EB9E5E72FED5115 /* TripViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BB55467CADFF06F62D81D07 /* TripViews.swift */; };
 		B389F8571D93A76A0A859D74 /* NativeFeatureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A77B306F81609580D07F5AA1 /* NativeFeatureTests.swift */; };
+		B8FB991400B7E926461B787B /* AssistantReplyText.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FE35AC9E5A71C6694947DA0 /* AssistantReplyText.swift */; };
 		BB39502329A8B308502103F6 /* Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD57B266F3B3AB0BA968872B /* Components.swift */; };
 		BEDB82F061E46A7A95F9987D /* ManualPlannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA660655A15CE628D1801DD3 /* ManualPlannerView.swift */; };
 		C7E82631AC479D7E41DB2097 /* CamerasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCEB4479A61B028C224B6FC6 /* CamerasView.swift */; };
 		CCEDED54025ACCFAEBC5DB46 /* BusTimetableView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC5F68982ED54B44B24D423C /* BusTimetableView.swift */; };
 		CCFC356F773EBFACDBFDE874 /* JourneyDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E07C486772D40253368F82 /* JourneyDetailView.swift */; };
 		D00547F324EEBDB1892A4B2D /* JourneyMapSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40A62727EDB80AF8A737BAD5 /* JourneyMapSnapshot.swift */; };
+		D76C0A3AB43B57263BA4EDD9 /* AssistantPresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD4812ADD9BF85E2BE8852DD /* AssistantPresentationTests.swift */; };
 		E1908E6FE7D1B338D8A7C312 /* VoiceInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE5D673644F8CA8E82033D9F /* VoiceInputView.swift */; };
 		E9B3F5B3C3C379D9AFB96597 /* ParkingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D02A7980F03C62156EED9CE /* ParkingView.swift */; };
 		EA4BE2A5CDF3C8A37E15561F /* NavigationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3251846819074BCE6A6A0042 /* NavigationTests.swift */; };
@@ -84,6 +87,7 @@
 		06C6C6D23C36758C4FFE50A8 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
 		09634682ED45702136721308 /* BusViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BusViews.swift; sourceTree = "<group>"; };
 		0C5D1C96697C468C5295B342 /* AssistantState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantState.swift; sourceTree = "<group>"; };
+		0FE35AC9E5A71C6694947DA0 /* AssistantReplyText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantReplyText.swift; sourceTree = "<group>"; };
 		1158E9DCB47310E73E62FD27 /* LocationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationService.swift; sourceTree = "<group>"; };
 		15C0E0C55C651C14BC740B84 /* AVKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVKit.framework; path = System/Library/Frameworks/AVKit.framework; sourceTree = SDKROOT; };
 		15E58F2E6143CF1201522206 /* Settings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Settings.swift; sourceTree = "<group>"; };
@@ -93,6 +97,7 @@
 		3968728EA201E8E457582122 /* SavedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedView.swift; sourceTree = "<group>"; };
 		40A62727EDB80AF8A737BAD5 /* JourneyMapSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneyMapSnapshot.swift; sourceTree = "<group>"; };
 		4C14BC63F07C4511C67849A7 /* MacauTraffic.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = MacauTraffic.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		51A8BC0CFE2D57ACF3926D07 /* BusStopRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BusStopRow.swift; sourceTree = "<group>"; };
 		558623532083D22A80F0D756 /* CityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CityView.swift; sourceTree = "<group>"; };
 		560CA7469A09AB8D7071C59D /* TransitStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransitStyle.swift; sourceTree = "<group>"; };
 		575BF59C0284D2FEADE98644 /* WalkingConnectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalkingConnectionView.swift; sourceTree = "<group>"; };
@@ -118,6 +123,7 @@
 		A77B306F81609580D07F5AA1 /* NativeFeatureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeFeatureTests.swift; sourceTree = "<group>"; };
 		B2C062573E0BF93A688BDCCF /* planner.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = planner.js; sourceTree = "<group>"; };
 		B426754DD8A6BA958DDD1456 /* ExploreView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExploreView.swift; sourceTree = "<group>"; };
+		BD4812ADD9BF85E2BE8852DD /* AssistantPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantPresentationTests.swift; sourceTree = "<group>"; };
 		BF5BB09C77881BE289FD307C /* BusVehicleRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BusVehicleRow.swift; sourceTree = "<group>"; };
 		C54D5539A672A755CFFFC0FD /* InteractionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InteractionTests.swift; sourceTree = "<group>"; };
 		C9CC42C3C39211E0992F483F /* PlannerEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlannerEngine.swift; sourceTree = "<group>"; };
@@ -167,6 +173,7 @@
 			children = (
 				E81E35DC0FE562B06E54AC25 /* AssistantComposer.swift */,
 				6767EF42680DA87EEF81F3F3 /* AssistantModels.swift */,
+				0FE35AC9E5A71C6694947DA0 /* AssistantReplyText.swift */,
 				0C5D1C96697C468C5295B342 /* AssistantState.swift */,
 				A4493D21054754269C845EFC /* AssistantView.swift */,
 				8D9AA6EBE92906B997C4CEB2 /* AssistantWaitingView.swift */,
@@ -236,6 +243,7 @@
 			isa = PBXGroup;
 			children = (
 				6E221642EAB26358BADBD0E3 /* APIClientTests.swift */,
+				BD4812ADD9BF85E2BE8852DD /* AssistantPresentationTests.swift */,
 				8BD78D2B8CF59109571A29C8 /* AssistantStreamTests.swift */,
 				E8B397297944E5433CED5C02 /* BusDetailTests.swift */,
 				5F9878C15DEC5226D32C92D0 /* ContractTests.swift */,
@@ -271,6 +279,7 @@
 			isa = PBXGroup;
 			children = (
 				CB0928435782167E21E30040 /* BusModelView.swift */,
+				51A8BC0CFE2D57ACF3926D07 /* BusStopRow.swift */,
 				FC5F68982ED54B44B24D423C /* BusTimetableView.swift */,
 				BF5BB09C77881BE289FD307C /* BusVehicleRow.swift */,
 				09634682ED45702136721308 /* BusViews.swift */,
@@ -431,10 +440,12 @@
 				35B0EBAF5518DCCB738A58EF /* APIClient.swift in Sources */,
 				57E7F0D00BE994CEAF907248 /* AssistantComposer.swift in Sources */,
 				3091A65F3763AF50518FAB0A /* AssistantModels.swift in Sources */,
+				B8FB991400B7E926461B787B /* AssistantReplyText.swift in Sources */,
 				378E636F3CE180158464C5C5 /* AssistantState.swift in Sources */,
 				84FDA24211C1DC0102745996 /* AssistantView.swift in Sources */,
 				7DC298F340C335D65C1C6DFF /* AssistantWaitingView.swift in Sources */,
 				03BBC3F9405EFC13972EA939 /* BusModelView.swift in Sources */,
+				4CFF8263BAC52A9882A39F4D /* BusStopRow.swift in Sources */,
 				CCEDED54025ACCFAEBC5DB46 /* BusTimetableView.swift in Sources */,
 				9D9FA6AA290D15BC1DFD957D /* BusVehicleRow.swift in Sources */,
 				F4C75590D25B8349BE861A53 /* BusViews.swift in Sources */,
@@ -471,6 +482,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				77C49BA56AA1E79B144D241F /* APIClientTests.swift in Sources */,
+				D76C0A3AB43B57263BA4EDD9 /* AssistantPresentationTests.swift in Sources */,
 				8E8733D72CE85CE5169C4FF3 /* AssistantStreamTests.swift in Sources */,
 				F8CFBAC1880F6DD89FCCBDCD /* BusDetailTests.swift in Sources */,
 				91519ED92BFE21DF6A5F2BAD /* ContractTests.swift in Sources */,
@@ -528,7 +540,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -607,7 +619,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;

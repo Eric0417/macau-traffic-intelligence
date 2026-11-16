@@ -23,7 +23,7 @@ struct JourneyOptionCard: View {
             }.buttonStyle(PressFeedbackStyle()).accessibilityIdentifier("apply-route-\(index)")
             DisclosureGroup(settings.text("方案資料", "Route information")) {
                 VStack(alignment: .leading, spacing: 10) {
-                    Text(option.reason).textSelection(.enabled)
+                    AssistantReplyText(text: option.reason).textSelection(.enabled)
                     JourneySummary(journey: option.journey)
                 }.padding(.top, 8)
             }.font(.caption).foregroundStyle(.secondary)
