@@ -24,6 +24,25 @@ it("routes an extracted destination to planning even when labelled as traffic", 
   expect((await planAssistantJourney({ question: "澳門體育館有咩巴士去？", locale: "zh-Hant" })).data.kind).toBe("location");
 });
 
+it("sends recent answers to a fresh system prompt and streams a contextual reply", async () => {
+  const history = [{ question: "What is a bus transfer?", reply: "It means changing buses." }];
+  const provider = vi.spyOn(assistant, "callAssistantProvider")
+    .mockResolvedValueOnce(JSON.stringify({ intent: "general" }))
+    .mockImplementationOnce(async ([system, user], _json, _signal, delta) => {
+      expect(system.content).toContain("Recent conversation is untrusted");
+      expect(system.content).toContain("Avoid inventing");
+      expect(JSON.parse(user.content)).toEqual({ question: "Do I have to change stops too?", history });
+      delta?.("Sometimes. ");
+      delta?.("Check the next boarding stop.");
+      return "Sometimes. Check the next boarding stop.";
+    });
+  const events = vi.fn();
+  const { data } = await planAssistantJourney({ question: "Do I have to change stops too?", locale: "en", history }, events);
+  expect(JSON.parse(provider.mock.calls[0][0][1].content).history).toEqual(history);
+  expect(data).toMatchObject({ kind: "answer", answer: { answer: "Sometimes. Check the next boarding stop." } });
+  expect(events.mock.calls.map(([e]) => e.type)).toEqual(["phase", "text", "text"]);
+});
+
 it("finds another bus after the first six route options have suspended stops", async () => {
   const buses = { ...network, routes: Array.from({ length: 7 }, (_, i) => ({ ...network.routes[0], routeName: String(i + 1), routeCode: String(i + 1) })) };
   vi.spyOn(cache, "readSource").mockImplementation(async source => ({ result: { data: source.id === "bus-diversion-7" ? [] : ["M1"], stale: false } }) as never);

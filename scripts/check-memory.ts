@@ -12,6 +12,7 @@ async function main() {
 
   const sourceIds = [
     "roads",
+    "road-forecast",
     "bridges",
     "cameras",
     "bus-routes",

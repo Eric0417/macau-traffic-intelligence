@@ -1,8 +1,23 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { loadRoads } from "@/server/sources/roads";
+import { loadRoads, loadRoadForecast } from "@/server/sources/roads";
 
 afterEach(() => {
   vi.unstubAllGlobals();
+});
+
+it("joins only official 30-minute predictions by identifier and leaves missing roads unknown", async () => {
+  const geometry = [{ roadSectionId: "a", roadCoordinates: "113.55,22.19;113.56,22.20" },
+    { roadSectionId: "b", roadCoordinates: "113.551,22.191;113.561,22.201" }];
+  const data = [{ roadSectionId: "a", indexType: "03", type: "road", trafficLevel: "5", newTrafficLevel: "3" }];
+  const fetchMock = vi.fn(async (url: string, init: RequestInit) => {
+    if (url.endsWith("/coordinates")) return Response.json({ header: { status: "000" }, data: geometry });
+    expect(new URLSearchParams(String(init.body)).get("indexType")).toBe("03");
+    return Response.json({ header: { status: "000" }, data });
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  expect((await loadRoadForecast()).features.map(f => f.properties.status)).toEqual(["congested", "unknown"]);
+  data[0].indexType = "00";
+  await expect(loadRoadForecast()).rejects.toThrow();
 });
 
 describe("loadRoads", () => {

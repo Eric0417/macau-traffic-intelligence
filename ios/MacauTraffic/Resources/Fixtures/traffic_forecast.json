@@ -1,0 +1,110 @@
+{
+  "data": {
+    "type": "FeatureCollection",
+    "features": [
+      {
+        "type": "Feature",
+        "properties": {
+          "id": "1",
+          "name": {
+            "zh-Hant": "關閘廣場",
+            "zh-Hans": "关闸广场",
+            "pt": "Praça das Portas do Cerco",
+            "en": "Praça das Portas do Cerco"
+          },
+          "nameVisible": true,
+          "lengthMeters": 54.27245790861741,
+          "status": "normal",
+          "officialLevel": 1
+        },
+        "geometry": {
+          "type": "LineString",
+          "coordinates": [
+            [
+              113.547272946,
+              22.2158632940001
+            ],
+            [
+              113.547788267,
+              22.2159632510001
+            ]
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "id": "698",
+          "name": {
+            "zh-Hant": "雅廉訪大馬路",
+            "zh-Hans": "雅廉访大马路",
+            "pt": "Avenida do Ouvidor Arriaga",
+            "en": "Avenida do Ouvidor Arriaga"
+          },
+          "nameVisible": false,
+          "lengthMeters": 72.70484829356705,
+          "status": "slow",
+          "officialLevel": 2
+        },
+        "geometry": {
+          "type": "LineString",
+          "coordinates": [
+            [
+              113.545164376,
+              22.2061645780001
+            ],
+            [
+              113.545693731,
+              22.2057308460001
+            ],
+            [
+              113.545693731,
+              22.2057308460001
+            ]
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "id": "6",
+          "name": {
+            "zh-Hant": "關閘廣場",
+            "zh-Hans": "关闸广场",
+            "pt": "Praça das Portas do Cerco",
+            "en": "Praça das Portas do Cerco"
+          },
+          "nameVisible": true,
+          "lengthMeters": 21.185325169906285,
+          "status": "unknown",
+          "officialLevel": -1
+        },
+        "geometry": {
+          "type": "LineString",
+          "coordinates": [
+            [
+              113.546505081,
+              22.2156124860001
+            ],
+            [
+              113.546301077,
+              22.2156353330001
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  "meta": {
+    "generatedAt": "2026-11-15T18:28:40.667Z",
+    "updatedAt": "2026-11-15T18:24:25.982Z",
+    "stale": true,
+    "ttlSeconds": 60,
+    "source": {
+      "id": "road-forecast",
+      "name": "Synthetic DSAT forecast",
+      "url": "https://bis.dsat.gov.mo/trafficmap/",
+      "text": "UI test fixtures only"
+    }
+  }
+}

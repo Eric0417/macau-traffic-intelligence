@@ -24,3 +24,9 @@ Of the 88 known road segments with a candidate bus match, reports agreed with th
 Kim and Wang's [Macao bus dataset](https://www.nature.com/articles/s41597-025-05660-y) also describes stop-to-stop congestion categories and bus travel times. It covers five historical routes. DSAT's [2024 travel survey](https://www.dsat.gov.mo/dsat/news_detail.aspx?a_id=352144CD66AF9E0F6B38EDDD3C070F0A) describes residents' travel behaviour. Neither supplies current street-level vehicle counts.
 
 A congestion model could use several days of direction-specific travel times and road measurements, with held-out streets and periods to score false clear readings. Estimating vehicles per hour requires traffic counts at representative sites to calibrate it. This single comparison supports keeping missing street statuses unknown. No forecast layer is published.
+
+## Follow-up using DSAT's own forecast
+
+The [DSAT Traffic Situation map](https://bis.dsat.gov.mo/macauTraffic/?lang=zh_tw) supplies road geometry separately from its current and forecast categories. A deliberate read on 16 November returned 2,390 road section IDs with coordinates. The current category was known for 1,646 and the 30-minute forecast for 2,293. The publisher uses different segment boundaries from the original live-road layer. In the same 650 m study area, 271 forecast segments had a reported category, compared with 114 in the earlier live-road snapshot. This count includes any segment with a vertex inside the circle.
+
+Using the same OSM inventory and 12 m proximity rule, 40.0% of the mapped road length in the study area was near a known forecast, versus 24.2% near the earlier live layer. For local roads the comparison was 6.4% versus 3.1%. Neither figure measures forecast accuracy. Build 11 adds the publisher forecast as a separate dashed map layer and leaves missing road sections uncoloured.

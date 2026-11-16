@@ -18,6 +18,11 @@ struct AssistantRequest: Codable {
     var question: String; var locale: String
     var destinationId: String?; var origin: Coordinate?; var originQuery: String?; var originId: String?
     var trip: TripDraft?; var previousTrip: TripDraft?; var facilitySearch: FacilitySearch?
+    var history: [AssistantTurn]?
+}
+struct AssistantTurn: Codable {
+    var question: String
+    var reply: String
 }
 struct TrafficQuestion: Encodable { var question: String; var locale: String }
 struct TrafficAnswer: Codable {
@@ -77,6 +82,7 @@ struct ItineraryPlans: Decodable {
 
 enum AssistantResult: Decodable {
     case traffic, emergency, nearbyLocation
+    case answer(TrafficAnswer)
     case location(Place), facilityLocation(FacilityLocation), facilities(FacilityResults), nearby(TrafficAnswer)
     case clarify(Clarification), choose(PlaceChoices), plans(AssistantPlans)
     case tripDetails(TripDetails), tripChoice(TripChoice), tripLocation(TripDraft), itineraries(ItineraryPlans)
@@ -85,6 +91,7 @@ enum AssistantResult: Decodable {
         let values = try decoder.container(keyedBy: Keys.self)
         switch try values.decode(String.self, forKey: .kind) {
         case "traffic": self = .traffic
+        case "answer": self = .answer(try values.decode(TrafficAnswer.self, forKey: .answer))
         case "emergency": self = .emergency
         case "nearby-location": self = .nearbyLocation
         case "location": self = .location(try values.decode(Place.self, forKey: .destination))
@@ -104,12 +111,13 @@ enum AssistantResult: Decodable {
 }
 
 enum AssistantStreamEvent: Decodable {
-    case phase(String), candidates(AssistantPlans), complete(Envelope<AssistantResult>), failure
-    enum Keys: String, CodingKey { case type, phase, data, envelope }
+    case phase(String), text(String), candidates(AssistantPlans), complete(Envelope<AssistantResult>), failure
+    enum Keys: String, CodingKey { case type, phase, data, envelope, delta }
     init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: Keys.self)
         switch try values.decode(String.self, forKey: .type) {
         case "phase": self = .phase(try values.decode(String.self, forKey: .phase))
+        case "text": self = .text(try values.decode(String.self, forKey: .delta))
         case "candidates": self = .candidates(try values.decode(AssistantPlans.self, forKey: .data))
         case "complete": self = .complete(try values.decode(Envelope<AssistantResult>.self, forKey: .envelope))
         case "error": self = .failure

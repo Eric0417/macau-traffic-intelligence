@@ -5,6 +5,7 @@ This registry is part of the implementation contract. Any source, field, TTL, fa
 | Source id | Publisher | Runtime endpoint or page | Refresh | Cache / stale | Fallback |
 | --- | --- | --- | --- | --- | --- |
 | `roads` | DSAT / DSSCU | `https://bis.dsat.gov.mo/api/Service/RoadTrafficSimpleGraph_Road` | 60 s | 60 s / 15 min | Last valid GeoJSON with `stale: true` |
+| `road-forecast` | DSAT | Public Traffic Situation map road geometry and road traffic situation, index `03` | 60 s | 60 s / 15 min; internal geometry 6 h / 1 day | Last valid forecast with stale flag; native map hides aged forecasts |
 | `bridges` | DSAT / DSSCU | `https://bis.dsat.gov.mo/api/Service/RoadTrafficSimpleGraph_BridTime` | 60 s | 60 s / 15 min | Last valid bridge values |
 | `cameras` | DSAT | `https://bis.dsat.gov.mo:37812/ddbus/common/supermap/traffic/video` | 6 h catalog | 6 h / 7 days | Cached catalog and direct official HLS |
 | `bus-routes` | DSAT | `https://bis.dsat.gov.mo:37812/macauweb/getRouteAndCompanyList.html` plus the official route page `https://www.dsat.gov.mo/dsat/bus_route.aspx` | 6 h | 6 h / 1 day | Cached route catalog; the route page fills omitted seasonal routes. Optional operating-hour display uses the reviewed DSAT poster snapshot (90 routes, 2026-11-16) |
@@ -33,7 +34,7 @@ This registry is part of the implementation contract. Any source, field, TTL, fa
 - Camera streams are played directly from the publisher and are never recorded or re-hosted.
 - Assistant answers are generated text from the configured provider. The app attributes the model in the response meta and stores neither questions nor answers.
 - DeepSeek detects the language of user-submitted recordings and returns the transcript. The app identifies the provider beside the microphone and in the API attribution.
-- The public API exposes normalized current views and explicitly dated topology snapshots, not bulk history or raw upstream datasets.
+- The public API exposes normalized current views, a labelled road forecast and dated topology snapshots, without bulk history or raw upstream datasets.
 
 ## Native iOS client (2026-11-16)
 
@@ -52,6 +53,10 @@ The native stop diagram places a vehicle between stops when its official estimat
 The bus route map draws the selected route's official stop-to-stop geometry in blue by default. The along-route mode colours those same segments using published bus-route traffic categories. Unknown or delayed categories appear dashed. Explore traffic layers are separate from this map.
 
 Explore's optional Apple Maps traffic mode uses MapKit's built-in layer and attribution. Apple controls its geographic coverage and refresh. It displays separately from the DSAT road overlay and contributes no data to server or assistant estimates. DSAT road reads in Explore follow the server's existing TTL and make one follow-up after three seconds on a stale response, then resume regular polling if it is still stale. See ADR 0028. The road-inference experiment in `docs/qa/traffic-estimation/RESEARCH.md` remains offline. DSAT unknown roads remain unknown.
+
+Explore's third layer uses `GET /api/v1/traffic/forecast`. The server joins DSAT's public Traffic Situation road geometry and 30-minute categories by road section ID. The app draws known categories as dashed lines and drops expired forecasts. The upstream response contains no issue time; displayed source time is retrieval time. See ADR 0030.
+
+Native assistant requests carry up to six recent question and reply pairs in the optional journey history field. Structured results contribute a short text summary without coordinate fields. This history is sent to the configured provider and is not persisted or cached by the app or server. NDJSON text deltas appear as they arrive; a complete response is required before a turn enters history. See ADR 0029.
 
 
 ## Adapter notes

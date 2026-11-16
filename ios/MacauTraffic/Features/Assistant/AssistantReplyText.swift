@@ -46,17 +46,19 @@ struct AssistantReplyBlock {
 struct AssistantReplyText: View {
     var text: String
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 16) {
             ForEach(Array(AssistantReplyBlock.parse(text).enumerated()), id: \.offset) { index, block in
                 HStack(alignment: .firstTextBaseline, spacing: 10) {
                     if block.kind == .bullet {
-                        Text(block.marker.map { $0 + "." } ?? "•").foregroundStyle(.secondary).frame(minWidth: 12, alignment: .leading)
+                        Text(block.marker.map { $0 + "." } ?? "•").font(.subheadline.monospacedDigit())
+                            .foregroundStyle(.secondary).frame(minWidth: 16, alignment: .trailing)
                     }
                     Text(block.formatted)
-                        .fontWeight(block.kind == .heading ? .semibold : .regular)
-                        .lineSpacing(4).fixedSize(horizontal: false, vertical: true)
+                        .font(block.kind == .heading ? .system(.headline, design: .rounded, weight: .semibold) : nil)
+                        .lineSpacing(5).fixedSize(horizontal: false, vertical: true)
                         .textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
-                }.padding(.top, block.kind == .heading && index > 0 ? 6 : 0)
+                }.padding(.leading, block.kind == .bullet ? 8 : 0)
+                    .padding(.top, block.kind == .heading && index > 0 ? 7 : 0)
                     .accessibilityElement(children: .combine).accessibilityIdentifier("reply-block-\(index)")
             }
         }.frame(maxWidth: .infinity, alignment: .leading)

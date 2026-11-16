@@ -19,6 +19,7 @@ struct AssistantView: View {
     @State private var editingTrip: TripEditorRequest?
     @State private var manualOrigin = ""
     @State private var locationError: String?
+    @State private var nearBottom = true
     @FocusState private var typing: Bool
     @FocusState private var originTyping: Bool
 
@@ -26,15 +27,18 @@ struct AssistantView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
+                    ForEach(Array(state.history.enumerated()), id: \.offset) { _, turn in
+                        questionBubble(turn.question)
+                        AssistantReplyText(text: turn.reply)
+                    }
                     if state.currentQuestion.isEmpty { welcome }
                     else {
-                        HStack {
-                            Spacer(minLength: 28)
-                            Text(state.currentQuestion).padding(.horizontal, 18).padding(.vertical, 12)
-                                .background(Color(.secondarySystemBackground), in: .rect(cornerRadius: 22))
-                        }
-                        if state.busy {
+                        questionBubble(state.currentQuestion)
+                        if state.busy && state.partialReply.isEmpty && !state.preview {
                             AssistantWaitingView()
+                        }
+                        if !state.partialReply.isEmpty {
+                            AssistantReplyText(text: state.partialReply).accessibilityIdentifier("assistant-streaming-reply")
                         }
                         if state.cancelled && !state.preview {
                             Text(settings.text("已停止查詢", "Request stopped")).font(.subheadline).foregroundStyle(.secondary)
@@ -47,7 +51,7 @@ struct AssistantView: View {
                                 NavigationLink(settings.text("使用手動行程規劃", "Use the manual planner")) { ManualPlannerView() }
                             }.readingCard()
                         }
-                        if let answer = state.answer { AnswerView(answer: answer) }
+                        if let answer = state.answer { AnswerView(answer: answer).id("response") }
                         if let result = state.result {
                             if state.preview {
                                 Text(settings.text(state.busy ? "候選路線 · AI 正在比較" : "候選路線 · AI 比較未完成", state.busy ? "Route candidates · AI is comparing" : "Route candidates · AI comparison incomplete")).font(.caption).foregroundStyle(.secondary)
@@ -60,9 +64,21 @@ struct AssistantView: View {
             }
             .background(Color(.systemBackground))
             .scrollDismissesKeyboard(.interactively)
+            .onScrollGeometryChange(for: Bool.self) { geometry in
+                geometry.contentSize.height + geometry.contentInsets.bottom - geometry.visibleRect.maxY < 180
+            } action: { _, value in nearBottom = value }
             .safeAreaInset(edge: .bottom) { if !originTyping { AssistantComposer(state: state, voice: voice, typing: $typing, submit: submit) } }
             .onChange(of: state.busy) { _, busy in
-                if !busy { withAnimation(reduceMotion ? nil : .smooth(duration: 0.3)) { proxy.scrollTo("response", anchor: .top) } }
+                if busy {
+                    proxy.scrollTo("bottom", anchor: .bottom)
+                } else if nearBottom, case .plans = state.result {
+                    withAnimation(reduceMotion ? nil : .smooth(duration: 0.3)) { proxy.scrollTo("response", anchor: .top) }
+                } else if nearBottom, state.result != nil || state.answer != nil {
+                    proxy.scrollTo("response", anchor: .top)
+                }
+            }
+            .onChange(of: state.partialReply) { _, value in
+                if !value.isEmpty && nearBottom { proxy.scrollTo("bottom", anchor: .bottom) }
             }
             .onChange(of: state.preview) { _, preview in
                 if preview { withAnimation(reduceMotion ? nil : .smooth(duration: 0.3)) { proxy.scrollTo("response", anchor: .top) } }
@@ -86,7 +102,7 @@ struct AssistantView: View {
                 TripEditorView(draft: request.draft) { value in
                     editingTrip = nil
                     if request.newTrip || state.pending == nil {
-                        state.start(.init(question: settings.text(value.mode == "day" ? "安排文化一日遊" : "依次去以下地方", value.mode == "day" ? "Plan a cultural day trip" : "Visit these places in order"), locale: settings.language.rawValue, trip: value))
+                        state.begin(.init(question: settings.text(value.mode == "day" ? "安排文化一日遊" : "依次去以下地方", value.mode == "day" ? "Plan a cultural day trip" : "Visit these places in order"), locale: settings.language.rawValue, trip: value))
                     } else { state.continueTrip(value) }
                 }
         }
@@ -96,6 +112,11 @@ struct AssistantView: View {
         }
         .onAppear { typing = false; originTyping = false }
         .onDisappear { voice.cancel(); locationTask?.cancel(); typing = false; originTyping = false }
+    }
+    private func questionBubble(_ question: String) -> some View {
+        Text(question).padding(.horizontal, 18).padding(.vertical, 12)
+            .background(Color(.secondarySystemBackground), in: .rect(cornerRadius: 22))
+            .padding(.leading, 36).frame(maxWidth: .infinity, alignment: .trailing)
     }
     private var welcome: some View {
         VStack(spacing: 18) {
@@ -138,6 +159,7 @@ struct AssistantView: View {
 
     @ViewBuilder private func resultView(_ result: AssistantResult) -> some View {
         switch result {
+        case .answer(let answer): AnswerView(answer: answer)
         case .traffic: EmptyView()
         case .emergency:
             VStack(alignment: .leading, spacing: 14) {
@@ -248,12 +270,14 @@ struct AnswerView: View {
                     NavigationLink(settings.text("查看相關巴士", "Open the bus route")) { ResolvedBusView(code: code, direction: action.direction ?? 0) }
                 }
             }
-            DisclosureGroup(settings.text("回答依據", "Answer sources")) {
+            if !answer.contextSummary.isEmpty {
+                DisclosureGroup(settings.text("回答依據", "Answer sources")) {
                 VStack(alignment: .leading, spacing: 8) {
                     ForEach(answer.contextSummary, id: \.self) { Text($0) }
                     Text(answer.model + " · " + answer.snapshotAt)
                 }.font(.caption).foregroundStyle(.secondary)
+                }
             }
-        }.readingCard()
+        }.frame(maxWidth: .infinity, alignment: .leading)
     }
 }

@@ -9,12 +9,13 @@ import { lrtServiceSource } from "@/server/sources/lrt-service";
 import { noticesSource } from "@/server/sources/notices";
 import { officialNewsSource } from "@/server/sources/official-news";
 import { parkingSource } from "@/server/sources/parking";
-import { roadsSource } from "@/server/sources/roads";
+import { roadForecastSource, roadsSource } from "@/server/sources/roads";
 import { walkingNetworkSource } from "@/server/sources/walking-network";
 import { weatherSource } from "@/server/sources/weather";
 
 export const sources = {
   roads: roadsSource,
+  roadForecast: roadForecastSource,
   bridges: bridgesSource,
   cameras: camerasSource,
   busRoutes: busRoutesSource,

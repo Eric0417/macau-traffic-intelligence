@@ -113,4 +113,30 @@ private final class StreamTransport: URLProtocol {
         XCTAssertNil(state.meta)
         XCTAssertNil(state.error)
     }
+
+    func testReplyStreamsThenEntersNextTurnContextAndClearsOnReset() async throws {
+        var envelope = try XCTUnwrap(JSONSerialization.jsonObject(with: fixture()) as? [String: Any])
+        envelope["data"] = ["kind": "answer", "answer": ["answer": "The route has a transfer.", "model": "fixture",
+            "locale": "en", "snapshotAt": "2026-11-16T00:00:00Z", "contextSummary": []]]
+        let end = try JSONSerialization.data(withJSONObject: ["type": "complete", "envelope": envelope]) + Data("\n".utf8)
+        let first = Data("{\"type\":\"text\",\"delta\":\"The route \"}\n".utf8)
+        StreamTransport.reply = { _ in .init(chunks: [first, end], delay: .milliseconds(300)) }
+        let state = AssistantState(client: client())
+        state.begin(request)
+        try await waitUntil { !state.partialReply.isEmpty }
+        XCTAssertTrue(state.busy)
+        XCTAssertNil(state.result)
+        try await waitUntil { !state.busy }
+        XCTAssertTrue(state.partialReply.isEmpty)
+        state.draft = "Where do I change?"
+        state.ask(locale: "en")
+        XCTAssertEqual(state.pending?.history?.first?.question, request.question)
+        XCTAssertEqual(state.pending?.history?.first?.reply, "The route has a transfer.")
+        XCTAssertEqual(state.pending?.history?.count, 1)
+        state.clear()
+        XCTAssertTrue(state.history.isEmpty)
+        XCTAssertNil(state.pending)
+        try await Task.sleep(for: .milliseconds(350))
+        XCTAssertNil(state.result)
+    }
 }

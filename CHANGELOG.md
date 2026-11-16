@@ -1,5 +1,11 @@
 # Changelog
 
+## Macao Move conversation and traffic outlook - 2026-11-16
+
+- Keep up to six recent exchanges in the native assistant. Resolve references and route revisions against that context and run the original verification rules on each turn.
+- Stream short text replies while they are generated. Keep verified route cards, improve heading hierarchy and list indentation, and allow practical answers to broader travel questions.
+- Add a separate dashed layer for DSAT's 30-minute road forecast. Clear aged predictions and preserve the current traffic layers.
+
 ## Macao Move bus route display - 2026-11-16
 
 - Start bus maps with a single blue route style. The along-route traffic view recolours those same segments, with dashed gray for unknown or delayed statuses.

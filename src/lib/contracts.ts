@@ -272,7 +272,7 @@ export const contractBySource = {
 } as const;
 
 export const assistantJourneyRequestSchema = z.object({
-  question: z.string().trim().min(2).max(500),
+  question: z.string().trim().min(1).max(500),
   locale: z.enum(["zh-Hant", "zh-Hans", "en"]).default("zh-Hant"),
   destinationId: z.string().min(1).max(120).optional(),
   origin: z.tuple([z.number().min(-180).max(180), z.number().min(-90).max(90)]).optional(),
@@ -281,4 +281,8 @@ export const assistantJourneyRequestSchema = z.object({
   trip: tripDraftSchema.optional(),
   previousTrip: tripDraftSchema.optional(),
   facilitySearch: facilitySearchSchema.optional(),
+  history: z.array(z.object({
+    question: z.string().trim().min(1).max(500),
+    reply: z.string().trim().min(1).max(1200),
+  }).strict()).max(6).optional(),
 });

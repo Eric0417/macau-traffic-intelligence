@@ -1,0 +1,24 @@
+{
+  "data": {
+    "kind": "answer",
+    "answer": {
+      "answer": "### Your route\nFrom Senado Square, start on the west side.\n- Check the stop name before boarding.",
+      "model": "UI fixture",
+      "locale": "en",
+      "snapshotAt": "2026-11-16T00:00:00Z",
+      "contextSummary": []
+    }
+  },
+  "meta": {
+    "generatedAt": "2026-11-16T00:00:00Z",
+    "updatedAt": "2026-11-16T00:00:00Z",
+    "stale": false,
+    "ttlSeconds": 0,
+    "source": {
+      "id": "fixture",
+      "name": "UI test fixture",
+      "url": "https://example.com",
+      "text": "Synthetic test data, never a production fallback"
+    }
+  }
+}

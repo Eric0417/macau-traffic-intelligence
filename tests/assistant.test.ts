@@ -287,7 +287,28 @@ it("gives the provider Macau publication dates and practical next steps", () => 
     ...snapshot, notices: [{ title: "恢復通車", category: "general", publishedAt: "2026-11-10T16:00:00.000Z" }],
   });
   expect(messages[1].content).toContain('"publishedAt":"2026-11-11"');
-  expect(messages[0].content).toContain("Do not end with a quiz");
+  expect(messages[0].content).toContain("Ask one focused question only if a missing detail matters");
+});
+
+it("streams UTF-8 answer text in order and requires a completed provider stream", async () => {
+  vi.stubEnv("ASSISTANT_API_KEY", "test-key");
+  const content = 'data: {"choices":[{"delta":{"content":"你好"}}]}\r\n\r\ndata: {"choices":[{"delta":{"content":"，可以。"}}]}\n\n';
+  for (const complete of [true, false]) {
+    const raw = new TextEncoder().encode(content + (complete ? "data: [DONE]\n\n" : ""));
+    const fetchMock = vi.fn().mockImplementation(() => new Response(new ReadableStream({
+      start(controller) {
+        for (let i = 0; i < raw.length; i += 3) controller.enqueue(raw.slice(i, i + 3));
+        controller.close();
+      },
+    }), { headers: { "Content-Type": "text/event-stream" } }));
+    vi.stubGlobal("fetch", fetchMock);
+    const deltas: string[] = [];
+    const answer = callAssistantProvider([{ role: "system", content: "test" }], false, undefined, delta => deltas.push(delta));
+    if (complete) await expect(answer).resolves.toBe("你好，可以。");
+    else await expect(answer).rejects.toThrow("assistant_stream_interrupted");
+    expect(deltas).toEqual(["你好", "，可以。"]);
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).stream).toBe(true);
+  }
 });
 
 

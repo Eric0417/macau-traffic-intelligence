@@ -7,7 +7,7 @@ struct AssistantComposer: View {
     var voice: VoiceRecorder
     var typing: FocusState<Bool>.Binding
     var submit: () -> Void
-    private var canSend: Bool { state.draft.trimmingCharacters(in: .whitespacesAndNewlines).count >= 2 && !state.busy && !voice.isStarting && !voice.isRecording && !voice.transcribing }
+    private var canSend: Bool { !state.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !state.busy && !voice.isStarting && !voice.isRecording && !voice.transcribing }
     var body: some View {
         VStack(spacing: 8) {
             if let error = voice.error { Text(error).font(.caption).foregroundStyle(.orange) }
@@ -23,7 +23,7 @@ struct AssistantComposer: View {
                     }.foregroundStyle(.white).padding(.horizontal, 18).padding(.vertical, 8)
                 } else {
                     HStack(alignment: .bottom, spacing: 6) {
-                        TextField("", text: $state.draft, prompt: Text(settings.text("講個目的地…", "Where to?")).foregroundColor(.white.opacity(0.48)), axis: .vertical)
+                        TextField("", text: $state.draft, prompt: Text(settings.text("問出行問題…", "Ask about your trip…")).foregroundColor(.white.opacity(0.48)), axis: .vertical)
                             .foregroundStyle(.white).tint(.white)
                             .lineLimit(1...(typeSize.isAccessibilitySize ? 3 : 5)).focused(typing).padding(.leading, 14).padding(.vertical, 12)
                             .onChange(of: state.draft) { _, value in if value.count > 500 { state.draft = String(value.prefix(500)) } }
@@ -52,7 +52,8 @@ struct AssistantComposer: View {
             .buttonStyle(.plain)
             .background(TransitStyle.ink, in: .rect(cornerRadius: 30))
             .overlay { RoundedRectangle(cornerRadius: 30).strokeBorder(.white.opacity(0.08), lineWidth: 1).allowsHitTesting(false) }
-            if !typeSize.isAccessibilitySize { Text(settings.text("DeepSeek · 回答請核實", "DeepSeek · Check answers")).font(.caption2).foregroundStyle(.secondary) }
+            Text(settings.text("最近對話會傳送畀 DeepSeek", "Recent messages are sent to DeepSeek"))
+                .font(.caption2).foregroundStyle(.secondary).multilineTextAlignment(.center)
         }.padding(.horizontal, 16).padding(.top, 10).padding(.bottom, 6).frame(maxWidth: 760)
             .background(.bar)
     }

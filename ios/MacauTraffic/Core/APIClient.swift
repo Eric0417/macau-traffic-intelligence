@@ -23,7 +23,14 @@ struct APIClient {
         #if DEBUG
         if baseURL == Self.productionURL && (ProcessInfo.processInfo.arguments.contains("--uitesting") || ProcessInfo.processInfo.environment["MACAU_FIXTURES"] == "1") {
             if ProcessInfo.processInfo.arguments.contains("--scenario=waiting") { try await Task.sleep(for: .seconds(30)) }
-            return try await post("assistant/journeys", body: body)
+            let response: Envelope<AssistantResult> = try await post("assistant/journeys", body: body)
+            if ProcessInfo.processInfo.arguments.contains("--scenario=conversation"), case .answer(let reply) = response.data,
+               let split = reply.answer.firstIndex(of: "\n") {
+                await receive(.text(String(reply.answer[..<split])))
+                try await Task.sleep(for: .seconds(2))
+                await receive(.text(String(reply.answer[split...])))
+            }
+            return response
         }
         #endif
         var request = URLRequest(url: baseURL.appendingPathComponent("assistant/journeys"), cachePolicy: .reloadIgnoringLocalCacheData)
@@ -142,6 +149,7 @@ enum FixtureLoader {
             case "facilities": name = "assistant_facilities"
             case "choice": name = "assistant_trip_choice"
             case "traffic": name = "assistant_traffic"
+            case "conversation": name = request?.history?.isEmpty == false ? "assistant_conversation_1" : "assistant_conversation_0"
             default: name = request?.originQuery == nil && request?.origin == nil ? "assistant_location" : "assistant_plans"
             }
         }

@@ -39,6 +39,7 @@ export interface AssistantJourneyPlans {
 export type AssistantJourneyResult =
   | ItineraryResult
   | { kind: "traffic" }
+  | { kind: "answer"; answer: LearningAssistantAnswer }
   | { kind: "emergency" }
   | { kind: "facility-location"; search: FacilitySearch; reason?: "outside-macau" | "unknown-landmark" }
   | AssistantFacilityResults
