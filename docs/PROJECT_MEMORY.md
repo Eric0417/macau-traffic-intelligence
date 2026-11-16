@@ -8,6 +8,8 @@
 
 ## Current State
 
+Macao Move Build 11 was installed and independently read back on the paired iPhone. The native assistant keeps six recent exchanges, streams free-form answers, and reinterprets route follow-ups against current candidates. Explore adds the separate DSAT 30-minute forecast. Render `dep-dbt7fp49v7es73cdvf20` is live at `84d2652`. A three-turn production check and the 2,390-section forecast passed. See `docs/qa/native-ios/BUILD11.md` and ADRs 0029–0030 for verification and limits.
+
 Macao Move Build 10 was installed and independently read back on the paired iPhone. Bus maps default to blue route geometry and can recolour the same geometry by reported traffic status. The Explore legend no longer duplicates the map's visibility control. The signed release, 260 repository tests, 46 native unit tests and two focused simulator flows passed. The central Macao coverage audit found weak agreement between road and bus traffic categories in its overlap sample and did not justify filling the missing data. See `docs/qa/traffic-estimation/CENTRAL-MACAO.md`.
 
 Build 9 introduced flat bus pins, a compact stop summary, and a waveform that moves between audio meter reads. Explore can switch between the original DSAT overlay and Apple Maps traffic. The DSAT client makes a short follow-up after stale cache responses (ADR 0028). See `docs/qa/native-ios/BUILD9.md` for traffic probes, waveform capture and installation. Street-level Apple coverage and physical frame pacing are unmeasured.

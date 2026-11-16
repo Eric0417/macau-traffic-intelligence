@@ -1,0 +1,9 @@
+# Macao Move Build 11 verification
+
+16 November 2026. CoreDevice installed Macao Move over the paired local connection. A separate installed-app query at 11:28 Macau time reported version 1.0.0, build 11. The release passed strict signature and archive checks. The signed IPA is `ios/build-device/MacaoMove-build11.ipa`, SHA-256 `3da1adc3bd1711cb883b9954ebf3b7def1ac434ad9cd16ad4ea629271a26f805`.
+
+Render deployment `dep-dbt7fp49v7es73cdvf20` at `84d2652e9beb3b919dbff66b36f6fb8fbb7cc756` was live at 11:27 Macau time. Health reported Redis and zero recorded forecast failures. The new route returned 2,390 sections, including 2,293 with a forecast. The result included 1,925 clear, 265 slow, 103 congested and 97 unknown. See the [central coverage comparison](../traffic-estimation/CENTRAL-MACAO.md) for sampling limits.
+
+Using the public API and actual configured provider, we asked for a bus from Senado Square to A-Ma Temple, followed up asking for less walking, and then asked what a transfer means. Both plans resolved to the same endpoints. The revision returned options 21A, 26 and 61. The explanation referred to the preceding options and delivered 59 text events before completion. A one-character acknowledgment also received an answer. The old JSON request without conversation history returned the existing location prompt for the full landmark name 大三巴牌坊. The shorter 大三巴 query already exercises the place-choice response.
+
+Typecheck, lint, 263 repository tests, documentation checks and the standalone production build passed. The iPhone simulator passed 47 native unit tests and three distinct UI flows for streaming with prior turns, traffic layer switching, and applying a journey with a manual origin. The latter was rerun after fixing its test parser to handle the additional camera debug field. The screenshots use fixtures; the production probes use only public place names. No physical frame pacing or forecast accuracy measurement was performed.
