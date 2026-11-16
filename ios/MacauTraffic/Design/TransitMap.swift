@@ -15,8 +15,6 @@ struct MapPin: Identifiable, Equatable {
     var title: String
     var symbol = "mappin"
     var color: Color = .blue
-    var modelName: String?
-    var bearing: Double?
 }
 
 @Observable @MainActor final class MapViewport {
@@ -48,6 +46,7 @@ struct TransitMap: View {
     var controlTopPadding: CGFloat = 12
     var viewport: MapViewport?
     var showsPerspective = true
+    var showsAppleTraffic = false
     var fitPadding = UIEdgeInsets(top: 70, left: 40, bottom: 60, right: 40)
     var fitCoordinates: [Coordinate]?
     var onSelect: ((String) -> Void)?
@@ -56,7 +55,7 @@ struct TransitMap: View {
     private var camera: MapViewport { viewport ?? ownViewport }
 
     var body: some View {
-        NativeTransitMap(lines: lines, pins: pins, fitID: fitID, fitPadding: fitPadding, fitCoordinates: fitCoordinates, viewport: camera, animated: !reduceMotion, onSelect: onSelect)
+        NativeTransitMap(lines: lines, pins: pins, fitID: fitID, fitPadding: fitPadding, fitCoordinates: fitCoordinates, viewport: camera, animated: !reduceMotion, showsAppleTraffic: showsAppleTraffic, onSelect: onSelect)
             .overlay(alignment: .topTrailing) {
                 if showsPerspective {
                     PerspectiveButton(viewport: camera).padding(.horizontal, 16).padding(.top, controlTopPadding)
@@ -110,14 +109,13 @@ struct NativeTransitMap: UIViewRepresentable {
     var fitCoordinates: [Coordinate]?
     var viewport: MapViewport
     var animated: Bool
+    var showsAppleTraffic: Bool
     var onSelect: ((String) -> Void)?
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
     func makeUIView(context: Context) -> MKMapView {
         let map = MKMapView()
-        let configuration = MKStandardMapConfiguration(elevationStyle: .realistic, emphasisStyle: .muted)
-        configuration.pointOfInterestFilter = .excludingAll
-        map.preferredConfiguration = configuration
+        map.preferredConfiguration = configuration()
         map.showsUserLocation = true
         map.showsCompass = true
         map.showsScale = true
@@ -132,6 +130,9 @@ struct NativeTransitMap: UIViewRepresentable {
         let coordinator = context.coordinator
         coordinator.parent = self
         viewport.map = map
+        if (map.preferredConfiguration as? MKStandardMapConfiguration)?.showsTraffic != showsAppleTraffic {
+            map.preferredConfiguration = configuration()
+        }
         let margins = NSDirectionalEdgeInsets(top: fitPadding.top, leading: 16, bottom: fitPadding.bottom, trailing: 16)
         if map.directionalLayoutMargins != margins { map.directionalLayoutMargins = margins }
         if coordinator.lines != lines {
@@ -151,6 +152,15 @@ struct NativeTransitMap: UIViewRepresentable {
                 }
             }
         }
+        #if DEBUG
+        coordinator.describeMap(map)
+        #endif
+    }
+    private func configuration() -> MKStandardMapConfiguration {
+        let configuration = MKStandardMapConfiguration(elevationStyle: .realistic, emphasisStyle: .muted)
+        configuration.pointOfInterestFilter = .excludingAll
+        configuration.showsTraffic = showsAppleTraffic
+        return configuration
     }
     static func dismantleUIView(_ map: MKMapView, coordinator: Coordinator) {
         map.delegate = nil
@@ -179,18 +189,10 @@ struct NativeTransitMap: UIViewRepresentable {
             for pin in pins {
                 if let annotation = annotations[pin.id] {
                     if annotation.pin != pin {
-                        if annotation.pin.modelName != pin.modelName {
-                            map.removeAnnotation(annotation)
-                            let replacement = TransitAnnotation(pin)
-                            annotations[pin.id] = replacement
-                            map.addAnnotation(replacement)
-                            continue
-                        }
                         annotation.pin = pin
                         annotation.coordinate = pin.coordinate.location
                         annotation.title = pin.title
                         if let view = map.view(for: annotation) as? MKMarkerAnnotationView { configure(view, with: pin) }
-                        if let view = map.view(for: annotation) as? BusModelAnnotationView, let bearing = pin.bearing { view.updatePose(bearing: bearing, camera: map.camera) }
                     }
                 } else {
                     let annotation = TransitAnnotation(pin)
@@ -210,13 +212,6 @@ struct NativeTransitMap: UIViewRepresentable {
         }
         func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
             guard let annotation = annotation as? TransitAnnotation else { return nil }
-            if let modelName = annotation.pin.modelName {
-                let view = mapView.dequeueReusableAnnotationView(withIdentifier: "bus-model") as? BusModelAnnotationView ?? BusModelAnnotationView(annotation: annotation, reuseIdentifier: "bus-model")
-                view.annotation = annotation
-                view.configure(modelName: modelName, plate: annotation.pin.title)
-                if let bearing = annotation.pin.bearing { view.updatePose(bearing: bearing, camera: mapView.camera) }
-                return view
-            }
             let view = mapView.dequeueReusableAnnotationView(withIdentifier: "transit") as? MKMarkerAnnotationView ?? MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: "transit")
             view.annotation = annotation
             configure(view, with: annotation.pin)
@@ -228,26 +223,26 @@ struct NativeTransitMap: UIViewRepresentable {
             view.titleVisibility = .adaptive
             view.canShowCallout = parent.onSelect == nil
             view.accessibilityLabel = pin.title
+            view.accessibilityIdentifier = pin.id
         }
         func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
             guard let annotation = view.annotation as? TransitAnnotation, let select = parent.onSelect else { return }
             select(annotation.pin.id)
             mapView.deselectAnnotation(annotation, animated: false)
         }
-        func mapViewDidChangeVisibleRegion(_ mapView: MKMapView) {
-            for annotation in annotations.values where annotation.pin.modelName != nil {
-                if let view = mapView.view(for: annotation) as? BusModelAnnotationView, let bearing = annotation.pin.bearing {
-                    view.updatePose(bearing: bearing, camera: mapView.camera)
-                }
-            }
-        }
         func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
             parent.viewport.update()
             #if DEBUG
-            let center = mapView.centerCoordinate
-            mapView.accessibilityValue = String(format: "%.5f,%.5f;pitch=%.0f;overlays=%d;span=%.5f", center.latitude, center.longitude, mapView.camera.pitch, mapView.overlays.count, mapView.region.span.latitudeDelta)
+            describeMap(mapView)
             #endif
         }
+        #if DEBUG
+        func describeMap(_ mapView: MKMapView) {
+            let center = mapView.centerCoordinate
+            let appleTraffic = (mapView.preferredConfiguration as? MKStandardMapConfiguration)?.showsTraffic == true
+            mapView.accessibilityValue = String(format: "%.5f,%.5f;pitch=%.0f;overlays=%d;span=%.5f;appleTraffic=%d", center.latitude, center.longitude, mapView.camera.pitch, mapView.overlays.count, mapView.region.span.latitudeDelta, appleTraffic ? 1 : 0)
+        }
+        #endif
     }
 }
 

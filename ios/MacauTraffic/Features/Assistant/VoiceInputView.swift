@@ -23,25 +23,32 @@ struct VoiceInputView: View {
 
 private struct VoiceWaveform: View {
     @Environment(AppSettings.self) private var settings
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var voice: VoiceRecorder
     var body: some View {
-        Canvas { context, size in
-            let count = max(1, Int(size.width / 4))
-            let samples = Array(voice.levels.suffix(count))
-            var baseline = Path()
-            baseline.move(to: .init(x: 0, y: size.height / 2))
-            baseline.addLine(to: .init(x: size.width, y: size.height / 2))
-            context.stroke(baseline, with: .color(.white.opacity(0.2)), lineWidth: 1)
-            for (index, level) in samples.enumerated() {
-                let x = size.width - CGFloat(samples.count - index) * 4 + 2
-                let height = max(2, CGFloat(level) * size.height)
-                let rect = CGRect(x: x, y: (size.height - height) / 2, width: 2, height: height)
-                context.fill(Path(roundedRect: rect, cornerRadius: 1), with: .color(.white))
+        TimelineView(.animation(paused: reduceMotion)) { frame in
+            let samples = voice.levels
+            let reference = reduceMotion ? samples.last?.date ?? frame.date : frame.date
+            Canvas { context, size in
+                var baseline = Path()
+                baseline.move(to: .init(x: 0, y: size.height / 2))
+                baseline.addLine(to: .init(x: size.width, y: size.height / 2))
+                context.stroke(baseline, with: .color(.white.opacity(0.2)), lineWidth: 1)
+                var bars = Path()
+                for sample in samples {
+                    // The time axis advances on each display frame, even between meter reads.
+                    let x = size.width - 2 - max(0, reference.timeIntervalSince(sample.date)) * 80
+                    guard x > -2 else { continue }
+                    let height = max(2, CGFloat(sample.level) * size.height)
+                    bars.addRoundedRect(in: CGRect(x: x, y: (size.height - height) / 2, width: 2, height: height), cornerSize: CGSize(width: 1, height: 1))
+                }
+                context.fill(bars, with: .color(.white))
             }
         }
+        .clipped()
         .accessibilityElement()
         .accessibilityLabel(settings.text("錄音聲量", "Recording level"))
-        .accessibilityValue("\(Int((voice.levels.last ?? 0) * 100))%")
+        .accessibilityValue("\(Int((voice.levels.last?.level ?? 0) * 100))%")
         .accessibilityIdentifier("voice-waveform")
     }
 }

@@ -120,7 +120,7 @@ struct BusDetailView: View {
                         Button { mapRequest = .init() } label: {
                             HStack { Text(settings.text("路線地圖", "Route map")); Spacer(); Image(systemName: "arrow.up.left.and.arrow.down.right") }
                         }.accessibilityIdentifier("bus-route-map")
-                        BusRouteMap(resource: resource, company: route.company, compact: true, onStop: { selectedStop = $0 })
+                        BusRouteMap(resource: resource, compact: true, onStop: { selectedStop = $0 })
                             .frame(height: 260).listRowInsets(EdgeInsets())
                     }
                 }
@@ -156,7 +156,7 @@ struct BusDetailView: View {
         .refreshable { if route.live { await resource.load(path) } }
         .sheet(item: $mapRequest) { request in
             NavigationStack {
-                BusRouteMap(resource: resource, company: route.company, initialVehicle: request.vehicleID, onStop: { selectedStop = $0; mapRequest = nil })
+                BusRouteMap(resource: resource, initialVehicle: request.vehicleID, onStop: { selectedStop = $0; mapRequest = nil })
                     .navigationTitle(route.routeName).navigationBarTitleDisplayMode(.inline)
                     .toolbar { ToolbarItem(placement: .confirmationAction) { Button(settings.text("完成", "Done")) { mapRequest = nil } } }
             }
@@ -174,6 +174,7 @@ struct ArrivalLabel: View {
     @Environment(AppSettings.self) private var settings
     var stop: BusStop
     var resource: LiveResource<BusETA>
+    var prominent = false
     var body: some View {
         TimelineView(.periodic(from: .now, by: 2)) { context in
             Group {
@@ -191,7 +192,7 @@ struct ArrivalLabel: View {
                 } else if let away = stop.stopsAway {
                     Text(away == 0 ? settings.text("正前往本站", "Approaching this stop") : settings.text("尚餘 \(away) 站", "\(away) stops away")).foregroundStyle(.blue)
                 } else { Text(settings.text("未有到站資料", "No arrival data")).foregroundStyle(.secondary) }
-            }.font(.subheadline)
+            }.font(prominent ? .title2 : .subheadline)
         }
     }
 }
@@ -208,26 +209,29 @@ struct StopSheet: View {
             Group {
             if let current {
             ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    HStack { RouteBadge(name: route.routeName); Spacer(); SaveButton(item: .init(id: "stop:\(route.routeCode):\(direction):\(current.id)", kind: "stop", title: current.stationName, routeCode: route.routeCode, direction: direction, stationCode: current.stationCode, sequence: current.sequence)) }
-                    Text(current.stationName).font(.largeTitle.bold())
-                    Text(current.stationCode).font(.subheadline.monospaced()).foregroundStyle(.secondary)
-                    ArrivalLabel(stop: current, resource: resource).font(.title2)
+                VStack(alignment: .leading, spacing: 22) {
+                    HStack(alignment: .top, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(current.stationName).font(.title.bold())
+                            Text(current.stationCode).font(.caption.monospaced()).foregroundStyle(.secondary)
+                        }
+                        Spacer(minLength: 0)
+                        SaveButton(item: .init(id: "stop:\(route.routeCode):\(direction):\(current.id)", kind: "stop", title: current.stationName, routeCode: route.routeCode, direction: direction, stationCode: current.stationCode, sequence: current.sequence))
+                    }
+                    ArrivalLabel(stop: current, resource: resource, prominent: true)
                     if let eta = resource.data {
                         TimelineView(.periodic(from: .now, by: 2)) { context in
-                            VStack(spacing: 0) {
-                                ForEach(eta.stopContext(through: current, includeVehicles: resource.fresh(at: context.date))) { item in
-                                    BusStopRow(stop: item, eta: eta, resource: resource, onStop: { detailStopID = item.id }, onVehicle: { mapRequest = .init(vehicleID: $0) })
+                            if resource.fresh(at: context.date), let bus = eta.nextVehicle(for: current, at: context.date) {
+                                if bus.position.from != nil {
+                                    Button { mapRequest = .init(vehicleID: bus.vehicle.id) } label: {
+                                        busPosition(plate: bus.vehicle.plate, position: bus.position, showsMap: true)
+                                    }.buttonStyle(.plain).accessibilityIdentifier("stop-bus-position")
+                                } else {
+                                    busPosition(plate: bus.vehicle.plate, position: bus.position, showsMap: false)
                                 }
                             }
                         }
                     }
-                    BusRouteMap(resource: resource, company: route.company, compact: true, onStop: { id in detailStopID = id })
-                        .frame(height: 260).clipShape(.rect(cornerRadius: 24))
-                    DisclosureGroup(settings.text("估算說明", "About estimates")) {
-                        Text(settings.text("到站分鐘為未經實際到站校準嘅系統估算；巴士位置為官方估算。", "Arrival minutes are system estimates, not calibrated against observed arrivals. Bus positions are official estimates.")).font(.footnote).foregroundStyle(.secondary)
-                    }
-                    SourceNote(meta: resource.meta, error: resource.error)
                 }.padding(24)
             }
             } else {
@@ -239,12 +243,30 @@ struct StopSheet: View {
         }
         .sheet(item: $mapRequest) { request in
             NavigationStack {
-                BusRouteMap(resource: resource, company: route.company, initialVehicle: request.vehicleID, onStop: { id in
+                BusRouteMap(resource: resource, initialVehicle: request.vehicleID, onStop: { id in
                     detailStopID = id; mapRequest = nil
                 }).navigationTitle(route.routeName).navigationBarTitleDisplayMode(.inline)
                     .toolbar { ToolbarItem(placement: .confirmationAction) { Button(settings.text("完成", "Done")) { mapRequest = nil } } }
             }
         }
+    }
+
+    private func busPosition(plate: String, position: BusRoutePosition, showsMap: Bool) -> some View {
+        HStack(alignment: .center, spacing: 12) {
+            Image(systemName: "bus.fill").foregroundStyle(.blue).accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(plate + " · " + settings.text("官方估算", "Official estimate")).font(.caption).foregroundStyle(.secondary)
+                if let from = position.from {
+                    Text("\(from.stationName) → \(position.to.stationName)").font(.subheadline.weight(.medium))
+                } else {
+                    Text(settings.text("正前往 ", "Approaching ") + position.to.stationName).font(.subheadline.weight(.medium))
+                }
+            }
+            Spacer(minLength: 0)
+            if showsMap { Image(systemName: "map").foregroundStyle(.secondary).accessibilityHidden(true) }
+        }.frame(minHeight: 44).readingCard().contentShape(Rectangle())
+            .accessibilityElement(children: .combine)
+            .accessibilityHint(showsMap ? settings.text("開啟地圖", "Opens map") : "")
     }
 }
 
@@ -252,7 +274,6 @@ struct BusRouteMap: View {
     @Environment(AppSettings.self) private var settings
     @Environment(LocationService.self) private var location
     let resource: LiveResource<BusETA>
-    var company: BusCompany
     var initialVehicle: String?
     var compact = false
     var onStop: (String) -> Void
@@ -266,11 +287,9 @@ struct BusRouteMap: View {
                 guard let coordinate = stop.coordinates else { return nil }
                 return .init(id: stop.id, coordinate: coordinate, title: stop.stationName, symbol: nearby == stop.id ? "figure.stand" : "circle.fill", color: stop.suspended ? .orange : .blue)
             }
-            let chosen = selectedVehicle ?? initialVehicle ?? eta?.vehicles.first(where: { $0.positionSource == "feed" && $0.coordinates != nil })?.id
             let vehicles = resource.fresh(at: context.date) ? (eta?.vehicles ?? []).compactMap { vehicle -> MapPin? in
                 guard vehicle.positionSource == "feed", let coordinate = vehicle.coordinates else { return nil }
-                let bearing = eta.flatMap { vehicle.routeBearing(in: $0) }
-                return .init(id: "vehicle:\(vehicle.id)", coordinate: coordinate, title: vehicle.plate, symbol: "bus.fill", color: .mint, modelName: vehicle.id == chosen && bearing != nil ? (company.color == "orange" ? "bus-tcm.usdz" : "bus-transmac.usdz") : nil, bearing: bearing)
+                return .init(id: "vehicle:\(vehicle.id)", coordinate: coordinate, title: vehicle.plate, symbol: "bus.fill", color: vehicle.id == (selectedVehicle ?? initialVehicle) ? .blue : .mint)
             } : []
             TransitMap(lines: (eta?.routeSegments ?? []).enumerated().map { index, segment in
                 .init(id: "\(index)", coordinates: segment.coordinates, color: resource.fresh(at: context.date) ? trafficColor(segment.trafficStatus) : .gray)
@@ -288,7 +307,7 @@ struct BusRouteMap: View {
                 if !compact {
                 VStack(spacing: 8) {
                     Text(settings.text("綠：暢通 · 橙：緩慢 · 紅：擠塞 · 灰：未確認", "Green: clear · Orange: slow · Red: congested · Gray: unknown")).font(.caption)
-                    Text(settings.text("點巴士睇 3D · 位置為官方估算", "Tap a bus for 3D · official estimated positions")).font(.caption)
+                    Text(settings.text("巴士位置為官方估算", "Official estimated bus positions")).font(.caption)
                     SourceNote(meta: resource.meta, error: resource.error)
                 }.padding(16).background(.regularMaterial)
                 }

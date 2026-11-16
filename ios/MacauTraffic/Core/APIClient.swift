@@ -106,12 +106,24 @@ enum APIError: Error, LocalizedError {
         }
         if generation == current { loading = false }
     }
-    func poll(_ path: String, interval: Double) async {
+    func poll(_ path: String, interval: Double, followSourceTTL: Bool = false) async {
         var failures = 0
+        var retriedStale = false
         while !Task.isCancelled {
             await load(path)
             failures = error == nil ? 0 : min(failures + 1, 5)
-            let delay = error == nil ? interval : max(interval, min(60, pow(2, Double(failures))))
+            var delay = error == nil ? interval : max(interval, min(60, pow(2, Double(failures))))
+            if followSourceTTL, error == nil, let meta {
+                if meta.stale {
+                    // The server serves the cached response while it refreshes in the background.
+                    if !retriedStale { delay = 3; retriedStale = true }
+                } else {
+                    retriedStale = false
+                    if let generated = Timestamp.date(meta.generatedAt), let updated = Timestamp.date(meta.updatedAt) {
+                        delay = min(interval, max(3, meta.ttlSeconds + 1 - generated.timeIntervalSince(updated)))
+                    }
+                }
+            }
             do { try await Task.sleep(for: .seconds(delay)) } catch { return }
         }
     }

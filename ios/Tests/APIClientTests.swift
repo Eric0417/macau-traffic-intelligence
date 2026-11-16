@@ -63,4 +63,28 @@ private final class MockTransport: URLProtocol {
         do { let _: Health = try await client().get("health"); XCTFail("429 must fail") }
         catch { XCTAssertTrue(error.localizedDescription.contains("wait a minute")) }
     }
+
+    func testRoadPollingCatchesUpAfterStaleCacheResponse() async throws {
+        let formatter = ISO8601DateFormatter()
+        let now = Date()
+        let timestamp = formatter.string(from: now)
+        let staleDate = formatter.string(from: now.addingTimeInterval(-125))
+        let source = Attribution(id: "roads", name: "Test", url: "", text: "")
+        let stale = try JSONEncoder().encode(Envelope(data: "cached", meta: .init(generatedAt: timestamp, updatedAt: staleDate, stale: true, ttlSeconds: 60, source: source)))
+        let fresh = try JSONEncoder().encode(Envelope(data: "refreshed", meta: .init(generatedAt: timestamp, updatedAt: timestamp, stale: false, ttlSeconds: 60, source: source)))
+        var requests = 0
+        MockTransport.handler = { _ in
+            requests += 1
+            return (200, requests == 1 ? stale : fresh)
+        }
+        let roads = LiveResource<String>(client: client())
+        let polling = Task { await roads.poll("traffic/roads", interval: 60, followSourceTTL: true) }
+        defer { polling.cancel() }
+        let deadline = ContinuousClock.now + .seconds(6)
+        while roads.data != "refreshed" && ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(50))
+        }
+        XCTAssertEqual(roads.data, "refreshed")
+        XCTAssertTrue(roads.fresh())
+    }
 }

@@ -8,8 +8,7 @@ struct BusRoutePosition {
 
 extension BusVehicle {
     func routePosition(in eta: BusETA) -> BusRoutePosition? {
-        if let match = matchedSegment(in: eta) {
-            let segment = match.segment
+        if let segment = matchedSegment(in: eta) {
             var adjacent = Array(zip(eta.stops, eta.stops.dropFirst()))
             if let last = eta.stops.last, let first = eta.stops.first, last.id != first.id { adjacent.append((last, first)) }
             let pairs = adjacent.filter {
@@ -29,26 +28,21 @@ extension BusVehicle {
         guard let position = routePosition(in: eta), let from = position.from else { return nil }
         return (from.stationName, position.to.stationName)
     }
-    func routeBearing(in eta: BusETA) -> Double? { matchedSegment(in: eta)?.bearing }
-    private func matchedSegment(in eta: BusETA) -> (segment: BusSegment, bearing: Double)? {
+    private func matchedSegment(in eta: BusETA) -> BusSegment? {
         guard positionSource == "feed", let coordinates, let index = segmentIndex,
               eta.routeSegments.indices.contains(index) else { return nil }
         let segment = eta.routeSegments[index]
         let point = MKMapPoint(coordinates.location)
         let points = segment.coordinates.map { MKMapPoint($0.location) }
-        var nearest: (distance: Double, bearing: Double)?
         for (start, end) in zip(points, points.dropFirst()) {
             let dx = end.x - start.x, dy = end.y - start.y
             let lengthSquared = dx * dx + dy * dy
             guard lengthSquared > 0 else { continue }
             let fraction = max(0, min(1, ((point.x - start.x) * dx + (point.y - start.y) * dy) / lengthSquared))
             let distance = point.distance(to: MKMapPoint(x: start.x + fraction * dx, y: start.y + fraction * dy))
-            if nearest == nil || distance < nearest!.distance {
-                nearest = (distance, (atan2(dx, -dy) * 180 / .pi + 360).truncatingRemainder(dividingBy: 360))
-            }
+            if distance <= 100 { return segment }
         }
-        guard let nearest, nearest.distance <= 100 else { return nil }
-        return (segment, nearest.bearing)
+        return nil
     }
 }
 
@@ -80,17 +74,17 @@ struct BusVehicleRow: View {
 }
 
 extension BusETA {
-    func stopContext(through target: BusStop, includeVehicles: Bool) -> [BusStop] {
-        guard let end = stops.firstIndex(where: { $0.id == target.id }) else { return [] }
+    func nextVehicle(for target: BusStop, at now: Date) -> (vehicle: BusVehicle, position: BusRoutePosition)? {
+        guard !target.suspended, let end = stops.firstIndex(where: { $0.id == target.id }) else { return nil }
         let loop = routeSegments.contains { $0.fromStationCode == stops.last?.stationCode && $0.toStationCode == stops.first?.stationCode }
-        let positions = includeVehicles ? vehicles.compactMap { $0.routePosition(in: self) } : []
-        let candidates = positions.compactMap { position -> (start: Int, distance: Int)? in
-            guard let to = stops.firstIndex(where: { $0.id == position.to.id }), to <= end || loop else { return nil }
-            let start = position.from.flatMap { from in stops.firstIndex { $0.id == from.id } } ?? to
-            return (start, (end - to + stops.count) % stops.count)
+        let predictedID = target.freshStatus(at: now)?.vehicleId ?? target.freshEstimate(at: now)?.vehicleId
+        let candidates = vehicles.compactMap { vehicle -> (vehicle: BusVehicle, position: BusRoutePosition, distance: Int)? in
+            guard predictedID == nil || vehicle.id == predictedID,
+                  let position = vehicle.routePosition(in: self),
+                  let to = stops.firstIndex(where: { $0.id == position.to.id }), to <= end || loop else { return nil }
+            return (vehicle, position, (end - to + stops.count) % stops.count)
         }
-        let start = candidates.min { $0.distance < $1.distance }?.start ?? max(0, end - 2)
-        if start <= end { return Array(stops[start...end]) }
-        return Array(stops[start...]) + Array(stops[...end])
+        guard let next = candidates.min(by: { $0.distance < $1.distance }) else { return nil }
+        return (next.vehicle, next.position)
     }
 }

@@ -46,4 +46,4 @@ The final user correction requires fixed world-space proportions. All five model
 
 Nearby landmark models are culled by screen spacing, with the selected station first; underlying point markers remain. At most 40 visible items render. Diffuse lighting and soft contact shadows separate the models from the map. Reduced motion and hidden mobile maps stop continuous animation. Each carriage samples its own position and heading along the route, with the rear outer cab facing back. The station has two side platforms and a central guideway.
 
-The native iOS route detail uses USDZ copies of the same two schematic bus meshes, loaded by RealityKit with a virtual camera. Rebuild them with `Blender --background --factory-startup --python ios/scripts/export-bus-models.py` (use the installed Blender binary path). The model is labelled illustrative and does not identify a reported plate.
+The native iOS app uses map pins for bus positions. The meshes above are for the web map.

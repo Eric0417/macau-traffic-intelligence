@@ -1,6 +1,5 @@
 import XCTest
 import CoreLocation
-import simd
 @testable import MacauTraffic
 
 @MainActor final class BusDetailTests: XCTestCase {
@@ -109,17 +108,19 @@ import simd
         eta.vehicles = [vehicle]
         XCTAssertEqual(vehicle.routePosition(in: eta)?.from?.id, eta.stops.last?.id)
         XCTAssertEqual(vehicle.routePosition(in: eta)?.to.id, first.id)
-        XCTAssertEqual(eta.stopContext(through: first, includeVehicles: true).map(\.id), [eta.stops.last!.id, first.id])
-        XCTAssertEqual(eta.stopContext(through: first, includeVehicles: false).map(\.id), [first.id])
+        XCTAssertEqual(eta.nextVehicle(for: first, at: now)?.position.from?.id, eta.stops.last?.id)
     }
-    func testBusNoseFollowsCompassAndRotatingMap() {
-        func nose(_ bearing: Double, _ heading: Double) -> SIMD3<Float> {
-            simd_quatf(angle: BusModelPose.yaw(bearing: bearing, heading: heading), axis: [0, 1, 0]).act([1, 0, 0])
-        }
-        XCTAssertEqual(nose(0, 0).z, -1, accuracy: 0.001)
-        XCTAssertEqual(nose(90, 0).x, 1, accuracy: 0.001)
-        XCTAssertEqual(nose(180, 0).z, 1, accuracy: 0.001)
-        XCTAssertEqual(nose(270, 0).x, -1, accuracy: 0.001)
-        XCTAssertEqual(nose(0, 90).x, -1, accuracy: 0.001)
+    func testStopPositionMatchesTheBusUsedForItsArrivalEstimate() throws {
+        let envelope: Envelope<BusETA> = try FixtureLoader.response("bus/routes/00056/eta_vehicles", body: nil)
+        let eta = envelope.data
+        var target = try XCTUnwrap(eta.stops.first { $0.sequence == 3 })
+        let generatedAt = ISO8601DateFormatter().string(from: now)
+        target.arrivalEstimate = .init(minutes: 8, generatedAt: generatedAt, vehicleId: "test-0", basis: "test")
+        XCTAssertEqual(eta.nextVehicle(for: target, at: now)?.vehicle.id, "test-0")
+        target.arrivalEstimate?.vehicleId = "missing"
+        XCTAssertNil(eta.nextVehicle(for: target, at: now))
+        XCTAssertEqual(eta.nextVehicle(for: target, at: now.addingTimeInterval(11))?.vehicle.id, "test-3")
+        target.suspended = true
+        XCTAssertNil(eta.nextVehicle(for: target, at: now))
     }
 }

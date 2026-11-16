@@ -7,16 +7,17 @@ struct LivePolling<Value: Codable>: ViewModifier {
     let path: String
     let interval: Double
     var enabled: Bool = true
+    var followSourceTTL = false
     func body(content: Content) -> some View {
         content.onAppear { visible = true }.onDisappear { visible = false }
             .task(id: "\(visible)-\(phase)-\(path)-\(enabled)") {
-                if visible && phase == .active && enabled { await resource.poll(path, interval: interval) }
+                if visible && phase == .active && enabled { await resource.poll(path, interval: interval, followSourceTTL: followSourceTTL) }
             }
     }
 }
 extension View {
-    func livePolling<T>(_ resource: LiveResource<T>, path: String, interval: Double, enabled: Bool = true) -> some View {
-        modifier(LivePolling(resource: resource, path: path, interval: interval, enabled: enabled))
+    func livePolling<T>(_ resource: LiveResource<T>, path: String, interval: Double, enabled: Bool = true, followSourceTTL: Bool = false) -> some View {
+        modifier(LivePolling(resource: resource, path: path, interval: interval, enabled: enabled, followSourceTTL: followSourceTTL))
     }
     func readingCard() -> some View {
         padding(18).background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 20))

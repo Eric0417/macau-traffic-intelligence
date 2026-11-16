@@ -22,7 +22,11 @@ enum VoiceWAV {
     var startedAt: Date?
     var transcript = ""
     var error: String?
-    private(set) var levels: [Float] = []
+    struct MeterSample {
+        var date: Date
+        var level: Float
+    }
+    private(set) var levels: [MeterSample] = []
     private var metering: Task<Void, Never>?
     private var recorder: AVAudioRecorder?
     private var file: URL?
@@ -60,8 +64,8 @@ enum VoiceWAV {
                 while !Task.isCancelled {
                     guard let self, isRecording, let recorder else { return }
                     recorder.updateMeters()
-                    levels.append(Self.normalizedLevel(recorder.averagePower(forChannel: 0)))
-                    if levels.count > 80 { levels.removeFirst(levels.count - 80) }
+                    levels.append(.init(date: .now, level: Self.normalizedLevel(recorder.averagePower(forChannel: 0))))
+                    if levels.count > 160 { levels.removeFirst(levels.count - 160) }
                     do { try await Task.sleep(for: .milliseconds(50)) } catch { return }
                 }
             }

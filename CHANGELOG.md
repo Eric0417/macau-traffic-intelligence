@@ -1,5 +1,12 @@
 # Changelog
 
+## Macao Move stop summary and traffic layers - 2026-11-16
+
+- Show the arrival estimate and one approaching bus in stop details. Tap its reported segment to open a map with a bus pin. The full stop diagram stays on the route page.
+- Remove the native 3D bus model and its assets. Map perspective controls remain available.
+- Add an Apple Maps traffic option in Explore. Retry a stale DSAT snapshot once after three seconds and schedule regular reads around cache expiry.
+- Scroll the recording waveform at the display cadence using timestamped microphone levels.
+
 ## Macao Move bus diagrams and readable replies - 2026-11-16
 
 - Place bus markers between stops in the arrival list and selected-stop detail. Preserve circular last-to-first segments and distinguish a matched position from an approaching-stop report.
