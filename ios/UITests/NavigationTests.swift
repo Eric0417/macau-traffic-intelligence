@@ -102,7 +102,13 @@ final class NavigationTests: XCTestCase {
         let search = app.searchFields.firstMatch
         XCTAssertTrue(search.waitForExistence(timeout: 5)); search.tap(); search.typeText("56")
         app.buttons["route-00056"].tap()
+        let hours = app.staticTexts["Operating hours"]
+        XCTAssertTrue(hours.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts["06:00 – 00:00 +1 day"].exists)
+        hours.tap()
         XCTAssertTrue(app.staticTexts["06:00 – 00:00 +1 day"].waitForExistence(timeout: 8))
+        capture("bus-operating-hours", app: app)
+        hours.tap()
         XCTAssertFalse(app.keyboards.firstMatch.exists)
         let bus = app.buttons["route-bus-test-3"]
         for _ in 0..<7 { if bus.exists && bus.isHittable { break }; app.swipeUp() }
@@ -170,7 +176,11 @@ final class NavigationTests: XCTestCase {
         let route = app.buttons["route-00056"]
         XCTAssertTrue(route.waitForExistence(timeout: 5)); capture("buses", app: app); route.tap()
         let stop = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "stop-")).firstMatch
-        XCTAssertTrue(stop.waitForExistence(timeout: 8)); capture("bus-detail", app: app); stop.tap()
+        XCTAssertTrue(stop.waitForExistence(timeout: 8)); capture("bus-detail", app: app)
+        app.buttons["bus-map-open"].tap()
+        XCTAssertTrue(app.maps.firstMatch.waitForExistence(timeout: 5))
+        app.buttons["Done"].tap()
+        stop.tap()
         let save = app.buttons.matching(identifier: "Save").allElementsBoundByIndex.first { $0.isHittable }
         XCTAssertNotNil(save); save?.tap(); capture("stop-sheet", app: app)
     }
@@ -204,6 +214,7 @@ final class NavigationTests: XCTestCase {
         let spanField = try XCTUnwrap(mapValue.split(separator: ";").first { $0.hasPrefix("span=") })
         let span = try XCTUnwrap(Double(spanField.dropFirst("span=".count)))
         XCTAssertLessThan(span, 0.04, "Traffic overlays must not expand the selected journey's bounds: \(mapValue)")
+        XCTAssertLessThanOrEqual(app.maps.firstMatch.frame.maxY, app.buttons["home-route-details"].frame.minY + 1)
         capture("journey-home", app: app)
         app.buttons["home-route-details"].tap()
         XCTAssertTrue(app.navigationBars["Journey"].waitForExistence(timeout: 5)); capture("journey", app: app)
@@ -245,6 +256,9 @@ final class NavigationTests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Macau weather"].waitForExistence(timeout: 5))
     }
     func testLocationRecentersAfterPanningTwice() throws {
+        let authorization = XCUIApplication()
+        authorization.resetAuthorizationStatus(for: .location)
+        defer { authorization.resetAuthorizationStatus(for: .location) }
         let app = launch()
         let locate = app.buttons["Show my location"]
         let map = app.maps.firstMatch
@@ -262,7 +276,11 @@ final class NavigationTests: XCTestCase {
     }
     func testVoiceCancelHitAreaAndLargeCity() throws {
         let app = launch(extra: ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"])
-        tab(app, "City").tap(); capture("city-large-text", app: app)
+        tab(app, "City").tap()
+        let temperature = app.staticTexts["20°"]
+        XCTAssertTrue(temperature.waitForExistence(timeout: 5))
+        XCTAssertGreaterThanOrEqual(temperature.frame.minY, app.staticTexts["Macau weather"].frame.maxY)
+        capture("city-large-text", app: app)
         tab(app, "Buses").tap(); capture("buses-large-text", app: app)
         tab(app, "Assistant").tap()
         app.buttons["DeepSeek voice input"].coordinate(withNormalizedOffset: CGVector(dx: 0.8, dy: 0.5)).tap()
@@ -299,6 +317,9 @@ final class NavigationTests: XCTestCase {
     }
 
     func testDarkDayTripDetailsAndLocationOrigin() throws {
+        let authorization = XCUIApplication()
+        authorization.resetAuthorizationStatus(for: .location)
+        defer { authorization.resetAuthorizationStatus(for: .location) }
         let app = launch("trip", extra: ["-appearance", "dark"])
         tab(app, "Assistant").tap()
         app.buttons["Plan a day"].tap()
@@ -400,7 +421,14 @@ final class NavigationTests: XCTestCase {
     }
     func testDarkExplore() throws {
         let app = launch(extra: ["-appearance", "dark"])
-        XCTAssertTrue(app.buttons["explore-search"].waitForExistence(timeout: 8))
+        let destination = app.buttons["explore-search"]
+        XCTAssertTrue(destination.waitForExistence(timeout: 8))
+        let map = app.maps.firstMatch
+        XCTAssertTrue(map.exists)
+        XCTAssertGreaterThan(map.frame.height, app.frame.height / 2)
+        XCTAssertLessThanOrEqual(map.frame.maxY, destination.frame.minY + 1)
+        XCTAssertTrue(app.buttons["Show my location"].isHittable)
+        XCTAssertTrue(app.buttons["Change map perspective"].isHittable)
         capture("explore-dark", app: app)
         app.buttons["Traffic"].tap()
         let sources = app.buttons["Traffic sources"]
@@ -444,6 +472,15 @@ final class NavigationTests: XCTestCase {
         app.launch()
         XCTAssertTrue(app.buttons["explore-search"].waitForExistence(timeout: 8))
         capture("explore-zh", app: app)
+        tab(app, "巴士").tap()
+        let firstRow = ["00001", "0001A", "00002", "0002A"].map { app.buttons["route-\($0)"] }
+        XCTAssertTrue(firstRow[0].waitForExistence(timeout: 5))
+        for route in firstRow {
+            XCTAssertTrue(route.isHittable)
+            XCTAssertEqual(route.frame.midY, firstRow[0].frame.midY, accuracy: 1)
+        }
+        XCTAssertGreaterThan(app.buttons["route-002AS"].frame.midY, firstRow[0].frame.midY)
+        capture("buses-zh", app: app)
         tab(app, "助手").tap()
         XCTAssertTrue(app.staticTexts["想去邊？"].waitForExistence(timeout: 5))
         capture("assistant-zh", app: app)

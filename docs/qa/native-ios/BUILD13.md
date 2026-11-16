@@ -1,0 +1,7 @@
+# Macao Move Build 13 verification
+
+17 November 2026. The Explore layout takes its framed map and placement of primary controls from Dot's viewfinder layout. The bus catalogue displays four routes across at standard text sizes and two at accessibility sizes. City uses grouped rows and the assistant keeps three shortcuts above the composer. The [four-screen preview](build13-overview.jpg) uses iPhone simulator captures from the final grid build.
+
+Typecheck, lint, documentation checks and 264 repository tests passed. The native checks covered 48 unit tests and 24 distinct UI tests across the iPhone, iPhone SE and iPad simulator runs. Final checks measured four route cards in the first row and verified the fifth wraps. They also covered searching and opening a route, operating hours, a bus between stops, map and traffic controls, the large-text weather layout and the light rail screen. The day-trip origin and repeated location actions passed after resetting simulator location permission and supplying fresh coordinates. A separate simulated GPS test showed the nearest stop on route 56.
+
+The development-signed 1.0.0 (13) release passed strict signature verification and archive validation. Its IPA is `ios/build-device/MacaoMove-build13.ipa`, SHA-256 `2d2535abcd8b72527562cb412414502cf9551ab6627a2d0981d80d758c8ae3ce`. The provisioning profile expires on 23 November at 01:56 Macau time. The physical installation request returned CoreDevice error 4016 and the paired iPhone was absent from USB enumeration.

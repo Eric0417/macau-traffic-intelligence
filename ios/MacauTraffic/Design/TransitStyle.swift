@@ -1,7 +1,6 @@
 import SwiftUI
 
 enum TransitStyle {
-    static let ink = Color(red: 0.09, green: 0.10, blue: 0.11)
     static let accent = Color(red: 0.24, green: 0.38, blue: 0.94)
 }
 

@@ -6,20 +6,13 @@ struct JourneyOptionCard: View {
     var index: Int
     var apply: () -> Void
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(option.title).font(.subheadline.weight(.semibold)).lineLimit(2)
-                Spacer(minLength: 12)
-                Text(String(format: "%02d", index + 1)).font(.system(.caption, design: .monospaced)).foregroundStyle(.secondary)
-            }
+        VStack(alignment: .leading, spacing: 12) {
+            Text(option.title).font(.subheadline.weight(.semibold)).lineLimit(2)
             CompactJourneyLine(journey: option.journey)
             Button(action: apply) {
-                HStack {
-                    Text(settings.text("用呢條路線", "Use this route"))
-                    Spacer()
-                    Image(systemName: "arrow.up.right")
-                }.font(.subheadline.weight(.semibold)).padding(16)
-                    .foregroundStyle(.white).background(TransitStyle.ink, in: .rect(cornerRadius: 18))
+                Label(settings.text("用呢條路線", "Use this route"), systemImage: "arrow.up.right")
+                    .font(.subheadline.weight(.semibold)).padding(.horizontal, 16).padding(.vertical, 8)
+                    .frame(minHeight: 44).foregroundStyle(Color(.systemBackground)).background(Color(.label), in: Capsule())
             }.buttonStyle(PressFeedbackStyle()).accessibilityIdentifier("apply-route-\(index)")
             DisclosureGroup(settings.text("方案資料", "Route information")) {
                 VStack(alignment: .leading, spacing: 10) {
@@ -27,6 +20,6 @@ struct JourneyOptionCard: View {
                     JourneySummary(journey: option.journey)
                 }.padding(.top, 8)
             }.font(.caption).foregroundStyle(.secondary)
-        }.padding(20).background(Color(.secondarySystemBackground), in: .rect(cornerRadius: 26))
+        }.padding(16).background(Color(.secondarySystemBackground), in: .rect(cornerRadius: 22))
     }
 }

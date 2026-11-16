@@ -30,34 +30,42 @@ struct ExploreView: View {
     }
 
     var body: some View {
-        ZStack {
+        VStack(spacing: 12) {
+            HStack(spacing: 8) {
+                Text("Macao Move")
+                    .font(.system(.callout, design: .monospaced, weight: .medium))
+                    .accessibilityAddTraits(.isHeader)
+                Spacer(minLength: 8)
+                if navigation.journey != nil {
+                    Button {
+                        navigation.journey = nil
+                        showJourney = false
+                    } label: {
+                        Image(systemName: "xmark").font(.subheadline.weight(.semibold))
+                            .frame(width: 44, height: 44).contentShape(Circle())
+                    }.buttonStyle(PressFeedbackStyle()).mapControlGlass()
+                        .accessibilityLabel(settings.text("結束路線", "Clear route"))
+                }
+                PerspectiveButton(viewport: viewport)
+            }
             TimelineView(.periodic(from: .now, by: 2)) { context in
                 let route = navigation.journey.map { JourneyMapSnapshot(selection: $0, live: live, now: context.date) }
                 TransitMap(lines: trafficLines(at: context.date) + (route?.lines ?? []), pins: route?.pins ?? [],
                            fitID: navigation.journey.map { $0.id + "-\(navigation.mapRevision)-\(live.selectionID == $0.id && live.geometry != nil)" } ?? "macau",
                            viewport: viewport, showsPerspective: false,
-                           fitPadding: .init(top: 80, left: 40, bottom: navigation.journey == nil ? 180 : 440, right: 40), fitCoordinates: route?.fitCoordinates)
-                    .ignoresSafeArea()
+                           fitPadding: .init(top: 18, left: 16, bottom: 12, right: 16), fitCoordinates: route?.fitCoordinates)
             }
-            VStack(spacing: 0) {
-                if showTraffic { trafficStatus.frame(maxWidth: .infinity, alignment: .leading) }
-                Spacer(minLength: 24)
-                controls
-                if let selection = navigation.journey {
-                    routePanel(selection).padding(.top, 14)
-                } else {
-                    Button { navigation.ask() } label: {
-                        HStack {
-                            Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-                            Text(settings.text("想去邊？", "Where to?")).font(.headline)
-                            Spacer()
-                            Image(systemName: "arrow.up.right").font(.subheadline.weight(.semibold))
-                        }.padding(.horizontal, 20).frame(minHeight: 56).contentShape(Capsule())
-                            .glassEffect(.regular.interactive(), in: .capsule)
-                    }.buttonStyle(PressFeedbackStyle()).accessibilityIdentifier("explore-search").padding(.top, 14)
-                }
-            }.padding(.horizontal, 20).padding(.top, 12).padding(.bottom, 14).frame(maxWidth: 620)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .clipShape(.rect(cornerRadius: 26))
+            .overlay(alignment: .topLeading) {
+                if showTraffic { trafficStatus.padding(10) }
+            }
+            controls
+            if let selection = navigation.journey { routeStatus(selection) }
         }
+        .padding(.horizontal, 20).padding(.top, 4).padding(.bottom, 10)
+        .frame(maxWidth: 760).frame(maxWidth: .infinity)
+        .background(Color(.systemBackground))
         .toolbar(.hidden, for: .navigationBar)
         .livePolling(roads, path: "traffic/roads", interval: 60, enabled: navigation.tab == .explore && showTraffic && trafficLayer == .dsat, followSourceTTL: true)
         .livePolling(forecast, path: "traffic/forecast", interval: 60, enabled: navigation.tab == .explore && showTraffic && trafficLayer == .forecast, followSourceTTL: true)
@@ -135,18 +143,10 @@ struct ExploreView: View {
                 HStack(spacing: 8) {
                     if resource.loading { ProgressView().controlSize(.small) }
                     else if delayed { Image(systemName: "clock.badge.exclamationmark").foregroundStyle(.orange) }
-                    else if predicted { Image(systemName: "clock.arrow.circlepath") }
-                    else {
-                        HStack(spacing: 4) {
-                            Circle().fill(.green)
-                            Circle().fill(.orange)
-                            Circle().fill(.red)
-                        }.frame(width: 26, height: 6)
-                    }
+                    else { Image(systemName: predicted ? "clock.arrow.circlepath" : "info.circle").font(.subheadline) }
                     (predicted ? Text(settings.text(delayed ? "預測暫未更新" : "30 分鐘預測", delayed ? "Forecast delayed" : "30 min forecast")) :
                         Text(settings.text(delayed ? "路況資料延遲" : "路況", delayed ? "Traffic data delayed" : "Traffic")))
                         .font(.caption.weight(.medium))
-                    Image(systemName: "info.circle").font(.caption)
                 }.padding(.horizontal, 14).frame(minHeight: 44).contentShape(Capsule()).glassEffect(.regular.interactive(), in: .capsule)
             }.buttonStyle(.plain).accessibilityLabel(settings.text("路況資料", "Traffic sources"))
                 .accessibilityValue(delayed ? settings.text("資料延遲", "Data delayed") : resource.loading || resource.meta == nil ? settings.text("更新中", "Updating") :
@@ -154,48 +154,63 @@ struct ExploreView: View {
         }
     }
     private var controls: some View {
-        HStack(alignment: .bottom) {
+        HStack(spacing: 12) {
             Button { showTraffic.toggle() } label: {
-                Image(systemName: "car.side.fill").font(.system(size: 19, weight: .medium)).frame(width: 48, height: 48).contentShape(Circle())
-                    .foregroundStyle(showTraffic ? .white : .primary)
-                    .background(showTraffic ? TransitStyle.ink : .clear, in: Circle())
-            }.buttonStyle(.plain).glassEffect(.regular.interactive(), in: .circle)
+                Image(systemName: "car.side").font(.system(size: 19, weight: .medium))
+                    .frame(width: 48, height: 48).contentShape(Circle())
+                    .foregroundStyle(showTraffic ? Color(.systemBackground) : .primary)
+                    .background(showTraffic ? Color(.label) : .clear, in: Circle())
+            }.buttonStyle(PressFeedbackStyle()).mapControlGlass()
                 .accessibilityLabel(settings.text("路況", "Traffic")).accessibilityValue(showTraffic ? "On" : "Off")
                 .sensoryFeedback(.selection, trigger: showTraffic)
-            Spacer()
-            VStack(spacing: 12) {
-                PerspectiveButton(viewport: viewport)
-                Button {
-                    locationTask?.cancel()
-                    locationTask = Task {
-                        do {
-                            let coordinate = try await location.request()
-                            try Task.checkCancellation()
-                            viewport.focus(coordinate, animated: !reduceMotion)
-                        } catch is CancellationError {} catch { self.error = error.localizedDescription }
+
+            let selection = navigation.journey
+            Button {
+                if selection == nil { navigation.ask() }
+                else { showJourney = true }
+            } label: {
+                HStack(spacing: 10) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(selection?.destination.name ?? settings.text("想去邊？", "Where to?"))
+                            .font(.headline).lineLimit(2)
+                        if let selection {
+                            let routes = selection.journey.legs.map(\.routeName)
+                            Text(routes.isEmpty ? settings.text("步行", "Walk") : routes.joined(separator: " → "))
+                                .font(.system(.caption, design: .monospaced)).lineLimit(1)
+                        }
                     }
-                } label: {
-                    Group {
-                        if location.locating { ProgressView() }
-                        else { Image(systemName: "location.fill").font(.system(size: 19, weight: .medium)) }
-                    }.frame(width: 48, height: 48).contentShape(Circle())
-                }.buttonStyle(.plain).glassEffect(.regular.interactive(), in: .circle).disabled(location.locating)
-                    .accessibilityLabel(settings.text("顯示目前位置", "Show my location"))
-            }
-        }
-    }
-    private func routePanel(_ selection: JourneySelection) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(selection.destination.name).font(.headline).lineLimit(2)
-                    Text(selection.origin.name).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                    Spacer(minLength: 0)
+                    Image(systemName: selection == nil ? "arrow.up.right" : "chevron.up")
+                        .font(.subheadline.weight(.semibold)).accessibilityHidden(true)
                 }
-                Spacer(minLength: 12)
-                Button { navigation.journey = nil; showJourney = false } label: { Image(systemName: "xmark").font(.subheadline.weight(.semibold)).frame(width: 44, height: 44) }
-                    .buttonStyle(.plain).accessibilityLabel(settings.text("結束路線", "Clear route"))
-            }
-            CompactJourneyLine(journey: selection.journey)
+                .multilineTextAlignment(.leading).padding(.horizontal, 18).padding(.vertical, 10)
+                .frame(maxWidth: 420, minHeight: 56).contentShape(Capsule())
+                .foregroundStyle(Color(.systemBackground)).background(Color(.label), in: Capsule())
+            }.buttonStyle(PressFeedbackStyle())
+                .accessibilityHint(selection == nil ? "" : settings.text("路線詳情", "Route details"))
+                .accessibilityIdentifier(selection == nil ? "explore-search" : "home-route-details")
+                .frame(maxWidth: .infinity)
+
+            Button {
+                locationTask?.cancel()
+                locationTask = Task {
+                    do {
+                        let coordinate = try await location.request()
+                        try Task.checkCancellation()
+                        viewport.focus(coordinate, animated: !reduceMotion)
+                    } catch is CancellationError {} catch { self.error = settings.description(for: error) }
+                }
+            } label: {
+                Group {
+                    if location.locating { ProgressView() }
+                    else { Image(systemName: "location.fill").font(.system(size: 19, weight: .medium)) }
+                }.frame(width: 48, height: 48).contentShape(Circle())
+            }.buttonStyle(PressFeedbackStyle()).mapControlGlass().disabled(location.locating)
+                .accessibilityLabel(settings.text("顯示目前位置", "Show my location"))
+        }.frame(maxWidth: 540)
+    }
+    private func routeStatus(_ selection: JourneySelection) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
             if !selection.future, let first = selection.journey.legs.first {
                 JourneyBoardingStatus(leg: first, envelope: live.envelopes[first.id], failed: live.errors.contains(first.id))
             }
@@ -203,10 +218,6 @@ struct ExploreView: View {
                 Text(settings.text("部分路線未能核實", "Some route segments are unverified")).font(.caption).foregroundStyle(.orange)
             }
             if selection.future { Text(settings.text("預定行程，班次未核實", "Planned journey; future service unverified")).font(.caption).foregroundStyle(.orange) }
-            Button { showJourney = true } label: {
-                HStack { Text(settings.text("路線詳情", "Route details")); Spacer(); Image(systemName: "chevron.up") }.font(.subheadline.weight(.semibold)).frame(minHeight: 44).contentShape(Rectangle())
-            }.buttonStyle(.plain).accessibilityIdentifier("home-route-details")
-        }.padding(20).background(Color(.systemBackground), in: .rect(cornerRadius: 28))
-            .shadow(color: .black.opacity(0.08), radius: 18, y: 6)
+        }.frame(maxWidth: 540, alignment: .leading)
     }
 }

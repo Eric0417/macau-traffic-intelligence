@@ -12,7 +12,6 @@ struct AssistantView: View {
     @Environment(AppNavigation.self) private var navigation
     @Environment(\.scenePhase) private var phase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.dynamicTypeSize) private var typeSize
     @State private var state = AssistantState()
     @State private var voice = VoiceRecorder()
     @State private var locationTask: Task<Void, Never>?
@@ -119,31 +118,26 @@ struct AssistantView: View {
             .padding(.leading, 36).frame(maxWidth: .infinity, alignment: .trailing)
     }
     private var welcome: some View {
-        VStack(spacing: 18) {
-            if !typeSize.isAccessibilitySize {
-                Image("RouteSculpture").resizable().scaledToFit().frame(width: 176, height: 176)
-                    .padding(.top, 18).accessibilityHidden(true)
-            }
-            Text(settings.text("想去邊？", "Where to?")).font(.system(.largeTitle, design: .rounded, weight: .bold))
-                .multilineTextAlignment(.center).frame(maxWidth: .infinity).padding(.bottom, 16)
+        VStack(alignment: .leading, spacing: 16) {
+            Text(settings.text("想去邊？", "Where to?")).font(.largeTitle.weight(.semibold))
+                .accessibilityAddTraits(.isHeader)
             VStack(spacing: 0) {
                 suggestion("搭巴士", "Find a bus", "bus", question: settings.text("去大三巴點搭巴士？", "How do I get to St Paul's by bus?"))
-                Divider().padding(.leading, 54)
                 suggestion("搵附近", "Find nearby", "location", question: settings.text("附近有咩停車場？", "Which car parks are nearby?"))
-                Divider().padding(.leading, 54)
-                suggestion("一日遊", "Plan a day", "sun.max", question: settings.text("幫我安排文化一日遊", "Plan a cultural day trip"))
+                suggestion("一日遊", "Plan a day", "calendar", question: settings.text("幫我安排文化一日遊", "Plan a cultural day trip"))
             }
-        }.padding(.bottom, 16)
+        }.padding(.top, 24)
     }
     private func suggestion(_ chinese: String, _ english: String.LocalizationValue, _ symbol: String, question: String) -> some View {
         Button { state.draft = question; submit() } label: {
-            HStack(spacing: 14) {
-                Image(systemName: symbol).frame(width: 24).foregroundStyle(.secondary)
-                Text(settings.text(chinese, english)).foregroundStyle(.primary).multilineTextAlignment(.leading)
-                Spacer(minLength: 4)
-                Image(systemName: "arrow.up.left").font(.caption).foregroundStyle(.secondary)
-            }.padding(.horizontal, 12).padding(.vertical, 18).contentShape(Rectangle())
-        }.buttonStyle(.plain)
+            HStack(spacing: 12) {
+                Image(systemName: symbol).font(.subheadline).foregroundStyle(.secondary)
+                    .frame(width: 32, height: 32).background(.primary.opacity(0.06), in: Circle())
+                    .accessibilityHidden(true)
+                Text(settings.text(chinese, english)).font(.subheadline.weight(.medium)).multilineTextAlignment(.leading)
+            }.padding(.vertical, 6).frame(minHeight: 44).frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+        }.buttonStyle(PressFeedbackStyle())
     }
     private func submit() { locationTask?.cancel(); typing = false; state.ask(locale: settings.language.rawValue) }
     private func apply(_ selection: JourneySelection) {

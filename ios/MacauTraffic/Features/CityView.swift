@@ -5,55 +5,53 @@ struct CityView: View {
     @Environment(\.dynamicTypeSize) private var typeSize
     @State private var weather = LiveResource<Weather>()
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 28) {
+        List {
+            Section {
                 NavigationLink { WeatherView() } label: {
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text(settings.text("澳門天氣", "Macau weather")).font(.subheadline.weight(.medium))
-                            Spacer()
-                            Image(systemName: "arrow.up.right").font(.subheadline)
-                        }.foregroundStyle(.secondary)
-                        HStack(alignment: .bottom) {
-                            Text(weather.data?.temperatureCelsius.map { "\(Int($0))°" } ?? "—")
-                                .font(.system(size: 100, weight: .bold, design: .rounded)).tracking(-7).lineLimit(1).minimumScaleFactor(0.65).contentTransition(.numericText())
-                            Spacer()
-                            if !typeSize.isAccessibilitySize, let humidity = weather.data?.humidityPercent {
-                                VStack(alignment: .trailing, spacing: 4) {
-                                    Text("\(Int(humidity))%").font(.system(.title2, design: .rounded, weight: .semibold))
-                                    Text(settings.text("濕度", "Humidity")).font(.caption).foregroundStyle(.secondary)
-                                }.padding(.bottom, 18)
+                    let layout = typeSize.isAccessibilitySize
+                        ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4))
+                        : AnyLayout(HStackLayout(spacing: 12))
+                    layout {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Label(settings.text("澳門天氣", "Macau weather"), systemImage: "cloud.sun")
+                            TimelineView(.periodic(from: .now, by: 2)) { context in
+                                if weather.error != nil || weather.meta?.isDelayed(at: context.date) == true {
+                                    Text(settings.text("天氣資料延遲", "Weather data delayed")).font(.caption).foregroundStyle(.orange)
+                                }
                             }
                         }
-                        if typeSize.isAccessibilitySize, let humidity = weather.data?.humidityPercent {
-                            Text(settings.text("濕度", "Humidity") + " \(Int(humidity))%").font(.title3).fixedSize(horizontal: false, vertical: true)
+                        if !typeSize.isAccessibilitySize { Spacer(minLength: 0) }
+                        if let temperature = weather.data?.temperatureCelsius {
+                            Text("\(Int(temperature))°")
+                                .font(.system(.title2, design: .monospaced, weight: .medium))
+                                .lineLimit(1).minimumScaleFactor(0.75).contentTransition(.numericText())
+                        } else if weather.loading {
+                            ProgressView().controlSize(.small)
                         }
-                    }.padding(24).background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 30))
-                }.buttonStyle(PressFeedbackStyle())
+                    }.frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
+                }
                 if let warning = weather.data?.warnings.first(where: \.active) {
-                    Label(warning.text, systemImage: "exclamationmark.triangle.fill").font(.subheadline).foregroundStyle(.orange)
+                    Label(warning.text, systemImage: "exclamationmark.triangle").font(.subheadline).foregroundStyle(.orange)
                 }
-                TimelineView(.periodic(from: .now, by: 2)) { context in
-                    if weather.error != nil || weather.meta?.isDelayed(at: context.date) == true { Text(settings.text("天氣資料延遲", "Weather data delayed")).font(.caption).foregroundStyle(.orange) }
+            }
+            Section {
+                NavigationLink { LRTView() } label: { Label(settings.text("輕軌", "Light rail"), systemImage: "tram") }
+                NavigationLink { ParkingView() } label: { Label(settings.text("泊車", "Parking"), systemImage: "parkingsign") }
+                NavigationLink { TrafficView() } label: { Label(settings.text("道路與大橋", "Roads and bridges"), systemImage: "car.side") }
+                NavigationLink { BordersView() } label: { Label(settings.text("口岸", "Border crossings"), systemImage: "door.left.hand.open") }
+                NavigationLink { ManualPlannerView() } label: {
+                    Label(settings.text("行程規劃", "Journey planner"), systemImage: "point.topleft.down.to.point.bottomright.curvepath")
                 }
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: typeSize.isAccessibilitySize ? 1 : 2), spacing: 12) {
-                    NavigationLink { LRTView() } label: { CityTile(title: settings.text("輕軌", "Light rail"), symbol: "tram.fill", color: .teal) }
-                    NavigationLink { ParkingView() } label: { CityTile(title: settings.text("泊車", "Parking"), symbol: "parkingsign", color: TransitStyle.accent) }
-                    NavigationLink { NoticesView() } label: { CityTile(title: settings.text("消息", "Updates"), symbol: "text.bubble.fill", color: .orange) }
-                    NavigationLink { CamerasView() } label: { CityTile(title: settings.text("鏡頭", "Cameras"), symbol: "video.fill", color: .primary) }
-                }.buttonStyle(PressFeedbackStyle())
-                VStack(spacing: 0) {
-                    NavigationLink { TrafficView() } label: { CityRow(title: settings.text("道路與大橋", "Roads and bridges"), symbol: "car.side.fill") }
-                    Divider().padding(.leading, 52)
-                    NavigationLink { BordersView() } label: { CityRow(title: settings.text("口岸", "Border crossings"), symbol: "door.left.hand.open") }
-                    Divider().padding(.leading, 52)
-                    NavigationLink { ManualPlannerView() } label: { CityRow(title: settings.text("行程規劃", "Journey planner"), symbol: "point.topleft.down.to.point.bottomright.curvepath") }
-                    Divider().padding(.leading, 52)
-                    NavigationLink { SourceStatusView() } label: { CityRow(title: settings.text("資料來源", "Sources"), symbol: "info.circle") }
-                }.buttonStyle(.plain)
-            }.padding(20)
-        }.background(Color(.systemGroupedBackground))
-        .navigationTitle(settings.text("城市", "City"))
+            }
+            Section {
+                NavigationLink { NoticesView() } label: { Label(settings.text("消息", "Updates"), systemImage: "text.bubble") }
+                NavigationLink { CamerasView() } label: { Label(settings.text("鏡頭", "Cameras"), systemImage: "video") }
+                NavigationLink { SourceStatusView() } label: { Label(settings.text("資料來源", "Sources"), systemImage: "info.circle") }
+            }
+        }.listStyle(.plain)
+        .frame(maxWidth: 760).frame(maxWidth: .infinity)
+        .background(Color(.systemBackground))
+        .navigationTitle(settings.text("城市", "City")).navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 NavigationLink { SavedView() } label: { Image(systemName: "star") }.accessibilityLabel(settings.text("收藏", "Saved"))
@@ -64,24 +62,6 @@ struct CityView: View {
         }
         .livePolling(weather, path: "weather", interval: 60)
         .refreshable { await weather.load("weather") }
-    }
-}
-
-private struct CityTile: View {
-    var title: String
-    var symbol: String
-    var color: Color
-    var body: some View {
-        VStack(alignment: .leading, spacing: 24) {
-            Image(systemName: symbol).font(.system(size: 32, weight: .semibold)).foregroundStyle(color)
-                .shadow(color: color.opacity(0.16), radius: 0, y: 3)
-            HStack {
-                Text(title).font(.headline)
-                Spacer()
-                Image(systemName: "arrow.up.right").font(.caption.weight(.medium)).foregroundStyle(.secondary)
-            }
-        }.padding(20).frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 26))
     }
 }
 

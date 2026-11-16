@@ -70,12 +70,21 @@ struct PerspectiveButton: View {
     var viewport: MapViewport
     var body: some View {
         Button { viewport.togglePerspective(animated: !reduceMotion) } label: {
-            Text(viewport.pitched ? "2D" : "3D").font(.system(.subheadline, design: .rounded, weight: .bold)).frame(width: 48, height: 48).contentShape(Circle())
+            Text(viewport.pitched ? "2D" : "3D").font(.system(.subheadline, design: .monospaced, weight: .semibold))
+                .lineLimit(1).minimumScaleFactor(0.75).frame(width: 48, height: 48).contentShape(Circle())
         }
-        .buttonStyle(.plain).glassEffect(.regular.interactive(), in: .circle)
+        .buttonStyle(PressFeedbackStyle()).mapControlGlass()
         .accessibilityLabel(settings.text("切換地圖角度", "Change map perspective"))
         .accessibilityValue(viewport.pitched ? "3D" : "2D")
         .sensoryFeedback(.selection, trigger: viewport.pitched)
+    }
+}
+
+extension View {
+    func mapControlGlass() -> some View {
+        background(.primary.opacity(0.04), in: Circle())
+            .glassEffect(.regular.interactive(), in: .circle)
+            .overlay { Circle().strokeBorder(.primary.opacity(0.12)).allowsHitTesting(false) }
     }
 }
 

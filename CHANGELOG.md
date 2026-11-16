@@ -1,5 +1,13 @@
 # Changelog
 
+## Macao Move map and navigation layout - 2026-11-17
+
+- Give Explore a rounded map frame and a single row for traffic, destination or route details, and location. Keep arrival and route warnings visible below that row.
+- Show four compact bus routes per row, or two with accessibility text sizes. Put operating hours behind a disclosure and keep the stop list and vehicle positions in view.
+- Replace city tiles with a grouped list and a compact weather row.
+- Open Light rail directly to the map and line picker.
+- Remove the assistant illustration and decorative route numbers. Use shorter shortcuts and a composer that follows the current appearance.
+
 ## Macao Move system languages and day-trip location - 2026-11-16
 
 - Follow the device language by default, with a language override in Settings. Add Japanese, Korean, Portuguese and Spanish interface and assistant support.

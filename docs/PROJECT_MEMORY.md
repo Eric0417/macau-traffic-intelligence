@@ -8,6 +8,8 @@
 
 ## Current State
 
+Macao Move Build 13 uses an inset map and one row of primary controls, a four-column bus catalogue, and simpler assistant and city screens. Accessibility text sizes use two bus columns and stack the weather reading below its label. The signed build passed simulator tests across iPhone, iPhone SE and iPad. The paired iPhone was unreachable for installation. See `docs/qa/native-ios/BUILD13.md` for the signed package and test results.
+
 Macao Move Build 12 was installed and read back on the paired iPhone. Explore has live DSAT traffic and a solid 30-minute forecast. The day-trip form accepts an empty origin and offers location sharing, and its button has readable text in Dark Mode. The app defaults to the device language and adds Japanese, Korean, Portuguese and Spanish. Some server-generated route notices still use English in the new languages. Render deployment `dep-dbtaa0l6e07s73bsu1r0` at `0e57847` passed live language and location probes. See `docs/qa/native-ios/BUILD12.md`.
 
 Macao Move Build 11 was installed and independently read back on the paired iPhone. The native assistant keeps six recent exchanges, streams free-form answers, and reinterprets route follow-ups against current candidates. Explore adds the separate DSAT 30-minute forecast. Render `dep-dbt7fp49v7es73cdvf20` is live at `84d2652`. A three-turn production check and the 2,390-section forecast passed. See `docs/qa/native-ios/BUILD11.md` and ADRs 0029–0030 for verification and limits.

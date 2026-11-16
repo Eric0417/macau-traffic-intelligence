@@ -9,10 +9,6 @@ struct LRTView: View {
     @State private var selectedStation: String?
     var body: some View {
         List {
-            Section {
-                Text(settings.text("沿住軌道，穿過澳門。", "Across Macau, by rail.")).font(.title2.weight(.semibold)).padding(.vertical, 10)
-                Text(settings.text("路線、車站同官方服務時間", "Lines, stations and published service hours")).foregroundStyle(.secondary)
-            }
             LoadState(resource: network) { Task { await network.load("lrt/network") } }
             if let data = network.data {
                 Section {

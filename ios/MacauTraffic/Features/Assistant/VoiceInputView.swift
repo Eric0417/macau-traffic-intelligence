@@ -11,13 +11,14 @@ struct VoiceInputView: View {
                 VoiceWaveform(voice: voice).frame(height: 38)
                 TimelineView(.periodic(from: .now, by: 1)) { context in
                     let seconds = min(20, max(0, Int(context.date.timeIntervalSince(voice.startedAt ?? context.date))))
-                    Text(String(format: "0:%02d / 0:20", seconds)).font(.caption2.monospacedDigit()).foregroundStyle(.white.opacity(0.6))
+                    Text(String(format: "0:%02d / 0:20", seconds)).font(.caption2.monospacedDigit()).foregroundStyle(.secondary)
                 }
             }
             Button { Task { await voice.stopAndTranscribe() } } label: {
-                Image(systemName: "checkmark").font(.body.weight(.semibold)).foregroundStyle(.black).frame(width: 44, height: 44).contentShape(Circle()).background(.white, in: Circle())
+                Image(systemName: "checkmark").font(.body.weight(.semibold)).foregroundStyle(Color(.systemBackground))
+                    .frame(width: 44, height: 44).contentShape(Circle()).background(Color(.label), in: Circle())
             }.accessibilityLabel(settings.text("停止並轉寫", "Stop and transcribe"))
-        }.foregroundStyle(.white).buttonStyle(.plain).padding(10)
+        }.buttonStyle(.plain).padding(10)
     }
 }
 
@@ -33,7 +34,7 @@ private struct VoiceWaveform: View {
                 var baseline = Path()
                 baseline.move(to: .init(x: 0, y: size.height / 2))
                 baseline.addLine(to: .init(x: size.width, y: size.height / 2))
-                context.stroke(baseline, with: .color(.white.opacity(0.2)), lineWidth: 1)
+                context.stroke(baseline, with: .color(.primary.opacity(0.2)), lineWidth: 1)
                 var bars = Path()
                 for sample in samples {
                     // The time axis advances on each display frame, even between meter reads.
@@ -42,7 +43,7 @@ private struct VoiceWaveform: View {
                     let height = max(2, CGFloat(sample.level) * size.height)
                     bars.addRoundedRect(in: CGRect(x: x, y: (size.height - height) / 2, width: 2, height: height), cornerSize: CGSize(width: 1, height: 1))
                 }
-                context.fill(bars, with: .color(.white))
+                context.fill(bars, with: .color(.primary))
             }
         }
         .clipped()

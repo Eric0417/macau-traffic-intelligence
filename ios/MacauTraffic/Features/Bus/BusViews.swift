@@ -8,33 +8,37 @@ private struct BusMapRequest: Identifiable {
 struct BusListView: View {
     @Environment(AppSettings.self) private var settings
     @Environment(\.dynamicTypeSize) private var typeSize
-    @ScaledMetric(relativeTo: .largeTitle) private var routeSize = 34.0
     @State private var routes = LiveResource<[BusRoute]>()
     @State private var query = ""
     var body: some View {
         ScrollView {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: typeSize.isAccessibilitySize ? 260 : 102), spacing: 12)], spacing: 12) {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: typeSize.isAccessibilitySize ? 2 : 4), spacing: 8) {
                 ForEach(filtered) { route in
                     NavigationLink { BusDetailView(route: route) } label: {
-                        VStack(alignment: .leading, spacing: 16) {
-                            Text(route.routeName).font(.system(size: routeSize, weight: .bold, design: .rounded)).tracking(-1)
-                                .lineLimit(1).minimumScaleFactor(0.6).frame(maxWidth: .infinity, alignment: .leading)
-                            HStack(spacing: 5) {
-                                Circle().fill(route.company.color == "orange" ? Color.orange : TransitStyle.accent).frame(width: 5, height: 5)
-                                Text(route.company.name).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
-                                if !route.live { Image(systemName: "calendar").font(.caption2) }
-                            }
-                        }.padding(16).frame(maxWidth: .infinity, minHeight: 110, alignment: .leading)
-                            .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 23))
-                            .shadow(color: .black.opacity(0.035), radius: 2, y: 3)
+                        VStack(spacing: 4) {
+                            Text(route.routeName).font(.system(.title3, design: .monospaced, weight: .semibold))
+                            HStack(spacing: 4) {
+                                Text(route.company.name)
+                                if !route.live {
+                                    Image(systemName: "calendar")
+                                        .accessibilityLabel(settings.text("查看官方路線班表", "Official route timetables"))
+                                }
+                            }.font(.caption2).foregroundStyle(.secondary)
+                        }
+                        .lineLimit(1).minimumScaleFactor(0.7)
+                        .padding(.horizontal, 6).padding(.vertical, 10)
+                        .frame(maxWidth: .infinity, minHeight: 68)
+                        .background(Color(.secondarySystemBackground), in: .rect(cornerRadius: 16))
                     }.buttonStyle(PressFeedbackStyle()).accessibilityIdentifier("route-\(route.routeCode)")
                 }
-            }.padding(.top, 8)
+            }.padding(.top, 6)
             LoadState(resource: routes) { Task { await routes.load("bus/routes") } }
             if routes.data != nil && filtered.isEmpty { ContentUnavailableView.search(text: query) }
             if routes.meta != nil { SourceNote(meta: routes.meta, error: routes.error).padding(.vertical, 20) }
-        }.contentMargins(.horizontal, 20).background(Color(.systemGroupedBackground))
-        .navigationTitle(settings.text("巴士", "Buses"))
+        }.contentMargins(.horizontal, 20)
+        .frame(maxWidth: 620).frame(maxWidth: .infinity)
+        .background(Color(.systemBackground))
+        .navigationTitle(settings.text("巴士", "Buses")).navigationBarTitleDisplayMode(.inline)
         .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: settings.text("路線號碼", "Route number"))
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -69,13 +73,11 @@ struct BusDetailView: View {
     var body: some View {
         List {
             Section {
-                HStack(alignment: .top, spacing: 16) {
-                    RouteBadge(name: route.routeName, color: route.company.color == "orange" ? .orange : .blue)
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(eta?.stops.last?.stationName ?? route.company.name).font(.title3.weight(.semibold))
-                        Text(settings.text("開往終點站", "Towards terminus")).font(.subheadline).foregroundStyle(.secondary)
-                    }
-                }.padding(.vertical, 8)
+                if let terminus = eta?.stops.last?.stationName {
+                    Label(terminus, systemImage: "arrow.turn.down.right")
+                        .font(.headline)
+                        .accessibilityLabel(settings.text("開往終點站", "Towards terminus") + ", " + terminus)
+                } else { Text(route.company.name).foregroundStyle(.secondary) }
                 if route.routeType != 2 {
                     Picker(settings.text("方向", "Direction"), selection: $direction) {
                         Text(settings.text("去程", "Outbound")).tag(0)
@@ -117,12 +119,9 @@ struct BusDetailView: View {
                         SourceNote(meta: resource.meta, error: resource.error)
                     }
                     Section {
-                        Button { mapRequest = .init() } label: {
-                            HStack { Text(settings.text("路線地圖", "Route map")); Spacer(); Image(systemName: "arrow.up.left.and.arrow.down.right") }
-                        }.accessibilityIdentifier("bus-route-map")
                         BusRouteMap(resource: resource, compact: true, onStop: { selectedStop = $0 })
                             .frame(height: 260).listRowInsets(EdgeInsets())
-                    }
+                    } header: { Text(settings.text("路線地圖", "Route map")) }
                 }
             }
         }
@@ -132,6 +131,7 @@ struct BusDetailView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Button { mapRequest = .init() } label: { Image(systemName: "map") }
                     .accessibilityLabel(settings.text("路線地圖", "Route map")).accessibilityIdentifier("bus-map-open")
+                    .disabled(eta == nil)
             }
             ToolbarItem(placement: .topBarTrailing) { SaveButton(item: .init(id: "bus:\(route.routeCode):\(direction)", kind: "bus", title: route.routeName, routeCode: route.routeCode, direction: direction)) }
         }
