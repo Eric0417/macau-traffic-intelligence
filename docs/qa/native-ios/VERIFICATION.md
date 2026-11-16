@@ -1,5 +1,7 @@
 # Macao Move native verification
 
+Latest revision: [Build 7 verification and device installation](BUILD7.md). The results below record the preceding Build 6 work.
+
 Checked on 2026-11-16. Build 1.0.0 (6), bundle `com.eric.macautraffic`, minimum iOS 26. Xcode 27.2. Build 3 was rejected after physical use: its earlier fixture tests missed repeated location, camera continuity, full-size traffic overlays and route application. Build 4 replaced those interactions; Builds 5–6 add shared routing optimizations with the same interface. This report describes the replacements and their specific checks.
 
 ## Reported interactions

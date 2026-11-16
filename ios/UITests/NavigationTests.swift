@@ -247,6 +247,11 @@ final class NavigationTests: XCTestCase {
         let app = launch(extra: ["-appearance", "dark"])
         XCTAssertTrue(app.buttons["explore-search"].waitForExistence(timeout: 8))
         capture("explore-dark", app: app)
+        app.buttons["Traffic"].tap()
+        let sources = app.buttons["Traffic sources"]
+        XCTAssertTrue(sources.waitForExistence(timeout: 5))
+        XCTAssertTrue(["Up to date", "Updating", "Data delayed"].contains(sources.value as? String ?? ""))
+        capture("explore-traffic-dark", app: app)
         tab(app, "Assistant").tap(); capture("assistant-dark", app: app)
     }
     func testLargeTextAssistantAndKeyboardRecovery() throws {

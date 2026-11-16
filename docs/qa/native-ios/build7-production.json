@@ -1,0 +1,20 @@
+{
+  "checkedAt": "2026-11-16T00:53:15.572332+00:00",
+  "deploy": "dep-dbt571lg1s2s738q9aag",
+  "commit": "5835430fe001a283bffcd369b881bc54ea03f61a",
+  "routeCount": 90,
+  "timetableCount": 90,
+  "mismatches": [],
+  "meta": {
+    "generatedAt": "2026-11-16T00:53:15.498Z",
+    "updatedAt": "2026-11-16T00:53:15.494Z",
+    "stale": false,
+    "ttlSeconds": 21600,
+    "source": {
+      "id": "bus-routes",
+      "name": "DSAT 巴士路線",
+      "url": "https://bis.dsat.gov.mo:37812/macauweb/",
+      "text": "交通事務局巴士報站及巴士路線公開資料"
+    }
+  }
+}
