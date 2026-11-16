@@ -75,7 +75,6 @@ struct ExploreView: View {
                             Text(settings.text("交通事務局", "DSAT")).tag(TrafficLayer.dsat)
                             Text(settings.text("Apple 地圖", "Apple Maps")).tag(TrafficLayer.apple)
                         }.pickerStyle(.segmented).accessibilityIdentifier("traffic-layer-picker")
-                        Toggle(settings.text("顯示路況", "Show traffic"), isOn: $showTraffic)
                     }
                     if trafficLayer == .dsat {
                         Section(settings.text("地圖顏色", "Map colours")) {

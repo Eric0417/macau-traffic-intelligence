@@ -279,21 +279,26 @@ struct BusRouteMap: View {
     var onStop: (String) -> Void
     @State private var selectedVehicle: String?
     @State private var viewport = MapViewport()
+    @State private var showsRouteTraffic = false
     var body: some View {
         TimelineView(.periodic(from: .now, by: 2)) { context in
             let eta = resource.data
+            let fresh = resource.fresh(at: context.date)
             let nearby = location.fix?.nearbyStop(in: eta?.stops ?? [], now: context.date)?.id
             let stops = (eta?.stops ?? []).compactMap { stop -> MapPin? in
                 guard let coordinate = stop.coordinates else { return nil }
                 return .init(id: stop.id, coordinate: coordinate, title: stop.stationName, symbol: nearby == stop.id ? "figure.stand" : "circle.fill", color: stop.suspended ? .orange : .blue)
             }
-            let vehicles = resource.fresh(at: context.date) ? (eta?.vehicles ?? []).compactMap { vehicle -> MapPin? in
+            let vehicles = fresh ? (eta?.vehicles ?? []).compactMap { vehicle -> MapPin? in
                 guard vehicle.positionSource == "feed", let coordinate = vehicle.coordinates else { return nil }
                 return .init(id: "vehicle:\(vehicle.id)", coordinate: coordinate, title: vehicle.plate, symbol: "bus.fill", color: vehicle.id == (selectedVehicle ?? initialVehicle) ? .blue : .mint)
             } : []
             TransitMap(lines: (eta?.routeSegments ?? []).enumerated().map { index, segment in
-                .init(id: "\(index)", coordinates: segment.coordinates, color: resource.fresh(at: context.date) ? trafficColor(segment.trafficStatus) : .gray)
-            }, pins: stops + vehicles, fitID: "\(eta?.routeCode ?? ""):\(eta?.direction ?? 0):\(initialVehicle ?? "route")", viewport: viewport, showsPerspective: true,
+                let status = fresh ? segment.trafficStatus : "unknown"
+                return .init(id: "\(index)", coordinates: segment.coordinates,
+                             color: showsRouteTraffic ? trafficColor(status) : .blue,
+                             dashed: showsRouteTraffic && status == "unknown")
+            }, pins: stops + vehicles, fitID: "\(eta?.routeCode ?? ""):\(eta?.direction ?? 0):\(initialVehicle ?? "route")", viewport: viewport, showsAppleTraffic: false,
                fitPadding: .init(top: 35, left: 30, bottom: 35, right: 30),
                fitCoordinates: initialVehicle.flatMap { id in eta?.vehicles.first(where: { $0.id == id && $0.positionSource == "feed" })?.coordinates }.map { [$0] },
                onSelect: { id in
@@ -305,11 +310,18 @@ struct BusRouteMap: View {
             }
             .safeAreaInset(edge: .bottom) {
                 if !compact {
-                VStack(spacing: 8) {
-                    Text(settings.text("綠：暢通 · 橙：緩慢 · 紅：擠塞 · 灰：未確認", "Green: clear · Orange: slow · Red: congested · Gray: unknown")).font(.caption)
-                    Text(settings.text("巴士位置為官方估算", "Official estimated bus positions")).font(.caption)
-                    SourceNote(meta: resource.meta, error: resource.error)
-                }.padding(16).background(.regularMaterial)
+                    VStack(spacing: 10) {
+                        Picker(settings.text("地圖顯示", "Map display"), selection: $showsRouteTraffic) {
+                            Text(settings.text("巴士路線", "Bus route")).tag(false)
+                            Text(settings.text("沿線路況", "Traffic along route")).tag(true)
+                        }.pickerStyle(.segmented).accessibilityIdentifier("bus-map-display")
+                        if showsRouteTraffic {
+                            Text(settings.text("綠 暢通 · 橙 緩慢 · 紅 擠塞 · 灰虛線 未知", "Green clear · Orange slow · Red congested · Dashed unknown"))
+                                .font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                                .accessibilityIdentifier("bus-route-traffic-legend")
+                        }
+                        SourceNote(meta: resource.meta, error: resource.error)
+                    }.padding(16).background(.regularMaterial)
                 }
             }
         }

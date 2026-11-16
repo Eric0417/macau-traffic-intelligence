@@ -8,7 +8,9 @@
 
 ## Current State
 
-Macao Move Build 9 is installed and independently identified on the paired iPhone. It uses flat bus pins, a compact stop summary, and a waveform that moves between audio meter reads. Explore can switch between the original DSAT overlay and Apple Maps traffic. The DSAT client makes a short follow-up after stale cache responses (ADR 0028). The signed release, 260 repository tests, 46 iPhone unit tests and five affected simulator flows passed. See `docs/qa/native-ios/BUILD9.md` for traffic probes, waveform capture and installation. Street-level Apple coverage and physical frame pacing are unmeasured.
+Macao Move Build 10 was installed and independently read back on the paired iPhone. Bus maps default to blue route geometry and can recolour the same geometry by reported traffic status. The Explore legend no longer duplicates the map's visibility control. The signed release, 260 repository tests, 46 native unit tests and two focused simulator flows passed. The central Macao coverage audit found weak agreement between road and bus traffic categories in its overlap sample and did not justify filling the missing data. See `docs/qa/traffic-estimation/CENTRAL-MACAO.md`.
+
+Build 9 introduced flat bus pins, a compact stop summary, and a waveform that moves between audio meter reads. Explore can switch between the original DSAT overlay and Apple Maps traffic. The DSAT client makes a short follow-up after stale cache responses (ADR 0028). See `docs/qa/native-ios/BUILD9.md` for traffic probes, waveform capture and installation. Street-level Apple coverage and physical frame pacing are unmeasured.
 
 Build 8 introduced the arrival-list bus diagram, formatted assistant replies, the traffic legend and haptics, and a contrasting origin-location button in both themes. Its selected 3D bus model was removed in Build 9. See `docs/qa/native-ios/BUILD8.md` for its verification. The missing-road experiment in `docs/qa/traffic-estimation/RESEARCH.md` missed all nine covered congested examples under whole-street holdout. It remains offline.
 

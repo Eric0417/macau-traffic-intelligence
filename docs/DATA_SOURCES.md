@@ -49,6 +49,8 @@ The native client is named Macao Move. Road overlays are batched by stroke style
 
 The native stop diagram places a vehicle between stops when its official estimated coordinate matches the reported route segment within 100 m. Unmatched reports keep approaching-stop wording. Repeated stop occurrences and circular closing segments keep their sequence identity. Stop details show one bus and use the vehicle ID from the displayed arrival status or minutes when available. Map pins display official estimates.
 
+The bus route map draws the selected route's official stop-to-stop geometry in blue by default. The along-route mode colours those same segments using published bus-route traffic categories. Unknown or delayed categories appear dashed. Explore traffic layers are separate from this map.
+
 Explore's optional Apple Maps traffic mode uses MapKit's built-in layer and attribution. Apple controls its geographic coverage and refresh. It displays separately from the DSAT road overlay and contributes no data to server or assistant estimates. DSAT road reads in Explore follow the server's existing TTL and make one follow-up after three seconds on a stale response, then resume regular polling if it is still stale. See ADR 0028. The road-inference experiment in `docs/qa/traffic-estimation/RESEARCH.md` remains offline. DSAT unknown roads remain unknown.
 
 

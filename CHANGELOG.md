@@ -1,5 +1,11 @@
 # Changelog
 
+## Macao Move bus route display - 2026-11-16
+
+- Start bus maps with a single blue route style. The along-route traffic view recolours those same segments, with dashed gray for unknown or delayed statuses.
+- Remove the duplicate show-traffic switch from the Explore legend. The map button controls visibility and the legend controls the source.
+- Audit data gaps near Senado Square against mapped roads and eight bus routes. The sample did not support publishing street-level congestion or vehicle counts from nearby bus reports.
+
 ## Macao Move stop summary and traffic layers - 2026-11-16
 
 - Show the arrival estimate and one approaching bus in stop details. Tap its reported segment to open a map with a bus pin. The full stop diagram stays on the route page.
