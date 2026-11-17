@@ -6,4 +6,4 @@ Typecheck, lint and 264 repository tests passed. The iPhone suite passed 48 nati
 
 The development-signed IPA is `ios/build-device/MacaoMove-build14.ipa`, SHA-256 `f466c7db38cfc9967652a66de87f99a7c2ef8fc8e5e37935a33620bc8dbedef3`. The app passed strict signature and archive checks.
 
-The paired iPhone was reachable over the local network. CoreDevice blocked installation while the phone was locked.
+CoreDevice initially blocked installation while the paired iPhone was locked. After unlock, USB installation completed and a separate app inventory query returned build 14.
