@@ -84,8 +84,8 @@ struct BusDetailView: View {
                         Text(settings.text("回程", "Inbound")).tag(1)
                     }.pickerStyle(.segmented).onChange(of: direction) { _, _ in selectedStop = nil }
                 }
+                BusTimetableView(timetable: route.timetable)
             }
-            BusTimetableView(timetable: route.timetable)
             if !route.live {
                 Text(settings.text("呢條路線暫無即時追蹤資料。服務日期請參閱官方公告。", "Live tracking is unavailable for this route. Check official notices for service dates."))
             } else {
@@ -98,7 +98,7 @@ struct BusDetailView: View {
                     }
                     Section {
                         ForEach(eta.stops.filter { search.isEmpty || $0.stationName.localizedCaseInsensitiveContains(search) || $0.stationCode.localizedCaseInsensitiveContains(search) }) { stop in
-                            BusStopRow(stop: stop, eta: eta, resource: resource, onStop: { selectedStop = stop.id }, onVehicle: { id in
+                            BusStopRow(stop: stop, eta: eta, resource: resource, showsTrack: search.isEmpty, onStop: { selectedStop = stop.id }, onVehicle: { id in
                                 mapRequest = .init(vehicleID: id)
                             }).listRowSeparator(.hidden).listRowInsets(.init(top: 0, leading: 20, bottom: 0, trailing: 20))
                         }

@@ -30,42 +30,41 @@ struct ExploreView: View {
     }
 
     var body: some View {
-        VStack(spacing: 12) {
-            HStack(spacing: 8) {
-                Text("Macao Move")
-                    .font(.system(.callout, design: .monospaced, weight: .medium))
-                    .accessibilityAddTraits(.isHeader)
-                Spacer(minLength: 8)
-                if navigation.journey != nil {
-                    Button {
-                        navigation.journey = nil
-                        showJourney = false
-                    } label: {
-                        Image(systemName: "xmark").font(.subheadline.weight(.semibold))
-                            .frame(width: 44, height: 44).contentShape(Circle())
-                    }.buttonStyle(PressFeedbackStyle()).mapControlGlass()
-                        .accessibilityLabel(settings.text("結束路線", "Clear route"))
-                }
-                PerspectiveButton(viewport: viewport)
-            }
+        ZStack {
             TimelineView(.periodic(from: .now, by: 2)) { context in
                 let route = navigation.journey.map { JourneyMapSnapshot(selection: $0, live: live, now: context.date) }
                 TransitMap(lines: trafficLines(at: context.date) + (route?.lines ?? []), pins: route?.pins ?? [],
                            fitID: navigation.journey.map { $0.id + "-\(navigation.mapRevision)-\(live.selectionID == $0.id && live.geometry != nil)" } ?? "macau",
                            viewport: viewport, showsPerspective: false,
-                           fitPadding: .init(top: 18, left: 16, bottom: 12, right: 16), fitCoordinates: route?.fitCoordinates)
+                           fitPadding: .init(top: 60, left: 16, bottom: navigation.journey == nil ? 174 : 220, right: 16), fitCoordinates: route?.fitCoordinates)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .clipShape(.rect(cornerRadius: 26))
-            .overlay(alignment: .topLeading) {
-                if showTraffic { trafficStatus.padding(10) }
-            }
-            controls
-            if let selection = navigation.journey { routeStatus(selection) }
+            .ignoresSafeArea()
+
+            VStack(spacing: 12) {
+                HStack(alignment: .top, spacing: 8) {
+                    if showTraffic { trafficStatus }
+                    Spacer(minLength: 4)
+                    if navigation.journey != nil {
+                        Button {
+                            navigation.journey = nil
+                            showJourney = false
+                        } label: {
+                            Image(systemName: "xmark").font(.subheadline.weight(.semibold))
+                                .frame(width: 44, height: 44).contentShape(Circle())
+                        }.buttonStyle(PressFeedbackStyle()).mapControlGlass()
+                            .accessibilityLabel(settings.text("結束路線", "Clear route"))
+                    }
+                    PerspectiveButton(viewport: viewport)
+                }
+                Spacer(minLength: 8)
+                if let selection = navigation.journey,
+                   selection.future || !selection.journey.legs.isEmpty || live.geometry?.missingLegs.isEmpty == false || live.error != nil {
+                    routeStatus(selection)
+                        .padding(12).background(.regularMaterial, in: .rect(cornerRadius: 18))
+                }
+                controls
+            }.padding(.horizontal, 20).padding(.vertical, 10).frame(maxWidth: 760)
         }
-        .padding(.horizontal, 20).padding(.top, 4).padding(.bottom, 10)
-        .frame(maxWidth: 760).frame(maxWidth: .infinity)
-        .background(Color(.systemBackground))
         .toolbar(.hidden, for: .navigationBar)
         .livePolling(roads, path: "traffic/roads", interval: 60, enabled: navigation.tab == .explore && showTraffic && trafficLayer == .dsat, followSourceTTL: true)
         .livePolling(forecast, path: "traffic/forecast", interval: 60, enabled: navigation.tab == .explore && showTraffic && trafficLayer == .forecast, followSourceTTL: true)
@@ -218,6 +217,6 @@ struct ExploreView: View {
                 Text(settings.text("部分路線未能核實", "Some route segments are unverified")).font(.caption).foregroundStyle(.orange)
             }
             if selection.future { Text(settings.text("預定行程，班次未核實", "Planned journey; future service unverified")).font(.caption).foregroundStyle(.orange) }
-        }.frame(maxWidth: 540, alignment: .leading)
+        }.frame(maxWidth: 516, alignment: .leading)
     }
 }

@@ -1,5 +1,11 @@
 # Changelog
 
+## Macao Move bus home and full-screen map - 2026-11-17
+
+- Open on the four-column bus catalogue and put Buses first in the tab bar.
+- Restore the edge-to-edge Explore map with traffic, location and journey controls over it.
+- Group operating hours with the route direction. Give stop rows vertical padding and connect the route line through the bus markers.
+
 ## Macao Move map and navigation layout - 2026-11-17
 
 - Give Explore a rounded map frame and a single row for traffic, destination or route details, and location. Keep arrival and route warnings visible below that row.

@@ -17,7 +17,7 @@ import SwiftUI
 
 @Observable @MainActor final class AppNavigation {
     enum Tab: Hashable { case explore, buses, assistant, city }
-    var tab: Tab = .explore
+    var tab: Tab = .buses
     var explorePath = NavigationPath()
     var journey: JourneySelection?
     var journeyLive = JourneyLiveState()
@@ -38,11 +38,11 @@ struct RootView: View {
     var body: some View {
         @Bindable var navigation = navigation
         TabView(selection: $navigation.tab) {
-            Tab(settings.text("探索", "Explore"), systemImage: "map", value: .explore) {
-                NavigationStack(path: $navigation.explorePath) { ExploreView() }
-            }
             Tab(settings.text("巴士", "Buses"), systemImage: "bus", value: .buses) {
                 NavigationStack { BusListView() }
+            }
+            Tab(settings.text("探索", "Explore"), systemImage: "map", value: .explore) {
+                NavigationStack(path: $navigation.explorePath) { ExploreView() }
             }
             Tab(settings.text("助手", "Assistant"), systemImage: "waveform", value: .assistant) {
                 NavigationStack { AssistantView() }

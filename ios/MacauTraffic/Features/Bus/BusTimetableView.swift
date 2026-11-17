@@ -36,30 +36,28 @@ struct BusTimetableView: View {
     var timetable: BusTimetable?
     @State private var showSource = false
     var body: some View {
-        Section {
-            DisclosureGroup(settings.text("營運時間", "Operating hours")) {
-                if let timetable {
-                    ForEach(timetable.schedules.indices, id: \.self) { index in
-                        let schedule = timetable.schedules[index]
-                        VStack(alignment: .leading, spacing: 5) {
-                            if let towards = schedule.towards {
-                                Text(settings.text("往", "Towards ") + towards).font(.subheadline)
-                            }
-                            ForEach(schedule.periods.indices, id: \.self) { period in
-                                Text(schedule.periods[period].label(settings)).font(.body.monospacedDigit().weight(.medium))
-                            }
-                            Text(schedule.dayLabel(settings)).font(.caption).foregroundStyle(.secondary)
-                        }.frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 3)
-                    }
-                    Button(settings.text("時間表資料", "Timetable information"), systemImage: "info.circle") {
-                        showSource = true
-                    }.font(.subheadline)
-                } else {
-                    Text(settings.text("未有已核實時間", "Hours not verified")).foregroundStyle(.secondary)
-                    Link(settings.text("查看官方路線班表", "Official route timetables"), destination: URL(string: "https://www.dsat.gov.mo/dsat/bus_route.aspx")!)
+        DisclosureGroup(settings.text("營運時間", "Operating hours")) {
+            if let timetable {
+                ForEach(timetable.schedules.indices, id: \.self) { index in
+                    let schedule = timetable.schedules[index]
+                    VStack(alignment: .leading, spacing: 5) {
+                        if let towards = schedule.towards {
+                            Text(settings.text("往", "Towards ") + towards).font(.subheadline)
+                        }
+                        ForEach(schedule.periods.indices, id: \.self) { period in
+                            Text(schedule.periods[period].label(settings)).font(.body.monospacedDigit().weight(.medium))
+                        }
+                        Text(schedule.dayLabel(settings)).font(.caption).foregroundStyle(.secondary)
+                    }.frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 3)
                 }
-            }.accessibilityIdentifier("bus-operating-hours")
-        }
+                Button(settings.text("時間表資料", "Timetable information"), systemImage: "info.circle") {
+                    showSource = true
+                }.font(.subheadline)
+            } else {
+                Text(settings.text("未有已核實時間", "Hours not verified")).foregroundStyle(.secondary)
+                Link(settings.text("查看官方路線班表", "Official route timetables"), destination: URL(string: "https://www.dsat.gov.mo/dsat/bus_route.aspx")!)
+            }
+        }.accessibilityIdentifier("bus-operating-hours")
         .sheet(isPresented: $showSource) {
             if let timetable {
                 NavigationStack {

@@ -6,6 +6,7 @@ struct BusStopRow: View {
     var stop: BusStop
     var eta: BusETA
     var resource: LiveResource<BusETA>
+    var showsTrack: Bool
     var onStop: () -> Void
     var onVehicle: (String) -> Void
 
@@ -15,7 +16,7 @@ struct BusStopRow: View {
             VStack(spacing: 0) {
                 if !vehicles.isEmpty {
                     HStack(spacing: 14) {
-                        Rectangle().fill(.blue.opacity(0.25)).frame(width: 3).frame(width: 28)
+                        Color.clear.frame(width: 28, height: 1)
                         VStack(alignment: .leading, spacing: 8) {
                             ForEach(vehicles) { vehicle in
                                 Button {
@@ -32,20 +33,18 @@ struct BusStopRow: View {
                                         }
                                         Spacer(minLength: 0)
                                         if vehicle.positionSource == "feed" { Image(systemName: "arrow.up.right").font(.caption).foregroundStyle(.secondary) }
-                                    }.padding(.vertical, 6).contentShape(Rectangle())
+                                    }.padding(.vertical, 6).frame(minHeight: 44).contentShape(Rectangle())
                                 }.buttonStyle(.plain).accessibilityIdentifier("route-bus-\(vehicle.id)")
                             }
-                        }.padding(.vertical, 9)
-                    }.fixedSize(horizontal: false, vertical: true)
+                        }.padding(.vertical, 5)
+                    }
+                    .background(alignment: .leading) {
+                        if showsTrack { track.frame(width: 28) }
+                    }
                 }
                 Button(action: onStop) {
                     HStack(alignment: .top, spacing: 14) {
-                        VStack(spacing: 0) {
-                            Circle().strokeBorder(stop.suspended ? .orange : .blue, lineWidth: 3)
-                                .background(Color(.secondarySystemGroupedBackground), in: Circle()).frame(width: 14, height: 14).padding(.top, 5)
-                            Rectangle().fill(.blue.opacity(0.25)).frame(width: 3)
-                                .opacity(stop.id == eta.stops.last?.id ? 0 : 1)
-                        }.frame(width: 28)
+                        Color.clear.frame(width: 28, height: 1)
                         VStack(alignment: .leading, spacing: 6) {
                             HStack(alignment: .firstTextBaseline, spacing: 6) {
                                 Text(stop.stationName).font(.body.weight(.medium)).foregroundStyle(.primary)
@@ -56,12 +55,27 @@ struct BusStopRow: View {
                                 }
                             }
                             ArrivalLabel(stop: stop, resource: resource)
-                            Text(stop.stationCode).font(.caption2).foregroundStyle(.tertiary)
-                        }.padding(.bottom, 22).frame(maxWidth: .infinity, alignment: .leading)
+                            Text(stop.stationCode).font(.caption2).foregroundStyle(.secondary)
+                        }.frame(maxWidth: .infinity, alignment: .leading)
                         Image(systemName: "chevron.right").font(.caption2.weight(.semibold)).foregroundStyle(.tertiary).padding(.top, 7)
-                    }.fixedSize(horizontal: false, vertical: true).contentShape(Rectangle())
+                    }
+                    .padding(.vertical, 11)
+                    .background(alignment: .leading) {
+                        VStack(spacing: 0) {
+                            track.frame(height: 13)
+                                .opacity(showsTrack && (stop.id != eta.stops.first?.id || !vehicles.isEmpty) ? 1 : 0)
+                            Circle().strokeBorder(stop.suspended ? .orange : .blue, lineWidth: 3)
+                                .frame(width: 14, height: 14)
+                            track.opacity(showsTrack && stop.id != eta.stops.last?.id ? 1 : 0)
+                        }.frame(width: 28).accessibilityHidden(true)
+                    }
+                    .contentShape(Rectangle())
                 }.buttonStyle(.plain).accessibilityIdentifier("stop-\(stop.stationCode)")
             }
         }
+    }
+
+    private var track: some View {
+        Rectangle().fill(.blue.opacity(0.35)).frame(width: 3).accessibilityHidden(true)
     }
 }

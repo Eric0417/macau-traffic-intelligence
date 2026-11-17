@@ -21,6 +21,7 @@ final class NavigationTests: XCTestCase {
     }
     func testTrafficInteractionPerformance() throws {
         let app = launch()
+        tab(app, "Explore").tap()
         XCTAssertTrue(app.buttons["Traffic"].waitForExistence(timeout: 10))
         let options = XCTMeasureOptions()
         options.iterationCount = 3
@@ -79,6 +80,7 @@ final class NavigationTests: XCTestCase {
     }
     func testAssistantWaitsWithDotAndKeepsKeyboardClosedOnEntry() throws {
         let app = launch("waiting")
+        tab(app, "Explore").tap()
         XCTAssertTrue(app.buttons["explore-search"].waitForExistence(timeout: 8))
         app.buttons["explore-search"].tap()
         XCTAssertTrue(input(app, "assistant-input").waitForExistence(timeout: 5))
@@ -97,8 +99,8 @@ final class NavigationTests: XCTestCase {
         XCTAssertFalse(app.keyboards.firstMatch.exists)
     }
     func testBusPositionsAppearInArrivalListAndMap() throws {
-        let app = launch("bus")
-        tab(app, "Buses").tap()
+        let app = launch("bus", extra: ["-appearance", "dark"])
+        XCTAssertTrue(tab(app, "Buses").isSelected)
         let search = app.searchFields.firstMatch
         XCTAssertTrue(search.waitForExistence(timeout: 5)); search.tap(); search.typeText("56")
         app.buttons["route-00056"].tap()
@@ -113,6 +115,8 @@ final class NavigationTests: XCTestCase {
         let bus = app.buttons["route-bus-test-3"]
         for _ in 0..<7 { if bus.exists && bus.isHittable { break }; app.swipeUp() }
         XCTAssertTrue(bus.isHittable)
+        XCTAssertGreaterThanOrEqual(bus.frame.height, 44)
+        XCTAssertLessThanOrEqual(bus.frame.maxY, app.buttons["stop-T376/2"].frame.minY)
         XCTAssertTrue(app.staticTexts["Between stops · official estimate"].firstMatch.exists)
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "min")).firstMatch.exists)
         capture("bus-arrival-diagram", app: app)
@@ -162,7 +166,8 @@ final class NavigationTests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["--uitesting", "-language", "zh-Hant", "-appearance", "light"]
         app.launch()
-        XCTAssertTrue(app.buttons["explore-search"].waitForExistence(timeout: 10))
+        XCTAssertTrue(tab(app, "巴士").isSelected)
+        XCTAssertEqual(app.tabBars.buttons.firstMatch.label, "巴士")
         tab(app, "城市").tap()
         app.buttons["設定"].tap()
         XCTAssertTrue(app.navigationBars["設定"].waitForExistence(timeout: 5))
@@ -196,6 +201,7 @@ final class NavigationTests: XCTestCase {
     }
     func testAssistantManualOriginAndJourney() throws {
         let app = launch()
+        tab(app, "Explore").tap()
         app.buttons["Traffic"].tap()
         tab(app, "Assistant").tap()
         capture("assistant", app: app)
@@ -214,7 +220,7 @@ final class NavigationTests: XCTestCase {
         let spanField = try XCTUnwrap(mapValue.split(separator: ";").first { $0.hasPrefix("span=") })
         let span = try XCTUnwrap(Double(spanField.dropFirst("span=".count)))
         XCTAssertLessThan(span, 0.04, "Traffic overlays must not expand the selected journey's bounds: \(mapValue)")
-        XCTAssertLessThanOrEqual(app.maps.firstMatch.frame.maxY, app.buttons["home-route-details"].frame.minY + 1)
+        XCTAssertGreaterThan(app.maps.firstMatch.frame.maxY, app.buttons["home-route-details"].frame.maxY)
         capture("journey-home", app: app)
         app.buttons["home-route-details"].tap()
         XCTAssertTrue(app.navigationBars["Journey"].waitForExistence(timeout: 5)); capture("journey", app: app)
@@ -223,6 +229,7 @@ final class NavigationTests: XCTestCase {
     }
     func testSendStateAndMapControls() throws {
         let app = launch(extra: ["-appearance", "dark"])
+        tab(app, "Explore").tap()
         let perspective = app.buttons["Change map perspective"]
         XCTAssertTrue(perspective.waitForExistence(timeout: 8))
         let map = app.maps.firstMatch
@@ -260,6 +267,7 @@ final class NavigationTests: XCTestCase {
         authorization.resetAuthorizationStatus(for: .location)
         defer { authorization.resetAuthorizationStatus(for: .location) }
         let app = launch()
+        tab(app, "Explore").tap()
         let locate = app.buttons["Show my location"]
         let map = app.maps.firstMatch
         let camera = app.descendants(matching: .any)["transit-map"]
@@ -367,6 +375,7 @@ final class NavigationTests: XCTestCase {
     }
     func testFormattedAssistantAndTrafficLegend() throws {
         let app = launch("traffic")
+        tab(app, "Explore").tap()
         app.buttons["Traffic"].tap()
         let source = app.buttons["Traffic sources"]
         XCTAssertTrue(source.waitForExistence(timeout: 5)); source.tap()
@@ -421,12 +430,14 @@ final class NavigationTests: XCTestCase {
     }
     func testDarkExplore() throws {
         let app = launch(extra: ["-appearance", "dark"])
+        tab(app, "Explore").tap()
         let destination = app.buttons["explore-search"]
         XCTAssertTrue(destination.waitForExistence(timeout: 8))
         let map = app.maps.firstMatch
         XCTAssertTrue(map.exists)
-        XCTAssertGreaterThan(map.frame.height, app.frame.height / 2)
-        XCTAssertLessThanOrEqual(map.frame.maxY, destination.frame.minY + 1)
+        XCTAssertEqual(map.frame.width, app.frame.width, accuracy: 1)
+        XCTAssertEqual(map.frame.height, app.frame.height, accuracy: 1)
+        XCTAssertTrue(destination.isHittable)
         XCTAssertTrue(app.buttons["Show my location"].isHittable)
         XCTAssertTrue(app.buttons["Change map perspective"].isHittable)
         capture("explore-dark", app: app)
@@ -470,9 +481,7 @@ final class NavigationTests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["--uitesting", "-language", "zh-Hant", "-appearance", "light"]
         app.launch()
-        XCTAssertTrue(app.buttons["explore-search"].waitForExistence(timeout: 8))
-        capture("explore-zh", app: app)
-        tab(app, "巴士").tap()
+        XCTAssertTrue(tab(app, "巴士").isSelected)
         let firstRow = ["00001", "0001A", "00002", "0002A"].map { app.buttons["route-\($0)"] }
         XCTAssertTrue(firstRow[0].waitForExistence(timeout: 5))
         for route in firstRow {
@@ -481,6 +490,9 @@ final class NavigationTests: XCTestCase {
         }
         XCTAssertGreaterThan(app.buttons["route-002AS"].frame.midY, firstRow[0].frame.midY)
         capture("buses-zh", app: app)
+        tab(app, "探索").tap()
+        XCTAssertTrue(app.buttons["explore-search"].waitForExistence(timeout: 8))
+        capture("explore-zh", app: app)
         tab(app, "助手").tap()
         XCTAssertTrue(app.staticTexts["想去邊？"].waitForExistence(timeout: 5))
         capture("assistant-zh", app: app)

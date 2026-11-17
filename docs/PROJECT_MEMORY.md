@@ -8,7 +8,9 @@
 
 ## Current State
 
-Macao Move Build 13 uses an inset map and one row of primary controls, a four-column bus catalogue, and simpler assistant and city screens. Accessibility text sizes use two bus columns and stack the weather reading below its label. The signed build passed simulator tests across iPhone, iPhone SE and iPad. The paired iPhone was unreachable for installation. See `docs/qa/native-ios/BUILD13.md` for the signed package and test results.
+Macao Move Build 14 opens on the bus catalogue and restores the full-screen Explore map. Stop rows have vertical padding and a continuous route line through approaching vehicle rows. See `docs/qa/native-ios/BUILD14.md` for verification and device status.
+
+Macao Move Build 13 introduced a four-column bus catalogue and simpler assistant and city screens. Accessibility text sizes use two bus columns and stack the weather reading below its label. The signed build passed simulator tests across iPhone, iPhone SE and iPad. It was later installed over USB and read back on the paired iPhone. See `docs/qa/native-ios/BUILD13.md` for the simulator checks.
 
 Macao Move Build 12 was installed and read back on the paired iPhone. Explore has live DSAT traffic and a solid 30-minute forecast. The day-trip form accepts an empty origin and offers location sharing, and its button has readable text in Dark Mode. The app defaults to the device language and adds Japanese, Korean, Portuguese and Spanish. Some server-generated route notices still use English in the new languages. Render deployment `dep-dbtaa0l6e07s73bsu1r0` at `0e57847` passed live language and location probes. See `docs/qa/native-ios/BUILD12.md`.
 
